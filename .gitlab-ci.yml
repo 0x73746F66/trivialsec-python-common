@@ -1,0 +1,54 @@
+before_script:
+  - echo 'COMMON_VERSION=0.1.4' > .env
+  - python3 --version
+  - pylint --version
+  - aws --version
+
+stages:
+  - test
+  - build
+
+lint:
+  retry: 2
+  tags:
+    - python
+  stage: test
+  script:
+    - pip install --use-feature=2020-resolver -q -U pylint
+    - make lint
+  only:
+    refs:
+      - merge_request
+
+build-package:
+  retry: 2
+  tags:
+    - python
+  stage: build
+  variables:
+    PKG_PATH: scripts/deploy/packages
+  script:
+    - pip install --use-feature=2020-resolver -q -U setuptools wheel
+    - make package
+  only:
+    refs:
+      - merge_request
+
+build-upload:
+  retry: 2
+  tags:
+    - python
+  stage: build
+  variables:
+    PKG_PATH: scripts/deploy/packages
+    AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+    AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+  script:
+    - make cloudformation-upload
+    - make update-proxy
+    - pip install --use-feature=2020-resolver -q -U setuptools wheel
+    - make package-upload
+  only:
+    refs:
+      - master
