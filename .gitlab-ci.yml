@@ -1,5 +1,5 @@
 before_script:
-  - echo 'COMMON_VERSION=0.1.4' > .env
+  - pip install --use-feature=2020-resolver -q -U setuptools wheel
   - python3 --version
   - pylint --version
   - aws --version
@@ -26,9 +26,8 @@ build-package:
     - python
   stage: build
   variables:
-    PKG_PATH: scripts/deploy/packages
+    COMMON_VERSION: 0.1.4
   script:
-    - pip install --use-feature=2020-resolver -q -U setuptools wheel
     - make package
   only:
     refs:
@@ -40,14 +39,11 @@ build-upload:
     - python
   stage: build
   variables:
-    PKG_PATH: scripts/deploy/packages
+    COMMON_VERSION: 0.1.4
     AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
     AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
     AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
   script:
-    - make cloudformation-upload
-    - make update-proxy
-    - pip install --use-feature=2020-resolver -q -U setuptools wheel
     - make package-upload
   only:
     refs:

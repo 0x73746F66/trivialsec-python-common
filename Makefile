@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-include .env
+-include .env
 export $(shell sed 's/=.*//' .env)
 
 .PHONY: help
