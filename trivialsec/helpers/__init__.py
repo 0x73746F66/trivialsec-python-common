@@ -611,18 +611,12 @@ def http_status(url: str)->(int, str):
 
     return code, status
 
-def check_domain_rules(domain: str):
-    parts = domain.split('.')
-    if len(parts) < 2:
-        return False
-
+def check_domain_rules(domain_name: str):
+    # TODO implement
     return True
 
 def check_subdomain_rules(domain_name: str, sub_domain: str):
-    if domain_name == sub_domain:
-        return False
-
-    return True
+    return sub_domain.endswith(domain_name) and domain_name != sub_domain
 
 def is_valid_ipv4_address(address):
     try:

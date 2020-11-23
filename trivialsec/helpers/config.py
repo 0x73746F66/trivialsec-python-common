@@ -9,8 +9,6 @@ from retry.api import retry
 
 
 class Config:
-    session_secret_key = getenv('SECRET_KEY')
-
     def __init__(self, **args):
         config_file: str = getenv('CONFIG_FILE', args.get('config_file', 'config.yaml'))
         self.config_path: str = config_file if config_file.startswith('/') else path.realpath(path.join(getcwd(), config_file))
@@ -53,7 +51,8 @@ class Config:
         self.nameservers: list = list(set(app_conf.get('nameservers', list())))
         self.external_dsn_provider: str = self.nameservers[0]
         self.queue_wait_timeout: int = app_conf.get('queue_wait_timeout', 5)
-        self.mysql['password']: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/MysqlPassword')
+        self.mysql['password']: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/SessionSecretKey')
+        self.session_secret_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/MysqlPassword')
         self.recaptcha_secret_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/RecaptchaSecretKey')
         self.recaptcha_site_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/RecaptchaSiteKey')
         self.sendgrid_api_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/SendGridApiKey')
