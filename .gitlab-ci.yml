@@ -1,5 +1,5 @@
 before_script:
-  - pip install --use-feature=2020-resolver -q -U setuptools wheel
+  - pip install -q -U setuptools wheel
   - python3 --version
   - pylint --version
   - aws --version
@@ -14,7 +14,7 @@ lint:
     - python
   stage: test
   script:
-    - pip install --use-feature=2020-resolver -q -U pylint
+    - pip install -q -U pylint
     - make lint
   only:
     refs:

@@ -114,7 +114,7 @@ class MySQLDatabase:
         if redis_value is not None:
             logger.debug(f'found in cache {redis_value}')
             return redis_value
-        sql = 'SELECT column_name FROM information_schema.columns WHERE table_name = %(table)s'
+        sql = f'SELECT `column_name` FROM `information_schema`.`columns` WHERE `table_schema` = "{self.database}" AND `table_name` = %(table)s'
         logger.debug(sql)
         self.cur = self.con.cursor(buffered=True)
         self.cur.execute(sql, {'table': table})

@@ -9,9 +9,10 @@ from retry.api import retry
 
 
 class Config:
-    def __init__(self, **args):
-        config_file: str = getenv('CONFIG_FILE', args.get('config_file', 'config.yaml'))
-        self.config_path: str = config_file if config_file.startswith('/') else path.realpath(path.join(getcwd(), config_file))
+    user_agent: str = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0 Safari/605.1.15'
+    config_file: str = getenv('CONFIG_FILE', 'config.yaml')
+    def __init__(self):
+        self.config_path: str = self.config_file if self.config_file.startswith('/') else path.realpath(path.join(getcwd(), self.config_file))
         try:
             with open(self.config_path) as stream:
                 conf: dict = yaml.safe_load(stream)
@@ -51,8 +52,8 @@ class Config:
         self.nameservers: list = list(set(app_conf.get('nameservers', list())))
         self.external_dsn_provider: str = self.nameservers[0]
         self.queue_wait_timeout: int = app_conf.get('queue_wait_timeout', 5)
-        self.mysql['password']: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/SessionSecretKey')
-        self.session_secret_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/MysqlPassword')
+        self.mysql['password']: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/MysqlPassword')
+        self.session_secret_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/SessionSecretKey')
         self.recaptcha_secret_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/RecaptchaSecretKey')
         self.recaptcha_site_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/RecaptchaSiteKey')
         self.sendgrid_api_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/SendGridApiKey')

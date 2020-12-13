@@ -3,6 +3,7 @@ from os import path, getenv
 from socket import gethostbyname, error as SocketError, getaddrinfo, AF_INET6, AF_INET
 from base64 import urlsafe_b64encode
 from datetime import datetime
+from urllib.parse import urlparse, urlencode
 import re
 import time
 import logging
@@ -17,16 +18,14 @@ import OpenSSL
 from bs4 import BeautifulSoup as bs
 from dns import resolver, rdtypes
 from dns.exception import DNSException
-from urllib.parse import urlparse, urlencode
 from dateutil.tz import tzlocal
 from retry.api import retry
 from passlib.hash import pbkdf2_sha256
 from requests.status_codes import _codes
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.connectionpool import HTTPSConnectionPool
-from requests.packages.urllib3.poolmanager import PoolManager
-from requests.exceptions import ReadTimeout, ConnectTimeout, ConnectionError
-from urllib3.poolmanager import SSL_KEYWORDS
+from requests.exceptions import ReadTimeout, ConnectTimeout
+from urllib3.connectionpool import HTTPSConnectionPool
+from urllib3.poolmanager import PoolManager, SSL_KEYWORDS
 from .log_manager import logger
 from .config import config
 
@@ -81,11 +80,9 @@ class InspectedHTTPSConnectionPool(HTTPSConnectionPool):
         self._inspector = inspector
 
     def _validate_conn(self, conn):
-        req = super()._validate_conn(conn)
+        super()._validate_conn(conn)
         if self.inspector:
             self.inspector(self.host, self.port, conn)
-
-        return req
 
 class InspectedPoolManager(PoolManager):
     @property
@@ -103,8 +100,8 @@ class InspectedPoolManager(PoolManager):
         kwargs = self.connection_pool_kw.copy()
         if scheme == 'http':
             kwargs = self.connection_pool_kw.copy()
-            for kword in SSL_KEYWORDS:
-                kwargs.pop(kword, None)
+            for keyword in SSL_KEYWORDS:
+                kwargs.pop(keyword, None)
 
         pool = InspectedHTTPSConnectionPool(host, port, **kwargs)
         pool.inspector = self.inspector
@@ -138,7 +135,7 @@ class SafeBrowsing(object):
     def __init__(self, key):
         self.api_key = key
 
-    def lookup_urls(self, urls, platforms=["ANY_PLATFORM"]):
+    def lookup_urls(self, urls:list, platforms: list = ["ANY_PLATFORM"]):
         proxies = None
         if config.http_proxy or config.https_proxy:
             proxies = {
@@ -147,8 +144,8 @@ class SafeBrowsing(object):
             }
         data = {
             "client": {
-                "clientId":      "pysafe",
-                "clientVersion": "0.1"
+                "clientId": "trivialsec-common",
+                "clientVersion": config.app_version
             },
             "threatInfo": {
                 "threatTypes":
@@ -166,7 +163,7 @@ class SafeBrowsing(object):
         }
         headers = {'Content-type': 'application/json'}
 
-        r = requests.post(
+        res = requests.post(
                 'https://safebrowsing.googleapis.com/v4/threatMatches:find',
                 data=json.dumps(data),
                 params={'key': self.api_key},
@@ -174,45 +171,37 @@ class SafeBrowsing(object):
                 proxies=proxies,
                 timeout=3
         )
-        if r.status_code == 200:
+        if res.status_code == 200:
             # Return clean results
-            if r.json() == {}:
-                return dict([(u, {"malicious": False}) for u in urls])
-            else:
-                result = {}
-                for url in urls:
-                    # Get matches
-                    matches = [match for match in r.json()['matches'] if match['threat']['url'] == url]
-                    if len(matches) > 0:
-                        result[url] = {
-                            'malicious': True,
-                            'platforms': list(set([b['platformType'] for b in matches])),
-                            'threats': list(set([b['threatType'] for b in matches])),
-                            'cache': min([b["cacheDuration"] for b in matches])
-                        }
-                    else:
-                        result[url] = {"malicious": False}
-                return result
-        else:
-            if r.status_code == 400:
-                if r.json()['error']['message'] == 'API key not valid. Please pass a valid API key.':
-                    raise SafeBrowsingInvalidApiKey()
+            if res.json() == {}:
+                return {u: {'malicious': False} for u in urls}
+            result = {}
+            for url in urls:
+                # Get matches
+                matches = [match for match in res.json()['matches'] if match['threat']['url'] == url]
+                if len(matches) > 0:
+                    result[url] = {
+                        'malicious': True,
+                        'platforms': { platform['platformType'] for platform in matches },
+                        'threats': { threat['threatType'] for threat in matches },
+                        'cache': min([b["cacheDuration"] for b in matches])
+                    }
                 else:
-                    raise SafeBrowsingWeirdError(
-                        r.json()['error']['code'],
-                        r.json()['error']['status'],
-                        r.json()['error']['message'],
-                        r.json()['error']['details']
-                    )
-            else:
-                raise SafeBrowsingWeirdError(r.status_code, "", "", "")
+                    result[url] = {"malicious": False}
+            return result
+        if res.status_code == 400:
+            if 'API key not valid' in res.json()['error']['message']:
+                raise SafeBrowsingInvalidApiKey()
+            raise SafeBrowsingWeirdError(
+                res.json()['error']['code'],
+                res.json()['error']['status'],
+                res.json()['error']['message'],
+                res.json()['error']['details']
+            )
+        raise SafeBrowsingWeirdError(res.status_code, "", "", "")
 
-    def lookup_url(self, url, platforms=["ANY_PLATFORM"]):
-        """
-        Online lookup of a single url
-        """
-        r = self.lookup_urls([url], platforms=platforms)
-        return r[url]
+    def lookup_url(self, url: str, platforms:  list = ["ANY_PLATFORM"]):
+        return self.lookup_urls([url], platforms=platforms)[url]
 
 class HTTPMetadata:
     HTTP_504 = 'Request Timeout'
@@ -566,7 +555,7 @@ def download_file(remote_file: str, temp_name: str = None, temp_dir: str = '/tmp
             local_size = path.getsize(temp_path)
         except OSError as err:
             if err.errno == errno.ENOENT:
-                pass
+                pass # no need to raise or handle this
             else:
                 raise
         if local_size == file_size:
@@ -587,7 +576,7 @@ def download_file(remote_file: str, temp_name: str = None, temp_dir: str = '/tmp
         remote_file,
         verify=remote_file.startswith('https'),
         allow_redirects=True,
-        headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0 Safari/605.1.15'}
+        headers={'User-Agent': config.user_agent}
     )
     text = resp.text
     with open(temp_path, 'w') as handle:
@@ -621,13 +610,13 @@ def check_subdomain_rules(domain_name: str, sub_domain: str):
 def is_valid_ipv4_address(address):
     try:
         socket.inet_pton(socket.AF_INET, address)
-    except AttributeError:  # no inet_pton here, sorry
+    except AttributeError:
         try:
             socket.inet_aton(address)
         except socket.error:
             return False
         return address.count('.') == 3
-    except socket.error:  # not a valid address
+    except socket.error:
         return False
 
     return True
@@ -635,7 +624,7 @@ def is_valid_ipv4_address(address):
 def is_valid_ipv6_address(address):
     try:
         socket.inet_pton(socket.AF_INET6, address)
-    except socket.error:  # not a valid address
+    except socket.error:
         return False
     return True
 

@@ -19,7 +19,6 @@ if [[ $PATH != *$(npm bin)* ]]; then
   export PATH="$PATH:$(npm bin)"
 fi
 
-source .venv/bin/activate
 if [[ -f .env ]]; then
   source .env
 fi
@@ -42,5 +41,13 @@ if [[ -f "$(which git-secrets 2>/dev/null)" ]]; then
 else
   echo "Please install git-secrets"
 fi
-make install-dev
+pip install -q -U pip
+
+if ! [[ -d .venv ]]; then
+  python3 -m venv .venv
+fi
+source .venv/bin/activate
+pip install -q -U setuptools pylint wheel awscli
+pip install -q -U --no-cache-dir --isolated -r ./docker/requirements.txt
+make common
 make lint

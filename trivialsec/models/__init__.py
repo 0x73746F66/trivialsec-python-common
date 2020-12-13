@@ -335,8 +335,8 @@ class DatabaseHelpers:
         if invalidations is None:
             invalidations = []
         if exists is None:
-            exists = True if self.__getattribute__(self.__pk) else self.exists()
-        logger.debug(f'persist {"UPDATE" if exists else "INSERT"} {self.__table}')
+            exists = False if self.__getattribute__(self.__pk) is None else self.exists()
+        logger.debug(f'persist {"UPDATE" if exists else "INSERT"} {self.__table} {self.__pk}')
         inv1 = f'{self.__table}/cols'
         if inv1 not in invalidations:
             invalidations.append(inv1)
