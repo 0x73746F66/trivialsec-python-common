@@ -11,8 +11,14 @@ from retry.api import retry
 class Config:
     user_agent: str = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0 Safari/605.1.15'
     config_file: str = getenv('CONFIG_FILE', 'config.yaml')
-    def __init__(self):
-        self.config_path: str = self.config_file if self.config_file.startswith('/') else path.realpath(path.join(getcwd(), self.config_file))
+
+    def __init__(self, custom_config: str = None):
+        if custom_config is not None:
+            self.config_file = custom_config
+        self.configure()
+
+    def configure(self):
+        self.config_path = self.config_file if self.config_file.startswith('/') else path.realpath(path.join(getcwd(), self.config_file))
         try:
             with open(self.config_path) as stream:
                 conf: dict = yaml.safe_load(stream)
