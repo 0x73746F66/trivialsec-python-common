@@ -1,3 +1,9 @@
+variables:
+  COMMON_VERSION: 0.1.5
+  AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+  AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+  AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+
 before_script:
   - pip install -q -U setuptools wheel
   - python3 --version
@@ -25,8 +31,6 @@ build-package:
   tags:
     - python
   stage: build
-  variables:
-    COMMON_VERSION: 0.1.4
   script:
     - make package
   only:
@@ -38,11 +42,6 @@ build-upload:
   tags:
     - python
   stage: build
-  variables:
-    COMMON_VERSION: 0.1.4
-    AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
-    AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
-    AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
   script:
     - make package-upload
   only:
