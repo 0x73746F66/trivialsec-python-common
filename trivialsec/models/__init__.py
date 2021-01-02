@@ -586,6 +586,26 @@ class Members(DatabaseIterators):
     def __init__(self):
         super().__init__('Member')
 
+class ApiKey(DatabaseHelpers):
+    def __init__(self, **kwargs):
+        super().__init__('api_keys', 'api_key')
+        self.api_key = kwargs.get('api_key')
+        self.api_key_secret = kwargs.get('api_key_secret')
+        self.comment = kwargs.get('comment')
+        self.member_id = kwargs.get('member_id')
+        self.allowed_hosts = kwargs.get('allowed_hosts')
+        self.active = bool(kwargs.get('active'))
+        self.created_at = kwargs.get('created_at')
+
+    def __setattr__(self, name, value):
+        if name in ['active']:
+            value = bool(value)
+        super().__setattr__(name, value)
+
+class ApiKeys(DatabaseIterators):
+    def __init__(self):
+        super().__init__('ApiKey')
+
 class Invitation(DatabaseHelpers):
     def __init__(self, **kwargs):
         super().__init__('invitations', 'invitation_id')
@@ -628,6 +648,28 @@ class Subscribers(DatabaseIterators):
         super().__init__('Subscriber')
 
 class ActivityLog(DatabaseHelpers):
+    ACTION_USER_LOGIN = 'user_login'
+    ACTION_USER_LOGOUT = 'user_logout'
+    ACTION_DOMAIN_VERIFICATION_CHECK = 'domain_verification_check'
+    ACTION_DOMAIN_METADATA_CHECK = 'domain_metadata_check'
+    ACTION_CREATE_PROJECT = 'create_project'
+    ACTION_ADDED_IPADDRESS = 'added_ipaddress'
+    ACTION_ADDED_DOMAIN = 'added_domain'
+    ACTION_ENABLE_DOMAIN = 'enabled_domain_automation'
+    ACTION_DISABLE_DOMAIN = 'disabled_domain_automation'
+    ACTION_ENABLE_PROJECT = 'enabled_project_automation'
+    ACTION_DISABLE_PROJECT = 'disabled_project_automation'
+    ACTION_DELETE_DOMAIN = 'deleted_domain'
+    ACTION_DELETE_PROJECT = 'deleted_project'
+    ACTION_ON_DEMAND_SCAN = 'on_demand_scan'
+    ACTION_USER_CHANGED_PASSWORD = 'user_changed_password'
+    ACTION_USER_CHANGE_EMAIL_REQUEST = 'user_change_email_request'
+    ACTION_USER_CHANGED_PASSWORD = 'user_changed_password'
+    ACTION_USER_RESET_PASSWORD_REQUEST = 'user_reset_password_request'
+    ACTION_USER_CREATED_INVITATION = 'user_created_invitation'
+    ACTION_USER_CHANGED_ACCOUNT = 'user_changed_account'
+    ACTION_USER_CHANGED_MEMBER = 'user_changed_member'
+
     def __init__(self, **kwargs):
         super().__init__('activity_logs', 'activity_log_id')
         self.activity_log_id = kwargs.get('activity_log_id')

@@ -48,6 +48,6 @@ if ! [[ -d .venv ]]; then
 fi
 source .venv/bin/activate
 pip install -q -U setuptools pylint wheel awscli
-pip install -q -U --no-cache-dir --isolated -r ./docker/requirements.txt
-make common
+pip install -q -U --no-cache-dir --isolated -r ./requirements.txt
 make lint
+make package-local

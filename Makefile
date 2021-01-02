@@ -1,6 +1,7 @@
 SHELL := /bin/bash
 -include .env
 export $(shell sed 's/=.*//' .env)
+LOCAL_CACHE = /tmp/trivialsec
 
 .PHONY: help
 
@@ -39,6 +40,12 @@ lint: ## checks code quality
 
 package: wheel ## packages distribution
 	zip -9rq build.zip build/wheel
+
+package-local: package ## packages distribution for local dev
+	mkdir -p $(LOCAL_CACHE)
+	cp -fu dist/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl $(LOCAL_CACHE)/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl
+	cp -fu build.zip $(LOCAL_CACHE)/build.zip
+	$(CMD_AWS) s3 cp --only-show-errors dist/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl s3://cloudformation-trivialsec/deploy-packages/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl
 
 package-upload: package ## uploads distribution to s3
 	$(CMD_AWS) s3 cp --only-show-errors dist/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl s3://cloudformation-trivialsec/deploy-packages/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl

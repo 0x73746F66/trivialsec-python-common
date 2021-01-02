@@ -1,9 +1,8 @@
-from functools import wraps
 from os import path, getenv
 from socket import gethostbyname, error as SocketError, getaddrinfo, AF_INET6, AF_INET
 from base64 import urlsafe_b64encode
 from datetime import datetime
-from urllib.parse import urlparse, urlencode
+from urllib.parse import urlparse, urlencode, parse_qs
 import re
 import time
 import logging
@@ -26,6 +25,7 @@ from requests.adapters import HTTPAdapter
 from requests.exceptions import ReadTimeout, ConnectTimeout
 from urllib3.connectionpool import HTTPSConnectionPool
 from urllib3.poolmanager import PoolManager, SSL_KEYWORDS
+from flask import request
 from .log_manager import logger
 from .config import config
 
@@ -522,6 +522,41 @@ class HTTPMetadata:
 
         return self
 
+def request_body():
+    body1 = request.get_json() or {}
+    data = request.stream.read()
+    body = parse_qs(data.decode('unicode-escape'))
+    body2 = {}
+    for _, key in enumerate(body):
+        if isinstance(body[key], list) and len(body[key]) == 1:
+            val = body[key][0]
+        else:
+            val = body[key]
+        ktype = None
+        if key[-2:] == '[]':
+            ktype = list
+        if key[-1:] == ']' and '[' in key:
+            ktype = dict
+        if ktype:
+            new_key = key[:key.find('[')]
+            if new_key not in body2:
+                if ktype == list:
+                    body2[new_key] = []
+                    body2[new_key].append(val)
+            elif ktype == list:
+                body2[new_key].append(val)
+            if ktype == dict:
+                dkey = key[key.find('[')+1:key.find(']')]
+                if new_key not in body2:
+                    body2[new_key] = {}
+                body2[new_key][dkey] = val
+        else:
+            body2[key] = val
+
+    new_body = {**body1, **body2}
+
+    return new_body
+
 @retry((SocketError), tries=5, delay=1.5, backoff=3)
 def download_file(remote_file: str, temp_name: str = None, temp_dir: str = '/tmp'):
     cached = False
@@ -588,7 +623,7 @@ def download_file(remote_file: str, temp_name: str = None, temp_dir: str = '/tmp
     return temp_path, cached
 
 @retry((SocketError), tries=5, delay=1.5, backoff=3, logger=logger)
-def http_status(url: str)->(int, str):
+def http_status(url: str):
     session = requests.Session()
     try:
         resp = session.head(url, verify=url.startswith('https'), allow_redirects=False, timeout=3)
@@ -599,6 +634,11 @@ def http_status(url: str)->(int, str):
         return 504, HTTPMetadata.HTTP_504
 
     return code, status
+
+def check_password_policy(passwd: str) -> bool:
+    if len(passwd) < 16:
+        return False
+    return True
 
 def check_domain_rules(domain_name: str):
     # TODO implement
@@ -647,27 +687,6 @@ def hash_password(password):
 
 def check_encrypted_password(password, hashed):
     return pbkdf2_sha256.verify(password, hashed)
-
-def control_timing_attacks(seconds: float):
-    def deco(func):
-        @wraps(func)
-        def f_retry(*args, **kwargs):
-            start = time.time()
-            try:
-                ret = func(*args, **kwargs)
-            except Exception as err:
-                ret = err
-            end = time.time()
-            elapsed_time = end - start
-            logger.debug(f'elapsed_time {elapsed_time}')
-            if elapsed_time < seconds:
-                remaining = seconds - elapsed_time - 0.03
-                time.sleep(remaining)
-            return ret
-
-        return f_retry
-    return deco
-
 def get_boto3_client(service: str, region_name: str, aws_profile: str = None, role_arn: str = None):
     boto_params = {
         'service_name': service,
