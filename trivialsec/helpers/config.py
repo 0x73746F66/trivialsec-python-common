@@ -103,6 +103,9 @@ class Config:
             'host_scheme': self.frontend.get('site_scheme'),
             'host_domain': self.frontend.get('site_domain'),
             'host_url': f"{self.frontend.get('site_scheme')}{self.frontend.get('site_domain')}",
+            'api_scheme': self.frontend.get('api_scheme'),
+            'api_domain': self.frontend.get('api_domain'),
+            'api_url': f"{self.frontend.get('api_scheme')}{self.frontend.get('api_domain')}",
             'socket_scheme': self.frontend.get('socket_scheme'),
             'socket_domain': self.frontend.get('socket_domain'),
             'socket_url': f"{self.frontend.get('socket_scheme')}{self.frontend.get('socket_domain')}"
