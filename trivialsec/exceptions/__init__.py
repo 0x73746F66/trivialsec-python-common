@@ -1,3 +1,6 @@
+__module__ = 'trivialsec.exceptions'
+
+
 class AppError(Exception):
     pass
 

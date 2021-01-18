@@ -2,6 +2,7 @@ import time
 import json
 import redis
 import mysql.connector
+from datetime import timedelta
 from retry.api import retry
 from .config import config
 from .log_manager import logger
@@ -10,7 +11,6 @@ from .log_manager import logger
 class MySQLDatabase:
     con = None
     cur = None
-    cache_ttl = config.redis.get('ttl', 300)
     retry_count = 0
     user = None
     password = None
@@ -79,7 +79,11 @@ class MySQLDatabase:
 
         return self
 
-    def query_one(self, sql, params=None, cache_key: str = None, invalidations: list = None):
+    def invalidate_cache(self, invalidations: list):
+        for invalidation_key in invalidations:
+            self.redis.delete(f'{config.app_version}{invalidation_key}')
+
+    def query_one(self, sql, params=None, cache_key: str = None, invalidations: list = None, cache_ttl: timedelta = timedelta(seconds=int(config.redis.get('ttl', 300)))):
         if cache_key:
             redis_value = self._get_from_redis(cache_key)
             if redis_value is not None:
@@ -99,15 +103,14 @@ class MySQLDatabase:
                 index += 1
         response = data if data else row
         if cache_key and response is not None:
-            self._save_to_redis(cache_key, response)
+            self._save_to_redis(cache_key, response, cache_ttl)
             response = self._get_from_redis(cache_key)
         if invalidations is not None:
-            for invalidation_key in invalidations:
-                self.redis.delete(invalidation_key)
+            self.invalidate_cache(invalidations)
 
         return response
 
-    def table_cols(self, table):
+    def table_cols(self, table, cache_ttl: timedelta = timedelta(seconds=int(config.redis.get('ttl', 300)))):
         cache_key = f'{table}/columns'
         logger.debug(f'checking cache {cache_key}')
         redis_value = self._get_from_redis(cache_key)
@@ -125,12 +128,12 @@ class MySQLDatabase:
         logger.debug(cols)
         self.cur.close()
         if len(cols) > 0:
-            self._save_to_redis(cache_key, cols)
+            self._save_to_redis(cache_key, cols, cache_ttl)
             cols = self._get_from_redis(cache_key)
 
         return cols
 
-    def query(self, sql, params=None, cache_key: str = None, invalidations: list = None):
+    def query(self, sql, params=None, cache_key: str = None, invalidations: list = None, cache_ttl: timedelta = timedelta(seconds=int(config.redis.get('ttl', 300)))):
         if cache_key is not None:
             redis_value = self._get_from_redis(cache_key)
             if redis_value is not None:
@@ -157,11 +160,10 @@ class MySQLDatabase:
         logger.debug(results)
         self.cur.close()
         if cache_key and results is not None:
-            self._save_to_redis(cache_key, results)
+            self._save_to_redis(cache_key, results, cache_ttl)
             results = self._get_from_redis(cache_key)
         if invalidations is not None:
-            for invalidation_key in invalidations:
-                self.redis.delete(invalidation_key)
+            self.invalidate_cache(invalidations)
 
         return results
 
@@ -169,31 +171,25 @@ class MySQLDatabase:
         redis_value = None
         try:
             if isinstance(cache_key, str):
-                redis_value = self.redis.get(cache_key)
+                redis_value = self.redis.get(f'{config.app_version}{cache_key}')
                 logger.debug(f'{cache_key} {redis_value}')
         except Exception as ex:
             logger.exception(ex)
             return None
 
-        if redis_value:
-            redis_dict = json.loads(redis_value.decode())
-            if '_v' in redis_dict \
-                and 'data' in redis_dict \
-                and redis_dict['data'] is not None \
-                and redis_dict['_v'] == config.app_version:
-                logger.debug(f'CACHE HIT {cache_key}')
-                return redis_dict['data']
+        if redis_value is not None:
+            logger.debug(f'CACHE HIT {cache_key}')
+            return json.loads(redis_value.decode())
+
         logger.debug(f'CACHE MISS {cache_key}')
         return None
 
-    def _save_to_redis(self, cache_key: str, results):
-        redis_data = {'_v': config.app_version}
+    def _save_to_redis(self, cache_key: str, results, cache_ttl: timedelta = timedelta(seconds=int(config.redis.get('ttl', 300)))):
+        redis_data = results
         if isinstance(results, set):
-            redis_data['data'] = list(results)
-        else:
-            redis_data['data'] = results
+            redis_data = list(results)
         logger.debug(f'CACHE STORE {cache_key}')
         str_value = json.dumps(redis_data, default=str)
-        return self.redis.set(cache_key, str_value, ex=self.cache_ttl)
+        return self.redis.set(f'{config.app_version}{cache_key}', str_value, ex=cache_ttl)
 
 mysql_adapter = MySQLDatabase(**config.mysql)

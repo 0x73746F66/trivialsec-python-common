@@ -47,7 +47,7 @@ class LogManager:
         file_handler.setFormatter(formatter)
         self.log.addHandler(file_handler)
 
-    def create_stream_logger(self, colourise: bool = False, format_str: str = None, date_format: str = None):
+    def create_stream_logger(self, colourise: bool = True, format_str: str = None, date_format: str = None):
         stream_handler = logging.StreamHandler()
         if format_str is None:
             format_str = self.format_str

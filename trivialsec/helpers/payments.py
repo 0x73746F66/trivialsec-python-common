@@ -5,7 +5,8 @@ from retry.api import retry
 from decimal import Decimal, ROUND_DOWN
 from trivialsec.helpers.log_manager import logger
 from trivialsec.helpers.config import config
-from trivialsec import models
+from trivialsec.models import Plan
+
 
 stripe.api_version = "2020-08-27"
 stripe.api_key = config.stripe_secret_key
@@ -119,7 +120,7 @@ def webhook_received(request):
     logger.info(f"[{event_type}]\n{data}")
 
     if event_type == 'payment_intent.succeeded':
-        plan = models.Plan(stripe_customer_id=data['customer'])
+        plan = Plan(stripe_customer_id=data['customer'])
         plan.hydrate('stripe_customer_id')
         plan.stripe_payment_method_id = data['charges']['data'][0]['payment_method']
         plan.stripe_card_brand = data['charges']['data'][0]['payment_method_details']['card']['brand']
@@ -129,7 +130,7 @@ def webhook_received(request):
         plan.persist()
 
     elif event_type == 'invoice.paid':
-        plan = models.Plan(stripe_customer_id=data['customer'])
+        plan = Plan(stripe_customer_id=data['customer'])
         plan.hydrate('stripe_customer_id')
         plan.currency = data['currency'].upper()
         plan.cost = Decimal(int(data['subtotal'])/100).quantize(Decimal('.01'), rounding=ROUND_DOWN)

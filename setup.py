@@ -11,7 +11,8 @@ setup(
         'trivialsec/exceptions',
         'trivialsec/helpers',
         'trivialsec/models',
-        'trivialsec/decorators'
+        'trivialsec/decorators',
+        'trivialsec/services'
     ],
     classifiers=[
         'Programming Language :: Python :: 3.8',
@@ -32,9 +33,7 @@ setup(
         'stripe>=2.51<2.52',
         'pysafebrowsing>=0.1.1<1.0',
         'pyOpenSSL>=19.1.0<20.0',
-        'beautifulsoup4>=4.9.3<5.0',
-        'Flask==1.1.2',
-        'flask-login==0.5.0'
+        'beautifulsoup4>=4.9.3<5.0'
     ],
     include_package_data=True
 )

@@ -58,7 +58,7 @@ class Config:
         self.nameservers: list = list(set(app_conf.get('nameservers', list())))
         self.external_dsn_provider: str = self.nameservers[0]
         self.queue_wait_timeout: int = app_conf.get('queue_wait_timeout', 5)
-        self.mysql['password']: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/MysqlPassword')
+        self.mysql['password'] = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/MysqlPassword')
         self.session_secret_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/SessionSecretKey')
         self.recaptcha_secret_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/RecaptchaSecretKey')
         self.recaptcha_site_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/RecaptchaSiteKey')
