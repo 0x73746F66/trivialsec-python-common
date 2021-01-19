@@ -42,7 +42,7 @@ def validate(raw: str, request_method: str, uri: str, headers: dict, not_before_
         return None
     # fetch the correct shared-secret from database using ApiKey
     api_key = ApiKey(api_key=incoming_headers.get("apikey"))
-    api_key.hydrate()
+    api_key.hydrate(ttl_seconds=3)
     if api_key.api_key_secret is None:
         logger.info(f'Missing api_key: {incoming_headers.get("apikey")}')
         return None
