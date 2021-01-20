@@ -938,7 +938,7 @@ class Domain(DatabaseHelpers):
                     created_at=now
                 ).persist()
             if isinstance(self._http_metadata.server_certificate, X509):
-                serial_number = self._http_metadata.server_certificate.get_serial()
+                serial_number = self._http_metadata.server_certificate.get_serial_number()
                 DomainStat(
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_CERTIFICATE,
