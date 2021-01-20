@@ -6,6 +6,7 @@ from decimal import Decimal, ROUND_DOWN
 from datetime import datetime, timedelta
 from random import shuffle, choice
 from string import ascii_lowercase
+from OpenSSL.crypto import X509, X509Name
 from trivialsec.helpers.log_manager import logger
 from trivialsec.helpers.database import mysql_adapter
 from trivialsec.helpers.transport import HTTPMetadata
@@ -936,31 +937,33 @@ class Domain(DatabaseHelpers):
                     domain_value=self._http_metadata.pubkey_type,
                     created_at=now
                 ).persist()
-            if self._http_metadata.server_certificate.get('serialNumber'):
+            if isinstance(self._http_metadata.server_certificate, X509):
+                serial_number = self._http_metadata.server_certificate.get_serial()
                 DomainStat(
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_CERTIFICATE,
-                    domain_value=self._http_metadata.server_certificate.get('serialNumber'),
-                    domain_data=self._http_metadata.server_certificate,
+                    domain_value=serial_number,
+                    domain_data=json.dumps(self._http_metadata.server_certificate),
                     created_at=now
                 ).persist()
-            for issuer in self._http_metadata.server_certificate.get('issuer'):
-                if issuer[0][0] == 'commonName':
-                    DomainStat(
-                        domain_id=self.domain_id,
-                        domain_stat=DomainStat.HTTP_CERTIFICATE_ISSUER,
-                        domain_value=issuer[0][1],
-                        created_at=now
-                    ).persist()
-                if issuer[0][0] == 'countryName':
-                    DomainStat(
-                        domain_id=self.domain_id,
-                        domain_stat=DomainStat.HTTP_CERTIFICATE_ISSUER_COUNTRY,
-                        domain_value=issuer[0][1],
-                        created_at=now
-                    ).persist()
-            if self._http_metadata.server_certificate.get('notBefore'):
-                issued = datetime.strptime(self._http_metadata.server_certificate.get('notBefore'), HTTPMetadata.SSL_DATE_FMT)
+
+                issuer: X509Name = self._http_metadata.server_certificate.get_issuer()
+                DomainStat(
+                    domain_id=self.domain_id,
+                    domain_stat=DomainStat.HTTP_CERTIFICATE_ISSUER,
+                    domain_value=issuer.commonName,
+                    domain_data=json.dumps(issuer),
+                    created_at=now
+                ).persist()
+                DomainStat(
+                    domain_id=self.domain_id,
+                    domain_stat=DomainStat.HTTP_CERTIFICATE_ISSUER_COUNTRY,
+                    domain_value=issuer.countryName,
+                    domain_data=json.dumps(issuer),
+                    created_at=now
+                ).persist()
+
+                issued = datetime.strptime(self._http_metadata.server_certificate.get_notBefore(), HTTPMetadata.SSL_DATE_FMT)
                 DomainStat(
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_CERTIFICATE_ISSUED,
@@ -968,8 +971,8 @@ class Domain(DatabaseHelpers):
                     domain_data=f'{(datetime.utcnow() - issued).days} days ago',
                     created_at=now
                 ).persist()
-            if self._http_metadata.server_certificate.get('notAfter'):
-                expires = datetime.strptime(self._http_metadata.server_certificate.get('notAfter'), HTTPMetadata.SSL_DATE_FMT)
+
+                expires = datetime.strptime(self._http_metadata.server_certificate.get_notAfter(), HTTPMetadata.SSL_DATE_FMT)
                 DomainStat(
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_CERTIFICATE_EXPIRY,
