@@ -237,12 +237,11 @@ class HTTPMetadata:
         try:
             self.negotiated_cipher, protocol, _ = conn.sock.cipher()
             self.protocol_version = conn.sock.version() or protocol
-            self.server_certificate = conn.sock.getpeercert()
             der = conn.sock.getpeercert(True)
-            certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_ASN1, der)
-            self.signature_algorithm = certificate.get_signature_algorithm().decode('ascii')
-            self.sha1_fingerprint = certificate.digest('sha1').decode('ascii')
-            public_key = certificate.get_pubkey()
+            self.server_certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_ASN1, der)
+            self.signature_algorithm = self.server_certificate.get_signature_algorithm().decode('ascii')
+            self.sha1_fingerprint = self.server_certificate.digest('sha1').decode('ascii')
+            public_key = self.server_certificate.get_pubkey()
             self.pubkey_type = 'RSA' if public_key.type() == OpenSSL.crypto.TYPE_RSA else 'DSA'
             self.server_key_size = public_key.bits()
 
