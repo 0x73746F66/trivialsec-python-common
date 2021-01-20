@@ -29,8 +29,9 @@ def validate(raw: str, request_method: str, uri: str, headers: dict, not_before_
         logger.debug(f'X-Digest [{incoming_headers.get("digest")}] not supported')
         return None
     # base64 encode json for signing
+    b64 = ''
     if raw:
-        raw = urlsafe_b64encode(raw.encode('ascii')).decode('ascii')
+        b64 = urlsafe_b64encode(raw.strip().encode('ascii')).decode('ascii')
     # not_before prevents replay attacks
     incoming_date = incoming_headers.get('date')
     compare_date = datetime.fromisoformat(incoming_date if not incoming_date.endswith('+00:00') else incoming_date[:-6])
@@ -47,7 +48,7 @@ def validate(raw: str, request_method: str, uri: str, headers: dict, not_before_
         logger.info(f'Missing api_key: {incoming_headers.get("apikey")}')
         return None
     # Signing structure
-    signing_data = bytes(f'{request_method}\n{uri}\n{incoming_date}\n{raw}'.strip("\n"), 'utf-8')
+    signing_data = bytes(f'{request_method}\n{uri}\n{incoming_date}\n{b64}'.strip("\n"), 'utf-8')
     # Sign HMAC using server-side secret
     compare_hmac = hmac.new(bytes(api_key.api_key_secret, 'utf-8'), signing_data, supported_digests.get(incoming_headers.get("digest"))).hexdigest()
     # Compare server-side HMAC with client provided HMAC
