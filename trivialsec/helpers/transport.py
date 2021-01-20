@@ -285,11 +285,11 @@ class HTTPMetadata:
                 'http': config.http_proxy,
                 'https': config.https_proxy
             }
-        session = requests.Session()
-        if self.url.startswith('https'):
-            session.mount(self.url, TLSInspectorAdapter(self._connection_inspector))
-        method_callable = getattr(session, self.method)
         try:
+            session = requests.Session()
+            if self.url.startswith('https'):
+                session.mount(self.url, TLSInspectorAdapter(self._connection_inspector))
+            method_callable = getattr(session, self.method)
             resp = method_callable(self.url,
                 verify=verify_tls,
                 allow_redirects=allow_redirects,
