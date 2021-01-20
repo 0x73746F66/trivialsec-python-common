@@ -249,26 +249,24 @@ class HTTPMetadata:
         except MaxRetryError:
             self.code = 503
             self.reason = self.HTTP_503
-
         except SSLError:
             self.code = 500
             self.reason = self.TLS_ERROR
-
         except ConnectionResetError:
             self.code = 503
             self.reason = self.HTTP_503
-
         except NewConnectionError:
             self.code = 503
             self.reason = self.HTTP_503
-
         except ConnectionError:
             self.code = 503
             self.reason = self.HTTP_503
-
         except ConnectTimeoutError:
             self.code = 598
             self.reason = self.HTTP_598
+        except SocketError:
+            self.code = 503
+            self.reason = self.HTTP_503
 
     def head(self, verify_tls: bool = False, allow_redirects: bool = False):
         self.method = 'head'
@@ -320,34 +318,30 @@ class HTTPMetadata:
         except ReadTimeout:
             self.code = 504
             self.reason = self.HTTP_504
-
         except MaxRetryError:
             self.code = 503
             self.reason = self.HTTP_503
-
         except SSLError:
             self.code = 500
             self.reason = self.TLS_ERROR
-
         except ConnectTimeout:
             self.code = 599
             self.reason = self.HTTP_599
-
         except ConnectionResetError:
             self.code = 503
             self.reason = self.HTTP_503
-
         except NewConnectionError:
             self.code = 503
             self.reason = self.HTTP_503
-
         except ConnectionError:
             self.code = 503
             self.reason = self.HTTP_503
-
         except ConnectTimeoutError:
             self.code = 598
             self.reason = self.HTTP_598
+        except SocketError:
+            self.code = 503
+            self.reason = self.HTTP_503
 
         return self
 
@@ -452,6 +446,8 @@ class HTTPMetadata:
             err = str(ex)
         except ConnectTimeout:
             err = 'DNS Timeout'
+        except ConnectTimeoutError:
+            err = 'DNS Timeout'
         except MaxRetryError:
             err = 'DNS Max Retry'
         except ConnectionResetError:
@@ -460,8 +456,8 @@ class HTTPMetadata:
             err = 'Name or service not known'
         except ConnectionError:
             err = 'Name or service not known'
-        except ConnectTimeoutError:
-            err = 'DNS Timeout'
+        except SocketError:
+            err = 'Name or service not known'
 
         return res, err
 
