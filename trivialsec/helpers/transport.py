@@ -253,7 +253,6 @@ class HTTPMetadata:
         self.method = 'get'
         return self.fetch(verify_tls=verify_tls, allow_redirects=allow_redirects)
 
-    @retry((SocketError), tries=5, delay=1.5, backoff=3)
     def fetch(self, verify_tls: bool = False, allow_redirects: bool = False, http_timeout: int = 3):
         proxies = None
         if config.http_proxy or config.https_proxy:
