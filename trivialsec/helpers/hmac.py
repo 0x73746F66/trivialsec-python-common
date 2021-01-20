@@ -47,6 +47,9 @@ def validate(raw: str, request_method: str, uri: str, headers: dict, not_before_
     if api_key.api_key_secret is None:
         logger.info(f'Missing api_key: {incoming_headers.get("apikey")}')
         return None
+    if api_key.active is not True:
+        logger.info(f'Disabled api_key: {incoming_headers.get("apikey")}')
+        return None
     # Signing structure
     signing_data = bytes(f'{request_method}\n{uri}\n{incoming_date}\n{b64}'.strip("\n"), 'utf-8')
     # Sign HMAC using server-side secret
