@@ -234,16 +234,37 @@ class HTTPMetadata:
     def _connection_inspector(self, host, port, conn):
         self.host = host
         self.port = port
-        self.negotiated_cipher, protocol, _ = conn.sock.cipher()
-        self.protocol_version = conn.sock.version() or protocol
-        self.server_certificate = conn.sock.getpeercert()
-        der = conn.sock.getpeercert(True)
-        certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_ASN1, der)
-        self.signature_algorithm = certificate.get_signature_algorithm().decode('ascii')
-        self.sha1_fingerprint = certificate.digest('sha1').decode('ascii')
-        public_key = certificate.get_pubkey()
-        self.pubkey_type = 'RSA' if public_key.type() == OpenSSL.crypto.TYPE_RSA else 'DSA'
-        self.server_key_size = public_key.bits()
+        try:
+            self.negotiated_cipher, protocol, _ = conn.sock.cipher()
+            self.protocol_version = conn.sock.version() or protocol
+            self.server_certificate = conn.sock.getpeercert()
+            der = conn.sock.getpeercert(True)
+            certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_ASN1, der)
+            self.signature_algorithm = certificate.get_signature_algorithm().decode('ascii')
+            self.sha1_fingerprint = certificate.digest('sha1').decode('ascii')
+            public_key = certificate.get_pubkey()
+            self.pubkey_type = 'RSA' if public_key.type() == OpenSSL.crypto.TYPE_RSA else 'DSA'
+            self.server_key_size = public_key.bits()
+
+        except MaxRetryError:
+            self.code = 503
+            self.reason = self.HTTP_503
+
+        except SSLError:
+            self.code = 500
+            self.reason = self.TLS_ERROR
+
+        except ConnectionResetError:
+            self.code = 503
+            self.reason = self.HTTP_503
+
+        except ConnectionError:
+            self.code = 503
+            self.reason = self.HTTP_503
+
+        except ConnectTimeoutError:
+            self.code = 598
+            self.reason = self.HTTP_598
 
     def head(self, verify_tls: bool = False, allow_redirects: bool = False):
         self.method = 'head'
