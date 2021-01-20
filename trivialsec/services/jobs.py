@@ -6,7 +6,6 @@ class QueueData:
     def __init__(self, **kwargs):
         self.job_run_id = kwargs.get('job_run_id')
         self.queue_name = kwargs.get('queue_name')
-        self.tracking_id = kwargs.get('tracking_id')
         self.scan_type = kwargs.get('scan_type')
         self.is_passive = kwargs.get('scan_type') == 'passive'
         self.is_active = kwargs.get('scan_type') == 'active'
@@ -34,7 +33,6 @@ class QueueData:
             'job_run_id': self.job_run_id,
             'target': self.target,
             'queue_name': self.queue_name,
-            'tracking_id': self.tracking_id,
             'service_type': {
                 'type_id': self.service_type_id,
                 'name': self.service_type_name,
@@ -42,10 +40,9 @@ class QueueData:
             }
         }.items()
 
-def queue_job(tracking_id: str, params: dict, service_type: ServiceType, member: Member, project=Project, priority: int = 0) -> JobRun:
+def queue_job(params: dict, service_type: ServiceType, member: Member, project=Project, priority: int = 0) -> JobRun:
     queue_data = QueueData(
         scan_type=params.get('scan_type', 'passive'),
-        tracking_id=tracking_id,
         service_type_id=service_type.service_type_id,
         service_type_name=service_type.name,
         service_type_category=service_type.category,
@@ -54,14 +51,14 @@ def queue_job(tracking_id: str, params: dict, service_type: ServiceType, member:
     new_job_run = JobRun(
         account_id=member.account_id,
         project_id=project.project_id,
-        tracking_id=tracking_id,
         service_type_id=service_type.service_type_id,
         queue_data=str(queue_data),
         state=ServiceType.STATE_QUEUED,
         priority=priority
     )
     if not new_job_run.persist():
-        raise ValueError(f'tracking_id {tracking_id} persist error')
+        raise ValueError(f'queue_job {queue_data.target} persist error')
+
     ActivityLog(
         member_id=member.member_id,
         action=ActivityLog.ACTION_ON_DEMAND_SCAN,

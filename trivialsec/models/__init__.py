@@ -744,7 +744,6 @@ class Project(DatabaseHelpers):
         self.project_id = kwargs.get('project_id')
         self.account_id = kwargs.get('account_id')
         self.name = kwargs.get('name')
-        self.tracking_id = kwargs.get('tracking_id')
         self.created_at = kwargs.get('created_at')
         self.deleted = bool(kwargs.get('deleted'))
 
@@ -1311,7 +1310,6 @@ class JobRun(DatabaseHelpers):
         self.job_run_id = kwargs.get('job_run_id')
         self.account_id = kwargs.get('account_id')
         self.project_id = kwargs.get('project_id')
-        self.tracking_id = kwargs.get('tracking_id')
         self.service_type_id = kwargs.get('service_type_id')
         self.node_id = kwargs.get('node_id')
         self.worker_id = kwargs.get('worker_id')
