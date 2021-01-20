@@ -166,6 +166,7 @@ class HTTPMetadata:
     HTTP_599 = 'Network connect timeout error'
     TLS_ERROR = 'TLS handshake failure'
     SSL_DATE_FMT = r'%b %d %H:%M:%S %Y %Z'
+    _json_certificate = None
     signature_algorithm = None
     negotiated_cipher = None
     protocol_version = None
@@ -197,7 +198,7 @@ class HTTPMetadata:
             'signature_algorithm': self.signature_algorithm,
             'negotiated_cipher': self.negotiated_cipher,
             'protocol_version': self.protocol_version,
-            'server_certificate': self.server_certificate,
+            'server_certificate': self._json_certificate,
             'server_key_size': self.server_key_size,
             'sha1_fingerprint': self.sha1_fingerprint,
             'pubkey_type': self.pubkey_type,
@@ -244,6 +245,7 @@ class HTTPMetadata:
             public_key = self.server_certificate.get_pubkey()
             self.pubkey_type = 'RSA' if public_key.type() == OpenSSL.crypto.TYPE_RSA else 'DSA'
             self.server_key_size = public_key.bits()
+            self._json_certificate = json.dumps(conn.sock.getpeercert())
 
         except MaxRetryError:
             self.code = 503

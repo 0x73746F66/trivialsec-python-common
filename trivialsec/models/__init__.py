@@ -943,7 +943,7 @@ class Domain(DatabaseHelpers):
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_CERTIFICATE,
                     domain_value=serial_number,
-                    domain_data=json.dumps(self._http_metadata.server_certificate),
+                    domain_data=self._http_metadata._json_certificate,
                     created_at=now
                 ).persist()
 
@@ -952,14 +952,14 @@ class Domain(DatabaseHelpers):
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_CERTIFICATE_ISSUER,
                     domain_value=issuer.commonName,
-                    domain_data=json.dumps(issuer),
+                    domain_data=self._http_metadata._json_certificate,
                     created_at=now
                 ).persist()
                 DomainStat(
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_CERTIFICATE_ISSUER_COUNTRY,
                     domain_value=issuer.countryName,
-                    domain_data=json.dumps(issuer),
+                    domain_data=self._http_metadata._json_certificate,
                     created_at=now
                 ).persist()
 
