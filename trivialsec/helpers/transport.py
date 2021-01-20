@@ -14,7 +14,7 @@ from retry.api import retry
 from requests.status_codes import _codes
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ReadTimeout, ConnectTimeout
-from urllib3.exceptions import ConnectTimeoutError, SSLError
+from urllib3.exceptions import ConnectTimeoutError, SSLError, MaxRetryError
 from urllib3.connectionpool import HTTPSConnectionPool
 from urllib3.poolmanager import PoolManager, SSL_KEYWORDS
 from .log_manager import logger
@@ -295,6 +295,10 @@ class HTTPMetadata:
         except ReadTimeout:
             self.code = 504
             self.reason = self.HTTP_504
+
+        except MaxRetryError:
+            self.code = 503
+            self.reason = self.HTTP_503
 
         except SSLError:
             self.code = 500
