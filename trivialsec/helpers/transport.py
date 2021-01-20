@@ -14,7 +14,7 @@ from retry.api import retry
 from requests.status_codes import _codes
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ReadTimeout, ConnectTimeout
-from urllib3.exceptions import ConnectTimeoutError, SSLError, MaxRetryError
+from urllib3.exceptions import ConnectTimeoutError, SSLError, MaxRetryError, NewConnectionError
 from urllib3.connectionpool import HTTPSConnectionPool
 from urllib3.poolmanager import PoolManager, SSL_KEYWORDS
 from .log_manager import logger
@@ -258,6 +258,10 @@ class HTTPMetadata:
             self.code = 503
             self.reason = self.HTTP_503
 
+        except NewConnectionError:
+            self.code = 503
+            self.reason = self.HTTP_503
+
         except ConnectionError:
             self.code = 503
             self.reason = self.HTTP_503
@@ -330,6 +334,10 @@ class HTTPMetadata:
             self.reason = self.HTTP_599
 
         except ConnectionResetError:
+            self.code = 503
+            self.reason = self.HTTP_503
+
+        except NewConnectionError:
             self.code = 503
             self.reason = self.HTTP_503
 
@@ -443,6 +451,16 @@ class HTTPMetadata:
         except DNSException as ex:
             err = str(ex)
         except ConnectTimeout:
+            err = 'DNS Timeout'
+        except MaxRetryError:
+            err = 'DNS Max Retry'
+        except ConnectionResetError:
+            err = 'Connection reset by peer'
+        except NewConnectionError:
+            err = 'Name or service not known'
+        except ConnectionError:
+            err = 'Name or service not known'
+        except ConnectTimeoutError:
             err = 'DNS Timeout'
 
         return res, err
