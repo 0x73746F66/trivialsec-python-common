@@ -14,6 +14,7 @@ from retry.api import retry
 from requests.status_codes import _codes
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ReadTimeout, ConnectTimeout
+from urllib3.exceptions import ConnectTimeoutError, SSLError, ConnectionResetError
 from urllib3.connectionpool import HTTPSConnectionPool
 from urllib3.poolmanager import PoolManager, SSL_KEYWORDS
 from .log_manager import logger
@@ -159,8 +160,11 @@ class SafeBrowsing:
         return self.lookup_urls([url], platforms=platforms)[url]
 
 class HTTPMetadata:
-    HTTP_504 = 'Request Timeout'
+    HTTP_503 = 'Service Unavailable'
+    HTTP_504 = 'Gateway Timeout'
+    HTTP_598 = 'Network read timeout error'
     HTTP_599 = 'Network connect timeout error'
+    TLS_ERROR = 'TLS handshake failure'
     SSL_DATE_FMT = r'%b %d %H:%M:%S %Y %Z'
     signature_algorithm = None
     negotiated_cipher = None
@@ -293,13 +297,25 @@ class HTTPMetadata:
             self.code = 504
             self.reason = self.HTTP_504
 
+        except SSLError:
+            self.code = 500
+            self.reason = self.TLS_ERROR
+
         except ConnectTimeout:
             self.code = 599
             self.reason = self.HTTP_599
 
+        except ConnectionResetError:
+            self.code = 503
+            self.reason = self.HTTP_503
+
         except ConnectionError:
-            self.code = 599
-            self.reason = self.HTTP_599
+            self.code = 503
+            self.reason = self.HTTP_503
+
+        except ConnectTimeoutError:
+            self.code = 598
+            self.reason = self.HTTP_598
 
         return self
 
