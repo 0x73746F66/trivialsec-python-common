@@ -245,52 +245,55 @@ class DatabaseHelpers:
         self.__pk = pk
         self.__cols = set()
 
-    def hydrate(self, by_column = None, value=None, conditional: str = 'AND', no_cache: bool = False, ttl_seconds: int = None)->bool:
-        cache_key = f'{self.__table}/{self.__pk}/{self.__getattribute__(self.__pk)}'
-        if by_column is None:
-            by_column = self.__pk
+    def hydrate(self, by_column = None, value=None, conditional: str = 'AND', no_cache: bool = False, ttl_seconds: int = None) -> bool:
+        try:
+            cache_key = f'{self.__table}/{self.__pk}/{self.__getattribute__(self.__pk)}'
+            if by_column is None:
+                by_column = self.__pk
 
-        values = {}
-        conditionals = '1=1'
-        if isinstance(by_column, str):
-            conditionals = f' {by_column} = %({by_column})s '
-            values[by_column] = value if value is not None else self.__getattribute__(by_column)
-            cache_key = f'{self.__table}/{by_column}/{values[by_column]}'
-        elif isinstance(by_column, tuple):
-            by_column, value = by_column
-            conditionals = f' {by_column} = %({by_column})s '
-            values[by_column] = value
-            cache_key = f'{self.__table}/{by_column}/{values[by_column]}'
-        elif isinstance(by_column, list):
-            where = []
-            for str_tuple in by_column:
-                if isinstance(str_tuple, tuple):
-                    by_column, value = str_tuple
-                if isinstance(str_tuple, str):
-                    by_column = str_tuple
-                    values[by_column] = value if value is not None else self.__getattribute__(by_column)
-                where.append(f"{by_column} = %({by_column})s")
+            values = {}
+            conditionals = '1=1'
+            if isinstance(by_column, str):
+                conditionals = f' {by_column} = %({by_column})s '
+                values[by_column] = value if value is not None else self.__getattribute__(by_column)
+                cache_key = f'{self.__table}/{by_column}/{values[by_column]}'
+            elif isinstance(by_column, tuple):
+                by_column, value = by_column
+                conditionals = f' {by_column} = %({by_column})s '
+                values[by_column] = value
+                cache_key = f'{self.__table}/{by_column}/{values[by_column]}'
+            elif isinstance(by_column, list):
+                where = []
+                for str_tuple in by_column:
+                    if isinstance(str_tuple, tuple):
+                        by_column, value = str_tuple
+                    if isinstance(str_tuple, str):
+                        by_column = str_tuple
+                        values[by_column] = value if value is not None else self.__getattribute__(by_column)
+                    where.append(f"{by_column} = %({by_column})s")
 
-            conditionals = f' {conditional} '.join(where)
-            if self.__pk not in values:
-                cache_parts = [f'table|{self.__table}']
-                for col, dval in values.items():
-                    cache_parts.append(f'{col}|{dval}')
-                cache_parts.sort()
-                cache_key = '/'.join(cache_parts)
+                conditionals = f' {conditional} '.join(where)
+                if self.__pk not in values:
+                    cache_parts = [f'table|{self.__table}']
+                    for col, dval in values.items():
+                        cache_parts.append(f'{col}|{dval}')
+                    cache_parts.sort()
+                    cache_key = '/'.join(cache_parts)
 
-        if self.cache_key is None:
-            self.cache_key = cache_key
+            if self.cache_key is None:
+                self.cache_key = cache_key
 
-        result = None
-        sql = f"SELECT * FROM {self.__table} WHERE {conditionals} LIMIT 1"
-        with mysql_adapter as database:
-            result = database.query_one(sql, values, cache_key=None if no_cache is True else self.cache_key, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
-            if result:
+            sql = f"SELECT * FROM {self.__table} WHERE {conditionals} LIMIT 1"
+            with mysql_adapter as database:
+                result = database.query_one(sql, values, cache_key=None if no_cache is True else self.cache_key, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
                 for col, val in result.items():
                     setattr(self, col, val)
-                return True
-        return False
+
+        except Exception as ex:
+            logger.exception(ex)
+            return False
+
+        return True
 
     def exists(self, by_list: list = None, conditional: str = 'AND', ttl_seconds: int = None) -> bool:
         value = self.__getattribute__(self.__pk)
@@ -646,6 +649,7 @@ class Subscribers(DatabaseIterators):
 
 class ActivityLog(DatabaseHelpers):
     ACTION_USER_LOGIN = 'user_login'
+    ACTION_USER_KEY_ROTATE = 'user_key_rotation'
     ACTION_USER_LOGOUT = 'user_logout'
     ACTION_DOMAIN_VERIFICATION_CHECK = 'domain_verification_check'
     ACTION_DOMAIN_METADATA_CHECK = 'domain_metadata_check'
