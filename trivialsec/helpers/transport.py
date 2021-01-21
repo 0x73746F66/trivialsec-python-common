@@ -359,11 +359,15 @@ class HTTPMetadata:
                 'http': config.http_proxy,
                 'https': config.https_proxy
             }
-        self._content = requests.get(f'http://{self.host}',
-            allow_redirects=True,
-            proxies=proxies,
-            timeout=3
-        ).content
+        try:
+            self._content = requests.get(f'http://{self.host}',
+                allow_redirects=True,
+                proxies=proxies,
+                timeout=3
+            ).content
+
+        except Exception as ex:
+            logger.exception(ex)
 
         return self._content
 

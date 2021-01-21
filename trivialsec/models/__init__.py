@@ -835,13 +835,13 @@ class Domain(DatabaseHelpers):
         self._http_metadata = HTTPMetadata(f'http://{self.name}')
         self._http_metadata.head()
         self._http_metadata.url = f'https://{self.name}'
-        self._http_metadata.head()\
-            .get_site_content()\
+        html_content = self._http_metadata.head()\
             .verification_check()\
             .safe_browsing_check()\
             .phishtank_check()\
             .projecthoneypot()\
-            .honeyscore_check()
+            .honeyscore_check()\
+            .get_site_content()
 
         if self._http_metadata.signature_algorithm:
             DomainStat(
@@ -1062,11 +1062,11 @@ class Domain(DatabaseHelpers):
                 created_at=now
             ).persist()
 
-        if self._http_metadata.get_site_content():
+        if html_content:
             DomainStat(
                 domain_id=self.domain_id,
                 domain_stat=DomainStat.HTML_SIZE,
-                domain_value=len(self._http_metadata.get_site_content()),
+                domain_value=len(html_content),
                 created_at=now
             ).persist()
 
