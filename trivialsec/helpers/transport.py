@@ -316,8 +316,8 @@ class HTTPMetadata:
                     self.reason = 'Not Found'
                 else:
                     logger.error(f"Unexpected HTTP response code {resp.status_code} for URL {self.url}")
-            for header, directive in resp.headers.lower_items():
-                self.headers[header] = directive
+            for header, directive in resp.headers.items():
+                self.headers[header.lower()] = directive
 
         except ReadTimeout:
             self.code = 504
