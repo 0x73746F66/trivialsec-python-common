@@ -836,6 +836,7 @@ class Domain(DatabaseHelpers):
         self._http_metadata.head()
         self._http_metadata.url = f'https://{self.name}'
         self._http_metadata.head()\
+            .get_site_content()\
             .verification_check()\
             .safe_browsing_check()\
             .phishtank_check()\
@@ -943,7 +944,7 @@ class Domain(DatabaseHelpers):
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_CERTIFICATE,
                     domain_value=serial_number,
-                    domain_data=self._http_metadata._json_certificate,
+                    domain_data=self._http_metadata._json_certificate, # pylint: disable=protected-access
                     created_at=now
                 ).persist()
 
@@ -952,32 +953,34 @@ class Domain(DatabaseHelpers):
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_CERTIFICATE_ISSUER,
                     domain_value=issuer.commonName,
-                    domain_data=self._http_metadata._json_certificate,
+                    domain_data=self._http_metadata._json_certificate, # pylint: disable=protected-access
                     created_at=now
                 ).persist()
                 DomainStat(
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_CERTIFICATE_ISSUER_COUNTRY,
                     domain_value=issuer.countryName,
-                    domain_data=self._http_metadata._json_certificate,
+                    domain_data=self._http_metadata._json_certificate, # pylint: disable=protected-access
                     created_at=now
                 ).persist()
 
-                issued = datetime.strptime(self._http_metadata.server_certificate.get_notBefore(), HTTPMetadata.SSL_DATE_FMT)
+                notBefore = datetime.strptime(self._http_metadata.server_certificate.get_notBefore().decode('ascii'), HTTPMetadata.X509_DATE_FMT)
+                logger.info(f'notBefore {self._http_metadata.server_certificate.get_notBefore()} {notBefore}')
                 DomainStat(
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_CERTIFICATE_ISSUED,
-                    domain_value=issued.isoformat(),
-                    domain_data=f'{(datetime.utcnow() - issued).days} days ago',
+                    domain_value=notBefore.isoformat(),
+                    domain_data=f'{(datetime.utcnow() - notBefore).days} days ago',
                     created_at=now
                 ).persist()
 
-                expires = datetime.strptime(self._http_metadata.server_certificate.get_notAfter(), HTTPMetadata.SSL_DATE_FMT)
+                notAfter = datetime.strptime(self._http_metadata.server_certificate.get_notAfter().decode('ascii'), HTTPMetadata.X509_DATE_FMT)
+                logger.info(f'notAfter {self._http_metadata.server_certificate.get_notAfter()} {notAfter}')
                 DomainStat(
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_CERTIFICATE_EXPIRY,
-                    domain_value=expires.isoformat(),
-                    domain_data=f'Expired {(datetime.utcnow() - expires).days} days ago' if expires < datetime.utcnow() else f'Valid for {(expires - datetime.utcnow()).days} days',
+                    domain_value=notAfter.isoformat(),
+                    domain_data=f'Expired {(datetime.utcnow() - notAfter).days} days ago' if notAfter < datetime.utcnow() else f'Valid for {(notAfter - datetime.utcnow()).days} days',
                     created_at=now
                 ).persist()
 
@@ -1050,6 +1053,22 @@ class Domain(DatabaseHelpers):
             domain_data=self._http_metadata.safe_browsing,
             created_at=now
         ).persist()
+
+        if self._http_metadata.get_site_title():
+            DomainStat(
+                domain_id=self.domain_id,
+                domain_stat=DomainStat.HTML_TITLE,
+                domain_value=self._http_metadata.get_site_title(),
+                created_at=now
+            ).persist()
+
+        if self._http_metadata.get_site_content():
+            DomainStat(
+                domain_id=self.domain_id,
+                domain_stat=DomainStat.HTML_SIZE,
+                domain_value=len(self._http_metadata.get_site_content()),
+                created_at=now
+            ).persist()
 
         domain_stat = DomainStat(
             domain_id=self.domain_id,

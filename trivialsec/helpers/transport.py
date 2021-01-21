@@ -160,13 +160,16 @@ class SafeBrowsing:
         return self.lookup_urls([url], platforms=platforms)[url]
 
 class HTTPMetadata:
+    _json_certificate = None
+    _content = None
+
     HTTP_503 = 'Service Unavailable'
     HTTP_504 = 'Gateway Timeout'
     HTTP_598 = 'Network read timeout error'
     HTTP_599 = 'Network connect timeout error'
     TLS_ERROR = 'TLS handshake failure'
     SSL_DATE_FMT = r'%b %d %H:%M:%S %Y %Z'
-    _json_certificate = None
+    X509_DATE_FMT = r'%Y%m%d%H%M%SZ'
     signature_algorithm = None
     negotiated_cipher = None
     protocol_version = None
@@ -198,7 +201,7 @@ class HTTPMetadata:
             'signature_algorithm': self.signature_algorithm,
             'negotiated_cipher': self.negotiated_cipher,
             'protocol_version': self.protocol_version,
-            'server_certificate': self._json_certificate,
+            'server_certificate': json.loads(self._json_certificate),
             'server_key_size': self.server_key_size,
             'sha1_fingerprint': self.sha1_fingerprint,
             'pubkey_type': self.pubkey_type,
@@ -245,7 +248,7 @@ class HTTPMetadata:
             public_key = self.server_certificate.get_pubkey()
             self.pubkey_type = 'RSA' if public_key.type() == OpenSSL.crypto.TYPE_RSA else 'DSA'
             self.server_key_size = public_key.bits()
-            self._json_certificate = json.dumps(conn.sock.getpeercert())
+            self._json_certificate = json.dumps(conn.sock.getpeercert(), default=str)
 
         except MaxRetryError:
             self.code = 503
@@ -346,20 +349,35 @@ class HTTPMetadata:
 
         return self
 
-    def get_scripts(self):
+    def get_site_content(self):
+        if self._content:
+            return self._content
+
         proxies = None
         if config.http_proxy or config.https_proxy:
             proxies = {
                 'http': config.http_proxy,
                 'https': config.https_proxy
             }
-        res = requests.get(f'http://{self.host}',
+        self._content = requests.get(f'http://{self.host}',
             allow_redirects=True,
             proxies=proxies,
             timeout=3
         ).content
-        soup = bs(res, 'html.parser')
+
+        return self._content
+
+    def get_scripts(self) -> list:
+        if self._content is None:
+            return []
+        soup = bs(self._content, 'html.parser')
         return [item['src'] for item in soup.select('script[src]')]
+
+    def get_site_title(self) -> str:
+        if self._content is None:
+            return ''
+        soup = bs(self._content, 'html.parser')
+        return soup.find('title')
 
     def honeyscore_check(self):
         proxies = None
