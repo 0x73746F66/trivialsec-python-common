@@ -381,7 +381,7 @@ class HTTPMetadata:
         if self._content is None:
             return ''
         soup = bs(self._content, 'html.parser')
-        return soup.find('title')
+        return soup.find('title').text.strip()
 
     def honeyscore_check(self):
         proxies = None
