@@ -835,7 +835,7 @@ class Domain(DatabaseHelpers):
         self._http_metadata = HTTPMetadata(f'http://{self.name}')
         self._http_metadata.head()
         self._http_metadata.url = f'https://{self.name}'
-        html_content = self._http_metadata.head()\
+        html_content = self._http_metadata.head(verify_tls=True)\
             .verification_check()\
             .safe_browsing_check()\
             .phishtank_check()\
