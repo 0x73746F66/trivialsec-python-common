@@ -1,6 +1,6 @@
 from random import shuffle
 from datetime import datetime, timedelta
-from trivialsec.models import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 from trivialsec.helpers.database import mysql_adapter
 
 

@@ -1,6 +1,6 @@
 from random import choice
 from string import ascii_lowercase
-from trivialsec.models import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 from trivialsec.helpers.database import mysql_adapter
 
 

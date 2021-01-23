@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 from OpenSSL.crypto import X509, X509Name
-from trivialsec.models import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 from trivialsec.helpers.database import mysql_adapter
 from trivialsec.helpers.transport import HTTPMetadata
 from trivialsec.helpers.log_manager import logger

@@ -1,4 +1,4 @@
-from trivialsec.models import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 
 
 __module__ = 'trivialsec.models.security_alert'
