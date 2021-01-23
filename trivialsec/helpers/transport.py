@@ -467,10 +467,6 @@ class HTTPMetadata:
 
         except DNSException as ex:
             err = str(ex)
-        except ConnectTimeout:
-            err = 'DNS Timeout'
-        except ConnectTimeoutError:
-            err = 'DNS Timeout'
         except MaxRetryError:
             err = 'DNS Max Retry'
         except ConnectionResetError:
@@ -479,6 +475,10 @@ class HTTPMetadata:
             err = 'Name or service not known'
         except ConnectionError:
             err = 'Name or service not known'
+        except ConnectTimeout:
+            err = 'DNS Timeout'
+        except ConnectTimeoutError:
+            err = 'DNS Timeout'
         except SocketError:
             err = 'Name or service not known'
 
