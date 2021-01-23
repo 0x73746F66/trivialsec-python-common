@@ -287,8 +287,9 @@ class DatabaseIterators:
         with mysql_adapter as database:
             results = database.query(sql, cache_key=cache_key, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
             for result in results:
-                for _, val in result.items():
-                    values.add(val)
+                if isinstance(result, dict):
+                    for _, val in result.items():
+                        values.add(val)
 
         return list(values)
 
@@ -422,7 +423,7 @@ class DatabaseHelpers:
                     where.append(f"{by_column} = %({by_column})s")
 
                 conditionals = f' {conditional} '.join(where)
-                if self.__pk not in values:
+                if self.__pk not in values.keys():
                     cache_parts = [f'table|{self.__table}']
                     for col, dval in values.items():
                         cache_parts.append(f'{col}|{dval}')
@@ -435,8 +436,9 @@ class DatabaseHelpers:
             sql = f"SELECT * FROM {self.__table} WHERE {conditionals} LIMIT 1"
             with mysql_adapter as database:
                 result = database.query_one(sql, values, cache_key=None if no_cache is True else self.cache_key, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
-                for col, val in result.items():
-                    setattr(self, col, val)
+                if isinstance(result, dict):
+                    for col, val in result.items():
+                        setattr(self, col, val)
 
         except Exception as ex:
             logger.exception(ex)
@@ -507,7 +509,7 @@ class DatabaseHelpers:
             if inv2 not in invalidations:
                 invalidations.append(inv2)
 
-        if self.__pk in data:
+        if self.__pk in data.keys():
             inv3 = f'{self.__table}/{self.__pk}/{data[self.__pk]}'
             if inv3 not in invalidations:
                 invalidations.append(inv3)
