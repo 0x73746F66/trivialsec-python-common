@@ -3,8 +3,14 @@ import secrets
 import uuid
 from trivialsec.helpers.config import config
 from trivialsec.helpers import check_email_rules, hash_password, oneway_hash
-from trivialsec.models import Account, AccountConfig, ApiKey, Member, Plan, Role
+from trivialsec.models.account import Account, AccountConfig
+from trivialsec.models.apikey import ApiKey
+from trivialsec.models.member import Member
+from trivialsec.models.plan import Plan
+from trivialsec.models.role import Role
 
+
+__module__ = 'trivialsec.services.accounts'
 
 def generate_api_key_secret(sequence_range: int = 8):
     sequence = string.ascii_letters + string.digits

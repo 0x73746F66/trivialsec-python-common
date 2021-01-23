@@ -1,7 +1,9 @@
 from trivialsec.helpers.log_manager import logger
 from trivialsec.helpers import check_email_rules, check_encrypted_password
-from trivialsec.models import Member
+from trivialsec.models.member import Member
 
+
+__module__ = 'trivialsec.services.member'
 
 def handle_login(email_addr: str, password: str) -> Member:
     res = check_email_rules(email_addr)

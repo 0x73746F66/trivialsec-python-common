@@ -8,6 +8,8 @@ from .config import config
 from .log_manager import logger
 
 
+__module__ = 'trivialsec.helpers.database'
+
 class MySQLDatabase:
     con = None
     cur = None

@@ -1,8 +1,12 @@
 import re
 from datetime import datetime
 from trivialsec.helpers.log_manager import logger
-from trivialsec.models import ActivityLog, Member, Finding, FindingNote
+from trivialsec.models.activity_log import ActivityLog
+from trivialsec.models.member import Member
+from trivialsec.models.finding import Finding, FindingNote
 
+
+__module__ = 'trivialsec.services.findings'
 
 def score_to_rating(score: int) -> str:
     if score == 0:

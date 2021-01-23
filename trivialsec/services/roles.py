@@ -1,5 +1,8 @@
-from trivialsec.models import Role, Member
+from trivialsec.models.role import Role
+from trivialsec.models.member import Member
 
+
+__module__ = 'trivialsec.services.roles'
 
 def is_internal_member(current_user: Member) -> bool:
     if not current_user.is_authenticated:

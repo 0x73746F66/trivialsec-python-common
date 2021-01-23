@@ -2,6 +2,8 @@ import logging
 import colorlog
 
 
+__module__ = 'trivialsec.helpers.log_manager'
+
 logging.getLogger().setLevel(logging.WARNING)
 class LogManager(logging.Logger):
     _format_str = None

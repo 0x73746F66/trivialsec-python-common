@@ -8,7 +8,8 @@ from flask import abort, request, url_for, redirect, jsonify
 from trivialsec.helpers.hmac import validate
 from trivialsec.helpers.config import config
 from trivialsec.helpers.log_manager import logger
-from trivialsec.models import ApiKey, Member
+from trivialsec.models.apikey import ApiKey
+from trivialsec.models.member import Member
 from trivialsec.services.roles import is_internal_member, is_support_member, is_billing_member, is_audit_member, is_owner_member
 
 

@@ -1,5 +1,7 @@
-from trivialsec.models import Feeds
+from trivialsec.models.feed import Feeds
 
+
+__module__ = 'trivialsec.helpers.datalists'
 
 namespaces = {
     'name': 'namespaces',

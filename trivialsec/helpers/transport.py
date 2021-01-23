@@ -21,6 +21,8 @@ from .log_manager import logger
 from .config import config
 
 
+__module__ = 'trivialsec.helpers.transport'
+
 class InspectedHTTPSConnectionPool(HTTPSConnectionPool):
     @property
     def inspector(self):

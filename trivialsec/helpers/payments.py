@@ -1,12 +1,14 @@
+from decimal import Decimal, ROUND_DOWN
 import json
 import stripe
 from stripe.error import RateLimitError, APIConnectionError
 from retry.api import retry
-from decimal import Decimal, ROUND_DOWN
 from trivialsec.helpers.log_manager import logger
 from trivialsec.helpers.config import config
-from trivialsec.models import Plan
+from trivialsec.models.plan import Plan
 
+
+__module__ = 'trivialsec.helpers.payments'
 
 stripe.api_version = "2020-08-27"
 stripe.api_key = config.stripe_secret_key

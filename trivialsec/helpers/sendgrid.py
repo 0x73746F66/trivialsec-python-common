@@ -4,6 +4,8 @@ from trivialsec.helpers.config import config
 from trivialsec.helpers.log_manager import logger
 
 
+__module__ = 'trivialsec.helpers.sendgrid'
+
 def send_email(subject: str, template: str, data: dict, recipient: str, group: str = 'notifications', sender: str = 'support@trivialsec.com'):
     sendgrid = SendGridAPIClient(config.sendgrid_api_key)
     tmp_url = sendgrid.client.mail.send._build_url(query_params={}) # pylint: disable=protected-access

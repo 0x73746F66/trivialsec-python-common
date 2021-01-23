@@ -8,6 +8,8 @@ from botocore.exceptions import ClientError, ConnectionClosedError, ReadTimeoutE
 from retry.api import retry
 
 
+__module__ = 'trivialsec.helpers.config'
+
 class Config:
     user_agent: str = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0 Safari/605.1.15'
     config_file: str = getenv('CONFIG_FILE', 'config.yaml')

@@ -1,6 +1,12 @@
 import json
-from trivialsec.models import ActivityLog, JobRun, ServiceType, Project, Member
+from trivialsec.models.activity_log import ActivityLog
+from trivialsec.models.job_run import JobRun
+from trivialsec.models.service_type import ServiceType
+from trivialsec.models.project import Project
+from trivialsec.models.member import Member
 
+
+__module__ = 'trivialsec.services.jobs'
 
 class QueueData:
     def __init__(self, **kwargs):

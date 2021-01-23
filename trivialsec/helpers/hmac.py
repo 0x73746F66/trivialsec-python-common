@@ -2,9 +2,11 @@ from base64 import urlsafe_b64encode
 from datetime import datetime, timedelta
 import hashlib
 import hmac
-from trivialsec.models import ApiKey
+from trivialsec.models.apikey import ApiKey
 from .log_manager import logger
 
+
+__module__ = 'trivialsec.helpers'
 
 supported_digests = {
     'HMAC-SHA256': hashlib.sha256,

@@ -1,3 +1,5 @@
+__module__ = 'trivialsec.helpers.messages'
+
 OK_GENERIC = 'ok'
 ERR_INCORRECT_PASSWORD = 'Incorrect password provided'
 ERR_ACCESS_DENIED = 'Unauthorised'
