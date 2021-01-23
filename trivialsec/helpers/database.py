@@ -206,7 +206,7 @@ class DatabaseIterators:
         self.__items = []
 
     def _load_items(self, results: list):
-        module = importlib.import_module(__module__)
+        module = importlib.import_module('trivialsec.models')
         class_ = getattr(module, self.__class_name)
         for result in results:
             model = class_()
@@ -218,7 +218,7 @@ class DatabaseIterators:
     def find_by(self, search_filter: list, conditional: str = 'AND', order_by: list = None, limit: int = 1000, offset: int = 0, cache_key: str = False, ttl_seconds: int = None):
         if cache_key is not None:
             self.cache_key = cache_key
-        module = importlib.import_module(__module__)
+        module = importlib.import_module('trivialsec.models')
         class_ = getattr(module, self.__class_name)
         cls = class_()
         data = {}
@@ -259,7 +259,7 @@ class DatabaseIterators:
     def load(self, order_by: list = None, limit: int = 1000, offset: int = 0, cache_key: str = None, ttl_seconds: int = None):
         if cache_key is not None:
             self.cache_key = cache_key
-        module = importlib.import_module(__module__)
+        module = importlib.import_module('trivialsec.models')
         class_ = getattr(module, self.__class_name)
         cls = class_()
         sql = f"SELECT * FROM {self.__table}"
