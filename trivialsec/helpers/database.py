@@ -215,7 +215,7 @@ class DatabaseIterators:
             self.__items.append(model)
         self.__index = 0
 
-    def find_by(self, search_filter: list, conditional: str = 'AND', order_by: list = None, limit: int = 1000, offset: int = 0, cache_key: str = False, ttl_seconds: int = None):
+    def find_by(self, search_filter: list, conditional: str = 'AND', order_by: list = None, limit: int = 1000, offset: int = 0, cache_key: str = False, ttl_seconds: int = 30):
         if cache_key is not None:
             self.cache_key = cache_key
         module = importlib.import_module('trivialsec.models')
@@ -256,7 +256,7 @@ class DatabaseIterators:
 
         return self
 
-    def load(self, order_by: list = None, limit: int = 1000, offset: int = 0, cache_key: str = None, ttl_seconds: int = None):
+    def load(self, order_by: list = None, limit: int = 1000, offset: int = 0, cache_key: str = None, ttl_seconds: int = 30):
         if cache_key is not None:
             self.cache_key = cache_key
         module = importlib.import_module('trivialsec.models')
@@ -277,7 +277,7 @@ class DatabaseIterators:
 
         return self
 
-    def distinct(self, column: str, limit: int = 1000, ttl_seconds: int = None) -> list:
+    def distinct(self, column: str, limit: int = 1000, ttl_seconds: int = 300) -> list:
         sql = f"SELECT DISTINCT({column}) FROM {self.__table}"
         if limit:
             sql += f' LIMIT {limit}'
@@ -293,7 +293,7 @@ class DatabaseIterators:
 
         return list(values)
 
-    def count(self, query_filter: list = None, conditional: str = 'AND', ttl_seconds: int = None) -> int:
+    def count(self, query_filter: list = None, conditional: str = 'AND', ttl_seconds: int = 5) -> int:
         data = {}
         sql = f"SELECT COUNT(*) as count FROM {self.__table}"
         if query_filter and isinstance(query_filter, list):
@@ -320,7 +320,7 @@ class DatabaseIterators:
             res = database.query_one(sql, data, cache_key=self.cache_key, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
             return res.get('count', 0)
 
-    def pagination(self, search_filter: list = None, page_size: int = 10, page_num: int = 0, show_pages: int = 10, conditional: str = 'AND', ttl_seconds: int = None)->dict:
+    def pagination(self, search_filter: list = None, page_size: int = 10, page_num: int = 0, show_pages: int = 10, conditional: str = 'AND', ttl_seconds: int = 5)->dict:
         data = {}
         sql = f"SELECT count(*) as records FROM {self.__table}"
         if search_filter and isinstance(search_filter, list):
@@ -395,7 +395,7 @@ class DatabaseHelpers:
         self.__pk = pk
         self.__cols = set()
 
-    def hydrate(self, by_column = None, value=None, conditional: str = 'AND', no_cache: bool = False, ttl_seconds: int = None) -> bool:
+    def hydrate(self, by_column = None, value=None, conditional: str = 'AND', no_cache: bool = False, ttl_seconds: int = 30) -> bool:
         try:
             cache_key = f'{self.__table}/{self.__pk}/{self.__getattribute__(self.__pk)}'
             if by_column is None:
@@ -446,7 +446,7 @@ class DatabaseHelpers:
 
         return True
 
-    def exists(self, by_list: list = None, conditional: str = 'AND', ttl_seconds: int = None) -> bool:
+    def exists(self, by_list: list = None, conditional: str = 'AND', ttl_seconds: int = 5) -> bool:
         value = self.__getattribute__(self.__pk)
         with mysql_adapter as database:
             if not by_list:
@@ -480,7 +480,7 @@ class DatabaseHelpers:
 
         return False
 
-    def persist(self, exists=None, invalidations: list = None, ttl_seconds: int = None) -> bool:
+    def persist(self, exists=None, invalidations: list = None) -> bool:
         data = {}
         values = []
         columns = []
@@ -524,7 +524,7 @@ class DatabaseHelpers:
                     if col != self.__pk:
                         values.append(f'{col} = %({col})s')
                 update_stmt = f"UPDATE {self.__table} SET {', '.join(values)} WHERE {self.__pk} = %({self.__pk})s"
-                changed = database.query(update_stmt, data, cache_key=None, invalidations=invalidations, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
+                changed = database.query(update_stmt, data, cache_key=None, invalidations=invalidations)
                 if changed > 0:
                     return True
             if exists is False:
@@ -540,7 +540,7 @@ class DatabaseHelpers:
 
                 insert_stmt = f"INSERT INTO {self.__table} ({', '.join(columns)}) VALUES ({', '.join(values)})"
                 logger.info(f'{insert_stmt} {repr(data)}')
-                new_id = database.query(insert_stmt, data, cache_key=None, invalidations=invalidations, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
+                new_id = database.query(insert_stmt, data, cache_key=None, invalidations=invalidations)
                 if new_id:
                     setattr(self, self.__pk, new_id)
                     self.hydrate()
@@ -548,7 +548,7 @@ class DatabaseHelpers:
 
         return False
 
-    def cols(self, ttl_seconds: int = None) -> list:
+    def cols(self, ttl_seconds: int = 3600) -> list:
         if self.__cols:
             return self.__cols
         with mysql_adapter as database:
