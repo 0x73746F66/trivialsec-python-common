@@ -494,10 +494,7 @@ class DatabaseHelpers:
             invalidations.append(inv1)
 
         for prop in self.cols():
-            try:
-                _val = self.__getattribute__(prop)
-            except (KeyError, AttributeError):
-                continue
+            _val = self.__getattribute__(prop)
             if not exists and _val is None:
                 continue
             if isinstance(_val, bool):
@@ -547,7 +544,15 @@ class DatabaseHelpers:
         if self.__cols:
             return self.__cols
         with mysql_adapter as database:
-            self.__cols = database.table_cols(self.__table, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
+            result_cols = database.table_cols(self.__table, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
+            columns = set()
+            for prop in result_cols:
+                try:
+                    self.__getattribute__(prop)
+                except (KeyError, AttributeError):
+                    continue
+                columns.add(prop)
+            self.__cols = list(columns)
             return self.__cols
 
 mysql_adapter = MySQLDatabase(**config.mysql)
