@@ -16,6 +16,7 @@ class JobRun(DatabaseHelpers):
         self.node_id = kwargs.get('node_id')
         self.worker_id = kwargs.get('worker_id')
         self.queue_data = kwargs.get('queue_data')
+        self.target = kwargs.get('target')
         self.state = kwargs.get('state')
         self.worker_message = kwargs.get('worker_message')
         self.priority = kwargs.get('priority', 0)
