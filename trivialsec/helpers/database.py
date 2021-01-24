@@ -494,7 +494,10 @@ class DatabaseHelpers:
             invalidations.append(inv1)
 
         for prop in self.cols():
-            _val = self.__getattribute__(prop)
+            try:
+                _val = self.__getattribute__(prop)
+            except (KeyError, AttributeError):
+                continue
             if not exists and _val is None:
                 continue
             if isinstance(_val, bool):
