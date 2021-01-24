@@ -517,6 +517,10 @@ class DatabaseHelpers:
         with mysql_adapter as database:
             if exists is True:
                 for col, _ in data.items():
+                    try:
+                        self.__getattribute__(col)
+                    except (KeyError, AttributeError):
+                        continue
                     if col != self.__pk:
                         values.append(f'{col} = %({col})s')
                 update_stmt = f"UPDATE {self.__table} SET {', '.join(values)} WHERE {self.__pk} = %({self.__pk})s"
@@ -526,6 +530,10 @@ class DatabaseHelpers:
             if exists is False:
                 for col, _ in data.items():
                     if _ is None:
+                        continue
+                    try:
+                        self.__getattribute__(col)
+                    except (KeyError, AttributeError):
                         continue
                     values.append(f'%({col})s')
                     columns.append(col)
