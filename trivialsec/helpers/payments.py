@@ -1,11 +1,13 @@
 from decimal import Decimal, ROUND_DOWN
+from datetime import datetime
 import json
 import stripe
 from stripe.error import RateLimitError, APIConnectionError
 from retry.api import retry
 from trivialsec.helpers.log_manager import logger
 from trivialsec.helpers.config import config
-from trivialsec.models.plan import Plan
+from trivialsec.models.account import Account
+from trivialsec.models.plan import Plan, Invoice
 
 
 __module__ = 'trivialsec.helpers.payments'
@@ -97,6 +99,23 @@ def checkout(price_id: str, customer_id: str):
     except Exception as ex:
         logger.exception(ex)
 
+def upsert_plan_invoice(stripe_invoice_data: dict):
+    plan = Plan(stripe_customer_id=stripe_invoice_data['customer'])
+    plan.hydrate('stripe_customer_id')
+    plan_invoice = Invoice(
+        plan_id=plan.plan_id,
+        stripe_invoice_id=stripe_invoice_data['id']
+    )
+    plan_invoice.hydrate('stripe_invoice_id')
+    plan_invoice.plan_id = plan.plan_id
+    plan_invoice.hosted_invoice_url = stripe_invoice_data['hosted_invoice_url']
+    plan_invoice.cost = stripe_invoice_data['lines']['data'][0]['amount']
+    plan_invoice.currency = stripe_invoice_data['lines']['data'][0]['currency']
+    plan_invoice.interval = stripe_invoice_data['lines']['data'][0]['plan']['interval']
+    plan_invoice.status = stripe_invoice_data['status']
+    plan_invoice.due_date = datetime.fromtimestamp(stripe_invoice_data['created']).isoformat()
+    plan_invoice.persist()
+
 def webhook_received(request):
     # You can use webhooks to receive information about asynchronous payment events.
     # For more about our webhook events check out https://stripe.com/docs/webhooks.
@@ -135,23 +154,50 @@ def webhook_received(request):
         plan = Plan(stripe_customer_id=data['customer'])
         plan.hydrate('stripe_customer_id')
         plan.currency = data['currency'].upper()
-        plan.cost = Decimal(int(data['subtotal'])/100).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+        plan.interval = data['lines']['data'][0]['plan']['interval'].upper()
+        plan.cost = data['subtotal']
         plan.stripe_product_id = data['lines']['data'][0]['price']['product']
         plan.stripe_price_id = data['lines']['data'][0]['price']['id']
         plan.stripe_subscription_id = data['lines']['data'][0]['subscription']
         plan.name = data['lines']['data'][0]['description'].replace('1 × ', '')
         plan.persist()
+        account = Account(account_id=plan.account_id)
+        account.hydrate()
+        if account.is_active is False:
+            account.is_active = True
+            account.persist()
+        upsert_plan_invoice(data)
+
+    elif event_type == 'invoice.updated':
+        upsert_plan_invoice(data)
 
     elif event_type == 'invoice.payment_failed':
-        # If the payment fails or the customer does not have a valid payment method,
-        # an invoice.payment_failed event is sent, the subscription becomes past_due.
-        # Use this webhook to notify your user that their payment has
-        # failed and to retrieve new card details.
-        pass
+        plan = Plan(stripe_customer_id=data['customer'])
+        plan.hydrate('stripe_customer_id')
+        account = Account(account_id=plan.account_id)
+        account.hydrate()
+        if account.is_active is True:
+            account.is_active = False
+            account.persist()
 
     elif event_type == 'customer.subscription.deleted':
-        # handle subscription cancelled automatically based
-        # upon your subscription settings. Or if the user cancels it.
-        pass
+        plan = Plan(stripe_customer_id=data['customer'])
+        plan.hydrate('stripe_customer_id')
+        account = Account(account_id=plan.account_id)
+        account.hydrate()
+        if account.is_active is True:
+            account.is_active = False
+            account.persist()
+
+    elif event_type == 'customer.subscription.created':
+        plan = Plan(stripe_customer_id=data['customer'])
+        plan.hydrate('stripe_customer_id')
+        plan.stripe_subscription_id = data['id']
+        plan.stripe_product_id = data['items']['data'][0]['plan']['product']
+        plan.stripe_price_id = data['items']['data'][0]['plan']['id']
+        plan.stripe_payment_method_id = data['default_payment_method']
+        plan.cost = Decimal(data['items']['data'][0]['plan']['amount_decimal']).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+        plan.currency = data['items']['data'][0]['plan']['currency'].upper()
+        plan.interval = data['items']['data'][0]['plan']['interval'].upper()
 
     return data

@@ -22,6 +22,7 @@ class Plan(DatabaseHelpers):
         self.stripe_card_expiry_year = kwargs.get('stripe_card_expiry_year')
         self.cost = Decimal(kwargs.get('cost', 0)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
         self.currency = kwargs.get('currency')
+        self.interval = kwargs.get('interval')
         self.retention_days = kwargs.get('retention_days', 32)
         self.active_daily = kwargs.get('active_daily', 1)
         self.scheduled_active_daily = kwargs.get('scheduled_active_daily', 0)
@@ -44,3 +45,20 @@ class Plan(DatabaseHelpers):
 class Plans(DatabaseIterators):
     def __init__(self):
         super().__init__('Plan')
+
+class Invoice(DatabaseHelpers):
+    def __init__(self, **kwargs):
+        super().__init__('plan_invoices', 'plan_id')
+        self.plan_id = kwargs.get('plan_id')
+        self.stripe_invoice_id = kwargs.get('stripe_invoice_id')
+        self.hosted_invoice_url = kwargs.get('hosted_invoice_url')
+        self.cost = kwargs.get('cost')
+        self.currency = kwargs.get('currency')
+        self.interval = kwargs.get('interval')
+        self.status = kwargs.get('status')
+        self.due_date = kwargs.get('due_date')
+        self.created_at = kwargs.get('created_at')
+
+class Invoices(DatabaseIterators):
+    def __init__(self):
+        super().__init__('Invoice')
