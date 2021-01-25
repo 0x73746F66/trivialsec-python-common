@@ -222,11 +222,11 @@ class DatabaseIterators:
         class_ = getattr(module, self.__class_name)
         cls = class_()
         data = {}
-        sql = f"SELECT * FROM {self.__table}"
+        sql = f"SELECT * FROM `{self.__table}`"
         conditions = []
         for key, val in search_filter:
             if val is None:
-                conditions.append(f' {key} is null ')
+                conditions.append(f' `{key}` is null ')
             elif isinstance(val, (list, tuple)):
                 index = 0
                 in_keys = []
@@ -236,10 +236,10 @@ class DatabaseIterators:
                     index += 1
                     in_keys.append(f'%({_key})s')
 
-                conditions.append(f' {key} in ({",".join(in_keys)}) ')
+                conditions.append(f' `{key}` in ({",".join(in_keys)}) ')
             else:
                 data[key] = val
-                conditions.append(f' {key} = %({key})s ')
+                conditions.append(f' `{key}` = %({key})s ')
         sql += f" WHERE {conditional.join(conditions)}"
 
         if order_by and isinstance(order_by, list):
@@ -262,7 +262,7 @@ class DatabaseIterators:
         module = importlib.import_module('trivialsec.models')
         class_ = getattr(module, self.__class_name)
         cls = class_()
-        sql = f"SELECT * FROM {self.__table}"
+        sql = f"SELECT * FROM `{self.__table}`"
         if order_by and isinstance(order_by, list):
             for _order in order_by:
                 if _order.lower() in ['DESC', 'ASC'] or _order.lower() not in cls.cols():
@@ -278,7 +278,7 @@ class DatabaseIterators:
         return self
 
     def distinct(self, column: str, limit: int = 1000, ttl_seconds: int = 300) -> list:
-        sql = f"SELECT DISTINCT({column}) FROM {self.__table}"
+        sql = f"SELECT DISTINCT(`{column}`) FROM `{self.__table}`"
         if limit:
             sql += f' LIMIT {limit}'
 
@@ -295,12 +295,12 @@ class DatabaseIterators:
 
     def count(self, query_filter: list = None, conditional: str = 'AND', ttl_seconds: int = 5) -> int:
         data = {}
-        sql = f"SELECT COUNT(*) as count FROM {self.__table}"
+        sql = f"SELECT COUNT(*) as count FROM `{self.__table}`"
         if query_filter and isinstance(query_filter, list):
             conditions = []
             for key, val in query_filter:
                 if val is None:
-                    conditions.append(f' {key} is null ')
+                    conditions.append(f' `{key}` is null ')
                 elif isinstance(val, (list, tuple)):
                     index = 0
                     in_keys = []
@@ -310,10 +310,10 @@ class DatabaseIterators:
                         index += 1
                         in_keys.append(f'%({_key})s')
 
-                    conditions.append(f' {key} in ({",".join(in_keys)}) ')
+                    conditions.append(f' `{key}` in ({",".join(in_keys)}) ')
                 else:
                     data[key] = val
-                    conditions.append(f' {key} = %({key})s ')
+                    conditions.append(f' `{key}` = %({key})s ')
             sql += f" WHERE {conditional.join(conditions)}"
 
         with mysql_adapter as database:
@@ -328,7 +328,7 @@ class DatabaseIterators:
             for col in search_filter:
                 key, val = col
                 if val is None:
-                    conditions.append(f' {key} is null ')
+                    conditions.append(f' `{key}` is null ')
                 elif isinstance(val, (list, tuple)):
                     index = 0
                     in_keys = []
@@ -338,10 +338,10 @@ class DatabaseIterators:
                         index += 1
                         in_keys.append(f'%({_key})s')
 
-                    conditions.append(f' {key} in ({",".join(in_keys)}) ')
+                    conditions.append(f' `{key}` in ({",".join(in_keys)}) ')
                 else:
                     data[key] = val
-                    conditions.append(f' {key} = %({key})s ')
+                    conditions.append(f' `{key}` = %({key})s ')
             sql += f' WHERE {conditional.join(conditions)} '
 
         result = None
@@ -404,12 +404,12 @@ class DatabaseHelpers:
             values = {}
             conditionals = '1=1'
             if isinstance(by_column, str):
-                conditionals = f' {by_column} = %({by_column})s '
+                conditionals = f' `{by_column}` = %({by_column})s '
                 values[by_column] = value if value is not None else self.__getattribute__(by_column)
                 cache_key = f'{self.__table}/{by_column}/{values[by_column]}'
             elif isinstance(by_column, tuple):
                 by_column, value = by_column
-                conditionals = f' {by_column} = %({by_column})s '
+                conditionals = f' `{by_column}` = %({by_column})s '
                 values[by_column] = value
                 cache_key = f'{self.__table}/{by_column}/{values[by_column]}'
             elif isinstance(by_column, list):
@@ -422,7 +422,7 @@ class DatabaseHelpers:
                         values[by_column] = value if value is not None else self.__getattribute__(by_column)
                     where.append(f"{by_column} = %({by_column})s")
 
-                conditionals = f' {conditional} '.join(where)
+                conditionals = f' `{conditional}` '.join(where)
                 if self.__pk not in values.keys():
                     cache_parts = [f'table|{self.__table}']
                     for col, dval in values.items():
@@ -433,7 +433,7 @@ class DatabaseHelpers:
             if self.cache_key is None:
                 self.cache_key = cache_key
 
-            sql = f"SELECT * FROM {self.__table} WHERE {conditionals} LIMIT 1"
+            sql = f"SELECT * FROM `{self.__table}` WHERE {conditionals} LIMIT 1"
             with mysql_adapter as database:
                 result = database.query_one(sql, values, cache_key=None if no_cache is True else self.cache_key, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
                 if isinstance(result, dict):
@@ -468,11 +468,11 @@ class DatabaseHelpers:
                     value = None
                     if isinstance(str_tuple, tuple):
                         pk_column, value = str_tuple
-                    where.append(f"{pk_column} = %({pk_column})s")
+                    where.append(f"`{pk_column}` = %({pk_column})s")
                     value = value if value is not None else self.__getattribute__(pk_column)
                     values[pk_column] = value
                 conditionals = f' {conditional} '.join(where)
-                sql = f"SELECT {self.__pk} FROM {self.__table} WHERE {conditionals} LIMIT 1"
+                sql = f"SELECT `{self.__pk}` FROM `{self.__table}` WHERE {conditionals} LIMIT 1"
                 result = database.query_one(sql, values, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
                 if result is not None:
                     setattr(self, self.__pk, result[self.__pk])
@@ -522,8 +522,8 @@ class DatabaseHelpers:
                     except (KeyError, AttributeError):
                         continue
                     if col != self.__pk:
-                        values.append(f'{col} = %({col})s')
-                update_stmt = f"UPDATE {self.__table} SET {', '.join(values)} WHERE {self.__pk} = %({self.__pk})s"
+                        values.append(f'`{col}` = %({col})s')
+                update_stmt = f"UPDATE `{self.__table}` SET {', '.join(values)} WHERE `{self.__pk}` = %({self.__pk})s"
                 logger.info(f'{update_stmt} {repr(data)}')
                 changed = database.query(update_stmt, data, cache_key=None, invalidations=invalidations)
                 if changed > 0:
@@ -539,7 +539,7 @@ class DatabaseHelpers:
                     values.append(f'%({col})s')
                     columns.append(col)
 
-                insert_stmt = f"INSERT INTO {self.__table} ({', '.join(columns)}) VALUES ({', '.join(values)})"
+                insert_stmt = f"INSERT INTO `{self.__table}` (`{'`, `'.join(columns)}`) VALUES ({', '.join(values)})"
                 logger.info(f'{insert_stmt} {repr(data)}')
                 new_id = database.query(insert_stmt, data, cache_key=None, invalidations=invalidations)
                 if new_id:
