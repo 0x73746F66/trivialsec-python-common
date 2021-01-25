@@ -524,6 +524,7 @@ class DatabaseHelpers:
                     if col != self.__pk:
                         values.append(f'{col} = %({col})s')
                 update_stmt = f"UPDATE {self.__table} SET {', '.join(values)} WHERE {self.__pk} = %({self.__pk})s"
+                logger.info(f'{update_stmt} {repr(data)}')
                 changed = database.query(update_stmt, data, cache_key=None, invalidations=invalidations)
                 if changed > 0:
                     return True
