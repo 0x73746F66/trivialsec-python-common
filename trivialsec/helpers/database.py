@@ -446,7 +446,7 @@ class DatabaseHelpers:
 
         return True
 
-    def exists(self, by_list: list = None, conditional: str = 'AND', ttl_seconds: int = 5) -> bool:
+    def exists(self, by_list: list = None, conditional: str = 'AND') -> bool:
         value = self.__getattribute__(self.__pk)
         with mysql_adapter as database:
             if not by_list:
@@ -456,7 +456,7 @@ class DatabaseHelpers:
                 pk_column = self.__pk
                 sql = f"SELECT `{self.__pk}` FROM `{self.__table}` WHERE `{pk_column}` = %({pk_column})s LIMIT 1"
                 value = value if value is not None else self.__getattribute__(pk_column)
-                result = database.query_one(sql, {pk_column: value}, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
+                result = database.query_one(sql, {pk_column: value})
                 if result is not None:
                     setattr(self, self.__pk, result[self.__pk])
                     return True
@@ -473,7 +473,7 @@ class DatabaseHelpers:
                     values[pk_column] = value
                 conditionals = f' {conditional} '.join(where)
                 sql = f"SELECT `{self.__pk}` FROM `{self.__table}` WHERE {conditionals} LIMIT 1"
-                result = database.query_one(sql, values, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
+                result = database.query_one(sql, values)
                 if result is not None:
                     setattr(self, self.__pk, result[self.__pk])
                     return True
