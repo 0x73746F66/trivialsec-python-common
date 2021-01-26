@@ -108,7 +108,7 @@ def upsert_plan_invoice(stripe_invoice_data: dict):
     )
     plan_invoice.hydrate('stripe_invoice_id')
     plan_invoice.plan_id = plan.plan_id
-    plan_invoice.hosted_invoice_url = stripe_invoice_data['hosted_invoice_url']
+    plan_invoice.hosted_invoice_url = stripe_invoice_data.get('hosted_invoice_url', plan_invoice.hosted_invoice_url)
     plan_invoice.cost = Decimal(int(stripe_invoice_data['lines']['data'][0]['amount'])/100).quantize(Decimal('.01'), rounding=ROUND_DOWN)
     plan_invoice.currency = stripe_invoice_data['lines']['data'][0]['currency']
     plan_invoice.interval = stripe_invoice_data['lines']['data'][0]['plan']['interval']
