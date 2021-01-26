@@ -422,7 +422,7 @@ class DatabaseHelpers:
                         values[by_column] = value if value is not None else self.__getattribute__(by_column)
                     where.append(f"{by_column} = %({by_column})s")
 
-                conditionals = f' `{conditional}` '.join(where)
+                conditionals = f' {conditional} '.join(where)
                 if self.__pk not in values.keys():
                     cache_parts = [f'table|{self.__table}']
                     for col, dval in values.items():
