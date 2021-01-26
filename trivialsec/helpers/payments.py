@@ -163,8 +163,8 @@ def webhook_received(request):
         plan.persist()
         account = Account(account_id=plan.account_id)
         account.hydrate()
-        if account.is_active is False:
-            account.is_active = True
+        if account.is_setup is False:
+            account.is_setup = True
             account.persist()
         upsert_plan_invoice(data)
 
@@ -176,8 +176,8 @@ def webhook_received(request):
         plan.hydrate('stripe_customer_id')
         account = Account(account_id=plan.account_id)
         account.hydrate()
-        if account.is_active is True:
-            account.is_active = False
+        if account.is_setup is True:
+            account.is_setup = False
             account.persist()
 
     elif event_type == 'customer.subscription.deleted':
@@ -185,8 +185,8 @@ def webhook_received(request):
         plan.hydrate('stripe_customer_id')
         account = Account(account_id=plan.account_id)
         account.hydrate()
-        if account.is_active is True:
-            account.is_active = False
+        if account.is_setup is True:
+            account.is_setup = False
             account.persist()
 
     elif event_type == 'customer.subscription.created':
@@ -200,5 +200,10 @@ def webhook_received(request):
         plan.currency = data['items']['data'][0]['plan']['currency'].upper()
         plan.interval = data['items']['data'][0]['plan']['interval'].upper()
         plan.persist()
+        account = Account(account_id=plan.account_id)
+        account.hydrate()
+        if account.is_setup is False:
+            account.is_setup = True
+            account.persist()
 
     return data

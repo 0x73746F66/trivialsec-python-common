@@ -11,7 +11,6 @@ class Account(DatabaseHelpers):
         self.plan_id = kwargs.get('plan_id', 1)
         self.billing_email = kwargs.get('billing_email')
         self.is_setup = bool(kwargs.get('is_setup', 0))
-        self.is_active = bool(kwargs.get('is_active', 0))
         self.socket_key = kwargs.get('socket_key')
         self.verification_hash = kwargs.get('verification_hash')
         self.registered = kwargs.get('registered')
