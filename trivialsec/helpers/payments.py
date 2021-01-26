@@ -109,7 +109,7 @@ def upsert_plan_invoice(stripe_invoice_data: dict):
     plan_invoice.hydrate('stripe_invoice_id')
     plan_invoice.plan_id = plan.plan_id
     plan_invoice.hosted_invoice_url = stripe_invoice_data['hosted_invoice_url']
-    plan_invoice.cost = stripe_invoice_data['lines']['data'][0]['amount']
+    plan_invoice.cost = Decimal(int(stripe_invoice_data['lines']['data'][0]['amount'])/100).quantize(Decimal('.01'), rounding=ROUND_DOWN)
     plan_invoice.currency = stripe_invoice_data['lines']['data'][0]['currency']
     plan_invoice.interval = stripe_invoice_data['lines']['data'][0]['plan']['interval']
     plan_invoice.status = stripe_invoice_data['status']
@@ -155,7 +155,7 @@ def webhook_received(request):
         plan.hydrate('stripe_customer_id')
         plan.currency = data['currency'].upper()
         plan.interval = data['lines']['data'][0]['plan']['interval'].upper()
-        plan.cost = data['subtotal']
+        plan.cost = Decimal(data['subtotal']).quantize(Decimal('.01'), rounding=ROUND_DOWN)
         plan.stripe_product_id = data['lines']['data'][0]['price']['product']
         plan.stripe_price_id = data['lines']['data'][0]['price']['id']
         plan.stripe_subscription_id = data['lines']['data'][0]['subscription']
@@ -199,5 +199,6 @@ def webhook_received(request):
         plan.cost = Decimal(data['items']['data'][0]['plan']['amount_decimal']).quantize(Decimal('.01'), rounding=ROUND_DOWN)
         plan.currency = data['items']['data'][0]['plan']['currency'].upper()
         plan.interval = data['items']['data'][0]['plan']['interval'].upper()
+        plan.persist()
 
     return data
