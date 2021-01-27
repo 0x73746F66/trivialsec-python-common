@@ -7,7 +7,7 @@ from retry.api import retry
 from trivialsec.helpers.log_manager import logger
 from trivialsec.helpers.config import config
 from trivialsec.models.account import Account
-from trivialsec.models.plan import Plan, Invoice
+from trivialsec.models.plan import Plan, PlanInvoice
 
 
 __module__ = 'trivialsec.helpers.payments'
@@ -102,7 +102,7 @@ def checkout(price_id: str, customer_id: str):
 def upsert_plan_invoice(stripe_invoice_data: dict):
     plan = Plan(stripe_customer_id=stripe_invoice_data['customer'])
     plan.hydrate('stripe_customer_id')
-    plan_invoice = Invoice(
+    plan_invoice = PlanInvoice(
         plan_id=plan.plan_id,
         stripe_invoice_id=stripe_invoice_data['id']
     )

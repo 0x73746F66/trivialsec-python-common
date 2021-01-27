@@ -24,29 +24,28 @@ class Plan(DatabaseHelpers):
         self.currency = kwargs.get('currency')
         self.interval = kwargs.get('interval')
         self.retention_days = kwargs.get('retention_days', 32)
-        self.active_daily = kwargs.get('active_daily', 1)
-        self.scheduled_active_daily = kwargs.get('scheduled_active_daily', 0)
-        self.passive_daily = kwargs.get('passive_daily', 10)
-        self.scheduled_passive_daily = kwargs.get('scheduled_passive_daily', 0)
-        self.git_integration_daily = kwargs.get('git_integration_daily', 0)
-        self.source_code_daily = kwargs.get('source_code_daily', 0)
-        self.dependency_support_rating = kwargs.get('dependency_support_rating', 0)
-        self.alert_email = bool(kwargs.get('alert_email'))
-        self.alert_integrations = bool(kwargs.get('alert_integrations'))
-        self.threatintel = bool(kwargs.get('threatintel'))
-        self.compromise_indicators = bool(kwargs.get('compromise_indicators'))
+        self.on_demand_passive_daily = kwargs.get('on_demand_passive_daily', 10)
+        self.on_demand_active_daily = kwargs.get('on_demand_active_daily', 1)
+        self.domains_monitored = kwargs.get('domains_monitored', 1)
+        self.webhooks = bool(kwargs.get('webhooks', True))
+        self.threatintel = bool(kwargs.get('threatintel', True))
         self.typosquatting = bool(kwargs.get('typosquatting'))
+        self.compromise_indicators = bool(kwargs.get('compromise_indicators'))
+        self.source_code_scans = bool(kwargs.get('source_code_scans', False))
+        self.compliance_reports = bool(kwargs.get('compliance_reports', False))
 
     def __setattr__(self, name, value):
-        if name in ['is_dedicated', 'alert_email', 'alert_integrations', 'threatintel', 'compromise_indicators', 'typosquatting']:
+        if name in ['is_dedicated', 'compliance_reports', 'webhooks', 'source_code_scans', 'threatintel', 'compromise_indicators', 'typosquatting']:
             value = bool(value)
+        elif name in 'cost':
+            value = Decimal(value).quantize(Decimal('.01'), rounding=ROUND_DOWN)
         super().__setattr__(name, value)
 
 class Plans(DatabaseIterators):
     def __init__(self):
         super().__init__('Plan')
 
-class Invoice(DatabaseHelpers):
+class PlanInvoice(DatabaseHelpers):
     def __init__(self, **kwargs):
         super().__init__('plan_invoices', 'plan_id')
         self.plan_id = kwargs.get('plan_id')
@@ -59,6 +58,6 @@ class Invoice(DatabaseHelpers):
         self.due_date = kwargs.get('due_date')
         self.created_at = kwargs.get('created_at')
 
-class Invoices(DatabaseIterators):
+class PlanInvoices(DatabaseIterators):
     def __init__(self):
-        super().__init__('Invoice')
+        super().__init__('PlanInvoice')
