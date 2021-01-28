@@ -129,7 +129,7 @@ def invoice_paid(stripe_customer: str, stripe_data: dict):
     if plan.hydrate('stripe_customer_id'):
         plan.currency = stripe_data['currency'].upper()
         plan.interval = stripe_data['lines']['data'][0]['plan']['interval'].upper()
-        plan.cost = Decimal(stripe_data['subtotal']).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+        plan.cost = Decimal(stripe_data['subtotal']/100).quantize(Decimal('.01'), rounding=ROUND_DOWN)
         plan.stripe_product_id = stripe_data['lines']['data'][0]['price']['product']
         plan.stripe_price_id = stripe_data['lines']['data'][0]['price']['id']
         plan.stripe_subscription_id = stripe_data['lines']['data'][0]['subscription']
@@ -149,7 +149,7 @@ def subscription_created(stripe_customer: str, stripe_subscription_id: str, defa
         plan.stripe_product_id = stripe_plan_data['product']
         plan.stripe_price_id = stripe_plan_data['id']
         plan.stripe_payment_method_id = default_payment_method
-        plan.cost = Decimal(stripe_plan_data['amount_decimal']).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+        plan.cost = Decimal(stripe_plan_data['amount_decimal']/100).quantize(Decimal('.01'), rounding=ROUND_DOWN)
         plan.currency = stripe_plan_data['currency'].upper()
         plan.interval = stripe_plan_data['interval'].upper()
         plan.persist()
