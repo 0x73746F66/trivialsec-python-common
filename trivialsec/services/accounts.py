@@ -45,6 +45,7 @@ def register(email_addr: str, passwd: str, selected_plan: dict, alias=None, veri
         account_config.persist()
         selected_plan['account_id'] = account.account_id
         plan = Plan(**selected_plan)
+        plan.account_id = account.account_id
         plan.persist()
 
     member.account_id = account.account_id
