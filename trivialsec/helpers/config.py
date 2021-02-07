@@ -4,6 +4,8 @@ import logging
 import subprocess
 import yaml
 import boto3
+import redis
+from datetime import timedelta
 from botocore.exceptions import ClientError, ConnectionClosedError, ReadTimeoutError, ConnectTimeoutError, CapacityNotAvailableError
 from retry.api import retry
 
@@ -11,6 +13,7 @@ from retry.api import retry
 __module__ = 'trivialsec.helpers.config'
 
 class Config:
+    _redis = None
     user_agent: str = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0 Safari/605.1.15'
     config_file: str = getenv('CONFIG_FILE', 'config.yaml')
 
@@ -50,6 +53,7 @@ class Config:
             if err or not node_id:
                 raise OSError(f'/etc/hostname could not be used\ngot node_id {node_id}\n{err}')
 
+            self._redis = redis.Redis(host=self.redis.get('host'), ssl=bool(self.redis.get('ssl')))
         except Exception as ex:
             print(ex)
             sys.exit(1)
@@ -76,6 +80,10 @@ class Config:
 
     @retry((ConnectionClosedError, ReadTimeoutError, ConnectTimeoutError, CapacityNotAvailableError), tries=5, delay=1.5, backoff=3)
     def ssm_secret(self, parameter: str, default=None, **kwargs) -> str:
+        redis_value = self._get_from_redis(parameter)
+        if redis_value is not None:
+            return redis_value
+
         session = boto3.session.Session()
         client = session.client(
             service_name='ssm',
@@ -98,6 +106,7 @@ class Config:
         if response and 'Parameter' in response:
             value = response['Parameter'].get('Value')
 
+        self._save_to_redis(parameter, value)
         return value
 
     def get_app(self)->dict:
@@ -112,5 +121,19 @@ class Config:
             'socket_domain': self.frontend.get('socket_domain'),
             'socket_url': f"{self.frontend.get('socket_scheme')}{self.frontend.get('socket_domain')}"
         }
+
+    def _get_from_redis(self, cache_key: str):
+        redis_value = None
+        if isinstance(cache_key, str):
+            redis_value = self._redis.get(f'{self.app_version}{cache_key}')
+
+        if redis_value is not None:
+            return redis_value.decode()
+
+        return None
+
+    def _save_to_redis(self, cache_key: str, result: str):
+        cache_ttl = timedelta(seconds=int(self.redis.get('ttl', 300)))
+        return self._redis.set(f'{self.app_version}{cache_key}', result, ex=cache_ttl)
 
 config = Config()

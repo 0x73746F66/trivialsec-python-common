@@ -78,208 +78,232 @@ class Domain(DatabaseHelpers):
         return self
 
     def fetch_metadata(self):
-        if not self.account_id or not self.domain_id or  not self.name:
+        if not self.account_id or not self.domain_id or not self.name:
             logger.warning('called Domain.fetch_metadata before initialising data')
             return self
-        now = datetime.utcnow().replace(microsecond=0).isoformat()
-        account = Account(account_id=self.account_id)
-        account.hydrate()
-        self._http_metadata = HTTPMetadata(f'http://{self.name}')
-        self._http_metadata.head()
-        self._http_metadata.url = f'https://{self.name}'
-        html_content = self._http_metadata.head(verify_tls=True)\
-            .verification_check()\
-            .safe_browsing_check()\
-            .phishtank_check()\
-            .projecthoneypot()\
-            .honeyscore_check()\
-            .get_site_content()
 
+        self._http_metadata = HTTPMetadata(f'http://{self.name}')
+        try:
+            self._http_metadata.head()
+        except Exception as ex:
+            logger.exception(ex)
+        try:
+            self._http_metadata.url = f'https://{self.name}'
+            self._http_metadata.head()
+        except Exception as ex:
+            logger.exception(ex)
+        try:
+            self._http_metadata.verification_check()
+        except Exception as ex:
+            logger.exception(ex)
+        try:
+            self._http_metadata.safe_browsing_check()
+        except Exception as ex:
+            logger.exception(ex)
+        try:
+            self._http_metadata.phishtank_check()
+        except Exception as ex:
+            logger.exception(ex)
+        try:
+            self._http_metadata.projecthoneypot()
+        except Exception as ex:
+            logger.exception(ex)
+        try:
+            self._http_metadata.honeyscore_check()
+        except Exception as ex:
+            logger.exception(ex)
+        return self
+
+    def gather_stats(self):
+        domain_stats = []
+        now = datetime.utcnow().replace(microsecond=0).isoformat()
         if self._http_metadata.signature_algorithm:
-            DomainStat(
+            domain_stats.append(DomainStat(
                 domain_id=self.domain_id,
                 domain_stat=DomainStat.HTTP_SIGNATURE_ALGORITHM,
                 domain_value=self._http_metadata.signature_algorithm,
                 created_at=now
-            ).persist()
+            ))
         if self._http_metadata.negotiated_cipher:
-            DomainStat(
+            domain_stats.append(DomainStat(
                 domain_id=self.domain_id,
                 domain_stat=DomainStat.HTTP_NEGOTIATED_CIPHER,
                 domain_value=self._http_metadata.negotiated_cipher,
                 created_at=now
-            ).persist()
+            ))
         if self._http_metadata.code:
-            DomainStat(
+            domain_stats.append(DomainStat(
                 domain_id=self.domain_id,
                 domain_stat=DomainStat.HTTP_CODE,
                 domain_value=self._http_metadata.code,
                 domain_data=self._http_metadata.reason,
                 created_at=now
-            ).persist()
+            ))
         if self._http_metadata.elapsed_duration:
-            DomainStat(
+            domain_stats.append(DomainStat(
                 domain_id=self.domain_id,
                 domain_stat=DomainStat.HTTP_ELAPSED_DURATION,
                 domain_value=self._http_metadata.elapsed_duration,
                 created_at=now
-            ).persist()
+            ))
         if self._http_metadata.protocol_version:
-            DomainStat(
+            domain_stats.append(DomainStat(
                 domain_id=self.domain_id,
                 domain_stat=DomainStat.HTTP_PROTOCOL,
                 domain_value=self._http_metadata.protocol_version,
                 created_at=now
-            ).persist()
+            ))
         if self._http_metadata.cookies:
-            DomainStat(
+            domain_stats.append(DomainStat(
                 domain_id=self.domain_id,
                 domain_stat=DomainStat.HTTP_COOKIES,
                 domain_data=json.dumps(self._http_metadata.cookies, default=str),
                 created_at=now
-            ).persist()
+            ))
         if self._http_metadata.headers:
-            DomainStat(
+            domain_stats.append(DomainStat(
                 domain_id=self.domain_id,
                 domain_stat=DomainStat.HTTP_HEADERS,
                 domain_data=json.dumps(self._http_metadata.headers, default=str),
                 created_at=now
-            ).persist()
+            ))
             for header_name, header_value in self._http_metadata.headers.items():
                 if header_name == 'x-powered-by':
-                    DomainStat(
+                    domain_stats.append(DomainStat(
                         domain_id=self.domain_id,
                         domain_stat=DomainStat.APPLICATION_BANNER,
                         domain_value=header_value,
                         created_at=now
-                    ).persist()
+                    ))
                 if header_name == 'server':
-                    DomainStat(
+                    domain_stats.append(DomainStat(
                         domain_id=self.domain_id,
                         domain_stat=DomainStat.SERVER_BANNER,
                         domain_value=header_value,
                         created_at=now
-                    ).persist()
+                    ))
                 if header_name == 'via':
-                    DomainStat(
+                    domain_stats.append(DomainStat(
                         domain_id=self.domain_id,
                         domain_stat=DomainStat.APPLICATION_PROXY,
                         domain_value=header_value,
                         created_at=now
-                    ).persist()
+                    ))
 
         if self._http_metadata.server_certificate:
             if self._http_metadata.sha1_fingerprint:
-                DomainStat(
+                domain_stats.append(DomainStat(
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_SHA1_FINGERPRINT,
                     domain_value=self._http_metadata.sha1_fingerprint,
                     created_at=now
-                ).persist()
+                ))
             if self._http_metadata.server_key_size:
-                DomainStat(
+                domain_stats.append(DomainStat(
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_SERVER_KEY_SIZE,
                     domain_value=self._http_metadata.server_key_size,
                     created_at=now
-                ).persist()
+                ))
             if self._http_metadata.pubkey_type:
-                DomainStat(
+                domain_stats.append(DomainStat(
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_SERVER_KEY_TYPE,
                     domain_value=self._http_metadata.pubkey_type,
                     created_at=now
-                ).persist()
+                ))
             if isinstance(self._http_metadata.server_certificate, X509):
                 serial_number = self._http_metadata.server_certificate.get_serial_number()
-                DomainStat(
+                domain_stats.append(DomainStat(
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_CERTIFICATE,
                     domain_value=serial_number,
                     domain_data=self._http_metadata._json_certificate, # pylint: disable=protected-access
                     created_at=now
-                ).persist()
+                ))
 
                 issuer: X509Name = self._http_metadata.server_certificate.get_issuer()
-                DomainStat(
+                domain_stats.append(DomainStat(
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_CERTIFICATE_ISSUER,
                     domain_value=issuer.commonName,
                     domain_data=self._http_metadata._json_certificate, # pylint: disable=protected-access
                     created_at=now
-                ).persist()
-                DomainStat(
+                ))
+                domain_stats.append(DomainStat(
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_CERTIFICATE_ISSUER_COUNTRY,
                     domain_value=issuer.countryName,
                     domain_data=self._http_metadata._json_certificate, # pylint: disable=protected-access
                     created_at=now
-                ).persist()
+                ))
 
                 not_before = datetime.strptime(self._http_metadata.server_certificate.get_notBefore().decode('ascii'), HTTPMetadata.X509_DATE_FMT)
                 logger.info(f'notBefore {self._http_metadata.server_certificate.get_notBefore()} {not_before}')
-                DomainStat(
+                domain_stats.append(DomainStat(
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_CERTIFICATE_ISSUED,
                     domain_value=not_before.isoformat(),
                     domain_data=f'{(datetime.utcnow() - not_before).days} days ago',
                     created_at=now
-                ).persist()
+                ))
 
                 not_after = datetime.strptime(self._http_metadata.server_certificate.get_notAfter().decode('ascii'), HTTPMetadata.X509_DATE_FMT)
                 logger.info(f'notAfter {self._http_metadata.server_certificate.get_notAfter()} {not_after}')
-                DomainStat(
+                domain_stats.append(DomainStat(
                     domain_id=self.domain_id,
                     domain_stat=DomainStat.HTTP_CERTIFICATE_EXPIRY,
                     domain_value=not_after.isoformat(),
                     domain_data=f'Expired {(datetime.utcnow() - not_after).days} days ago' if not_after < datetime.utcnow() else f'Valid for {(not_after - datetime.utcnow()).days} days',
                     created_at=now
-                ).persist()
+                ))
 
-        DomainStat(
+        account = Account(account_id=self.account_id)
+        account.hydrate()
+        domain_stats.append(DomainStat(
             domain_id=self.domain_id,
             domain_stat=DomainStat.DNS_REGISTERED,
             domain_value=1 if self._http_metadata.registered else 0,
             created_at=now
-        ).persist()
+        ))
         verified = bool(account.verification_hash == self._http_metadata.verification_hash)
-        DomainStat(
+        domain_stats.append(DomainStat(
             domain_id=self.domain_id,
             domain_stat=DomainStat.APP_VERIFIED,
             domain_value=1 if verified else 0,
             created_at=now
-        ).persist()
+        ))
         if not self._http_metadata.registered:
-            DomainStat(
+            domain_stats.append(DomainStat(
                 domain_id=self.domain_id,
                 domain_stat=DomainStat.DNS_ANSWER,
                 domain_value=self._http_metadata.dns_answer,
                 created_at=now
-            ).persist()
+            ))
 
         if self._http_metadata.honey_score:
-            DomainStat(
+            domain_stats.append(DomainStat(
                 domain_id=self.domain_id,
                 domain_stat=DomainStat.HONEY_SCORE,
                 domain_value=self._http_metadata.honey_score,
                 created_at=now
-            ).persist()
+            ))
 
         if self._http_metadata.threat_score:
-            DomainStat(
+            domain_stats.append(DomainStat(
                 domain_id=self.domain_id,
                 domain_stat=DomainStat.THREAT_SCORE,
                 domain_value=self._http_metadata.threat_score,
                 created_at=now
-            ).persist()
+            ))
 
         if self._http_metadata.threat_type:
-            DomainStat(
+            domain_stats.append(DomainStat(
                 domain_id=self.domain_id,
                 domain_stat=DomainStat.THREAT_TYPE,
                 domain_value=self._http_metadata.threat_type,
                 created_at=now
-            ).persist()
+            ))
 
         phishtank_value = 'Unclassified'
         if self._http_metadata.phishtank:
@@ -287,40 +311,45 @@ class Domain(DatabaseHelpers):
                 phishtank_value = 'Reported Phish'
             elif self._http_metadata.phishtank.get('verified'):
                 phishtank_value = 'Verified Phish'
-        DomainStat(
+        domain_stats.append(DomainStat(
             domain_id=self.domain_id,
             domain_stat=DomainStat.PHISHTANK,
             domain_value=phishtank_value,
             domain_data=self._http_metadata.phishtank,
             created_at=now
-        ).persist()
+        ))
 
         sb_value = 'Safe'
         if self._http_metadata.safe_browsing:
             sb_value = f'{self._http_metadata.safe_browsing.get("platform_type")} {self._http_metadata.safe_browsing.get("threat_type")}'.lower()
-        DomainStat(
+        domain_stats.append(DomainStat(
             domain_id=self.domain_id,
             domain_stat=DomainStat.SAFE_BROWSING,
             domain_value=sb_value,
             domain_data=self._http_metadata.safe_browsing,
             created_at=now
-        ).persist()
+        ))
 
         if self._http_metadata.get_site_title():
-            DomainStat(
+            domain_stats.append(DomainStat(
                 domain_id=self.domain_id,
                 domain_stat=DomainStat.HTML_TITLE,
                 domain_value=self._http_metadata.get_site_title(),
                 created_at=now
-            ).persist()
+            ))
 
+        html_content = None
+        try:
+            html_content = self._http_metadata.get_site_content()
+        except Exception as ex:
+            logger.exception(ex)
         if html_content:
-            DomainStat(
+            domain_stats.append(DomainStat(
                 domain_id=self.domain_id,
                 domain_stat=DomainStat.HTML_SIZE,
                 domain_value=len(html_content),
                 created_at=now
-            ).persist()
+            ))
 
         domain_stat = DomainStat(
             domain_id=self.domain_id,
@@ -332,7 +361,7 @@ class Domain(DatabaseHelpers):
             f'domain_stats/domain_id/{self.domain_id}'
         ])
 
-        return self.get_stats()
+        return domain_stats
 
 class Domains(DatabaseIterators):
     def __init__(self):

@@ -45,8 +45,11 @@ package-local: package ## packages distribution for local dev
 	mkdir -p $(LOCAL_CACHE)
 	cp -fu dist/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl $(LOCAL_CACHE)/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl
 	cp -fu build.zip $(LOCAL_CACHE)/build.zip
-	$(CMD_AWS) s3 cp --only-show-errors dist/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl s3://cloudformation-trivialsec/deploy-packages/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl
+	$(CMD_AWS) s3 cp --only-show-errors dist/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl s3://trivialsec-assets/dev/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl
+
+package-upload-deps: ## packages distribution deps for local dev
+	$(CMD_AWS) s3 cp --only-show-errors build.zip s3://trivialsec-assets/dev/$(COMMON_VERSION)/build.zip
 
 package-upload: package ## uploads distribution to s3
-	$(CMD_AWS) s3 cp --only-show-errors dist/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl s3://cloudformation-trivialsec/deploy-packages/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl
-	$(CMD_AWS) s3 cp --only-show-errors build.zip s3://cloudformation-trivialsec/deploy-packages/build-$(COMMON_VERSION).zip
+	$(CMD_AWS) s3 cp --only-show-errors dist/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl s3://trivialsec-assets/deploy-packages/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl
+	$(CMD_AWS) s3 cp --only-show-errors build.zip s3://trivialsec-assets/deploy-packages/$(COMMON_VERSION)/build.zip

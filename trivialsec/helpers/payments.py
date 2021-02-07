@@ -78,6 +78,7 @@ def create_customer(email: str):
 def checkout(price_id: str, customer_id: str):
     try:
         return stripe.checkout.Session.create(
+            allow_promotion_codes=True,
             mode='subscription',
             customer=customer_id,
             payment_method_types=['card'],

@@ -38,7 +38,7 @@ class Plan(DatabaseHelpers):
         if name in ['is_dedicated', 'compliance_reports', 'webhooks', 'source_code_scans', 'threatintel', 'compromise_indicators', 'typosquatting']:
             value = bool(value)
         elif name in 'cost':
-            value = Decimal(value).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+            value = Decimal(value or 0).quantize(Decimal('.01'), rounding=ROUND_DOWN)
         super().__setattr__(name, value)
 
 class Plans(DatabaseIterators):
