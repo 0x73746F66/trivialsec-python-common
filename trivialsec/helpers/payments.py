@@ -99,21 +99,30 @@ def checkout(price_id: str, customer_id: str):
     except Exception as ex:
         logger.exception(ex)
 
-def upsert_plan_invoice(stripe_invoice_data: dict):
+def upsert_plan_invoice(stripe_invoice_data: dict) -> int:
     plan = Plan(stripe_customer_id=stripe_invoice_data['customer'])
     plan.hydrate('stripe_customer_id')
     plan_invoice = PlanInvoice(stripe_invoice_id=stripe_invoice_data['id'])
     plan_invoice.hydrate()
     plan_invoice.plan_id = plan.plan_id
     plan_invoice.hosted_invoice_url = stripe_invoice_data.get('hosted_invoice_url', plan_invoice.hosted_invoice_url)
-    plan_invoice.cost = Decimal(int(stripe_invoice_data['lines']['data'][0]['amount'])/100).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+    plan_invoice.cost = Decimal(int(stripe_invoice_data['total'])/100).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+    # plan_invoice.cost = Decimal(int(stripe_invoice_data['lines']['data'][0]['amount'])/100).quantize(Decimal('.01'), rounding=ROUND_DOWN)
     plan_invoice.currency = stripe_invoice_data['lines']['data'][0]['currency'].upper()
+    if 'discount' in stripe_invoice_data and 'coupon' in stripe_invoice_data['discount']:
+        plan_invoice.coupon_code = stripe_invoice_data['discount']['coupon']['id']
+        plan_invoice.coupon_desc = stripe_invoice_data['discount']['coupon']['name']
+        plan_invoice.stripe_promotion_id = stripe_invoice_data['discount']['promotion_code']
     plan_invoice.interval = stripe_invoice_data['lines']['data'][0]['plan']['interval'].upper()
     plan_invoice.status = stripe_invoice_data['status']
     plan_invoice.due_date = datetime.fromtimestamp(stripe_invoice_data['created']).isoformat()
     if plan_invoice.created_at is None:
         plan_invoice.created_at = datetime.utcnow()
-    plan_invoice.persist()
+    try:
+        plan_invoice.persist()
+    except Exception as ex:
+        logger.exception(ex)
+    return plan_invoice.plan_id
 
 def payment_intent_succeeded(stripe_customer: str, stripe_charge_data: dict):
     plan = Plan(stripe_customer_id=stripe_customer)
@@ -124,6 +133,9 @@ def payment_intent_succeeded(stripe_customer: str, stripe_charge_data: dict):
         plan.stripe_card_expiry_month = stripe_charge_data['payment_method_details']['card']['exp_month']
         plan.stripe_card_expiry_year = stripe_charge_data['payment_method_details']['card']['exp_year']
         plan.persist()
+        return plan.plan_id
+
+    return None
 
 def invoice_paid(stripe_customer: str, stripe_data: dict):
     plan = Plan(stripe_customer_id=stripe_customer)
@@ -141,7 +153,9 @@ def invoice_paid(stripe_customer: str, stripe_data: dict):
         if account.is_setup is False:
             account.is_setup = True
             account.persist()
-        upsert_plan_invoice(stripe_data)
+        return upsert_plan_invoice(stripe_data)
+
+    return None
 
 def subscription_created(stripe_customer: str, stripe_subscription_id: str, default_payment_method: str, stripe_plan_data: dict):
     plan = Plan(stripe_customer_id=stripe_customer)
@@ -159,3 +173,6 @@ def subscription_created(stripe_customer: str, stripe_subscription_id: str, defa
         if account.is_setup is False:
             account.is_setup = True
             account.persist()
+        return plan.plan_id
+
+    return None
