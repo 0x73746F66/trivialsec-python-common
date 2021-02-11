@@ -133,6 +133,138 @@ class Findings(DatabaseIterators):
         self.set_items(items)
         return self
 
+    def count_informational(self, search_filter: list, conditional: str = 'AND') -> int:
+        num_results = 0
+        data = {}
+        _cols = Finding().cols()
+        sql = 'SELECT COUNT(finding_id) as count FROM findings WHERE severity_normalized = 0'
+        conditions = []
+        for key, val in search_filter:
+            if key not in _cols:
+                continue
+            if val is None:
+                conditions.append(f' `{key}` is null ')
+            elif isinstance(val, (list, tuple)):
+                index = 0
+                in_keys = []
+                for _val in val:
+                    _key = f'{key}{index}'
+                    data[_key] = _val
+                    index += 1
+                    in_keys.append(f'%({_key})s')
+
+                conditions.append(f' `{key}` in ({",".join(in_keys)}) ')
+            else:
+                data[key] = val
+                conditions.append(f' `{key}` = %({key})s ')
+        sql += f" {conditional} {conditional.join(conditions)}"
+
+        with mysql_adapter as database:
+            result = database.query_one(sql, data)
+            if result:
+                num_results = int(result['count'])
+
+        return num_results
+
+    def count_low_severity(self, search_filter: list, conditional: str = 'AND') -> int:
+        num_results = 0
+        data = {}
+        _cols = Finding().cols()
+        sql = 'SELECT COUNT(finding_id) as count FROM findings WHERE severity_normalized > 0 AND severity_normalized < 40'
+        conditions = []
+        for key, val in search_filter:
+            if key not in _cols:
+                continue
+            if val is None:
+                conditions.append(f' `{key}` is null ')
+            elif isinstance(val, (list, tuple)):
+                index = 0
+                in_keys = []
+                for _val in val:
+                    _key = f'{key}{index}'
+                    data[_key] = _val
+                    index += 1
+                    in_keys.append(f'%({_key})s')
+
+                conditions.append(f' `{key}` in ({",".join(in_keys)}) ')
+            else:
+                data[key] = val
+                conditions.append(f' `{key}` = %({key})s ')
+        sql += f" {conditional} {conditional.join(conditions)}"
+
+        with mysql_adapter as database:
+            result = database.query_one(sql, data)
+            if result:
+                num_results = int(result['count'])
+
+        return num_results
+
+    def count_medium_severity(self, search_filter: list, conditional: str = 'AND') -> int:
+        num_results = 0
+        data = {}
+        _cols = Finding().cols()
+        sql = 'SELECT COUNT(finding_id) as count FROM findings WHERE severity_normalized >= 40 AND severity_normalized < 70'
+        conditions = []
+        for key, val in search_filter:
+            if key not in _cols:
+                continue
+            if val is None:
+                conditions.append(f' `{key}` is null ')
+            elif isinstance(val, (list, tuple)):
+                index = 0
+                in_keys = []
+                for _val in val:
+                    _key = f'{key}{index}'
+                    data[_key] = _val
+                    index += 1
+                    in_keys.append(f'%({_key})s')
+
+                conditions.append(f' `{key}` in ({",".join(in_keys)}) ')
+            else:
+                data[key] = val
+                conditions.append(f' `{key}` = %({key})s ')
+        sql += f" {conditional} {conditional.join(conditions)}"
+
+        with mysql_adapter as database:
+            result = database.query_one(sql, data)
+            if result:
+                num_results = int(result['count'])
+
+        return num_results
+
+    def count_high_severity(self, search_filter: list, conditional: str = 'AND') -> int:
+        num_results = 0
+        data = {}
+        _cols = Finding().cols()
+        sql = 'SELECT COUNT(finding_id) as count FROM findings WHERE severity_normalized >= 70'
+        conditions = []
+        for key, val in search_filter:
+            if key not in _cols:
+                continue
+            if val is None:
+                conditions.append(f' `{key}` is null ')
+            elif isinstance(val, (list, tuple)):
+                index = 0
+                in_keys = []
+                for _val in val:
+                    _key = f'{key}{index}'
+                    data[_key] = _val
+                    index += 1
+                    in_keys.append(f'%({_key})s')
+
+                conditions.append(f' `{key}` in ({",".join(in_keys)}) ')
+            else:
+                data[key] = val
+                conditions.append(f' `{key}` = %({key})s ')
+        sql += f" {conditional} {conditional.join(conditions)}"
+
+        with mysql_adapter as database:
+            result = database.query_one(sql, data)
+            if result:
+                num_results = int(result['count'])
+
+        return num_results
+
 class FindingDetail(DatabaseHelpers):
     def __init__(self, **kwargs):
         super().__init__('finding_details', 'finding_detail_id')

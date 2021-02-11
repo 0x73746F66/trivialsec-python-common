@@ -222,10 +222,13 @@ class DatabaseIterators:
         module = importlib.import_module('trivialsec.models')
         class_ = getattr(module, self.__class_name)
         cls = class_()
+        _cols = cls.cols()
         data = {}
         sql = f"SELECT * FROM `{self.__table}`"
         conditions = []
         for key, val in search_filter:
+            if key not in _cols:
+                continue
             if val is None:
                 conditions.append(f' `{key}` is null ')
             elif isinstance(val, (list, tuple)):
@@ -277,6 +280,12 @@ class DatabaseIterators:
         return self
 
     def distinct(self, column: str, limit: int = 1000, cache_key: str = None, ttl_seconds: int = 300) -> list:
+        module = importlib.import_module('trivialsec.models')
+        class_ = getattr(module, self.__class_name)
+        cls = class_()
+        if column not in cls.cols():
+            return []
+
         sql = f"SELECT DISTINCT(`{column}`) FROM `{self.__table}`"
         if limit:
             sql += f' LIMIT {limit}'
@@ -294,11 +303,17 @@ class DatabaseIterators:
         return list(values)
 
     def count(self, query_filter: list = None, conditional: str = 'AND', cache_key: str = None, ttl_seconds: int = 5) -> int:
+        module = importlib.import_module('trivialsec.models')
+        class_ = getattr(module, self.__class_name)
+        cls = class_()
+        _cols = cls.cols()
         data = {}
         sql = f"SELECT COUNT(*) as count FROM `{self.__table}`"
-        if query_filter and isinstance(query_filter, list):
+        if isinstance(query_filter, list):
             conditions = []
             for key, val in query_filter:
+                if key not in _cols:
+                    continue
                 if val is None:
                     conditions.append(f' `{key}` is null ')
                 elif isinstance(val, (list, tuple)):
@@ -321,12 +336,18 @@ class DatabaseIterators:
             return res.get('count', 0)
 
     def pagination(self, search_filter: list = None, page_size: int = 10, page_num: int = 0, show_pages: int = 10, conditional: str = 'AND', ttl_seconds: int = 5)->dict:
+        module = importlib.import_module('trivialsec.models')
+        class_ = getattr(module, self.__class_name)
+        cls = class_()
+        _cols = cls.cols()
         data = {}
         sql = f"SELECT count(*) as records FROM {self.__table}"
-        if search_filter and isinstance(search_filter, list):
+        if isinstance(search_filter, list):
             conditions = []
             for col in search_filter:
                 key, val = col
+                if key not in _cols:
+                    continue
                 if val is None:
                     conditions.append(f' `{key}` is null ')
                 elif isinstance(val, (list, tuple)):
