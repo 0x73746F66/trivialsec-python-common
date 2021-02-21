@@ -161,7 +161,7 @@ class SafeBrowsing:
             platforms = ["ANY_PLATFORM"]
         return self.lookup_urls([url], platforms=platforms)[url]
 
-class HTTPMetadata:
+class Metadata:
     _json_certificate = None
     _content = None
 
@@ -184,6 +184,7 @@ class HTTPMetadata:
     elapsed_duration = 0
     code = None
     reason = None
+    redirect = None
     host = None
     port = None
     url = None
@@ -212,6 +213,7 @@ class HTTPMetadata:
             'elapsed_duration': str(self.elapsed_duration),
             'code': self.code,
             'reason': self.reason,
+            'redirect': self.redirect,
             'host': self.host,
             'port': self.port,
             'url': self.url,
@@ -306,20 +308,25 @@ class HTTPMetadata:
             titles = _codes[self.code]
             status, *_ = titles
             self.reason = resp.reason or status
-            if not str(resp.status_code).startswith('2'):
-                if resp.status_code == 403:
+
+            for header, directive in resp.headers.items():
+                self.headers[header.lower()] = directive
+
+            if not str(self.code).startswith('2'):
+                if self.code == 403:
                     logger.warning(f"Forbidden {self.url}")
                     self.code = 403
                     self.reason = 'Forbidden'
-
-                elif resp.status_code == 404:
+                elif self.code in [301, 302]:
+                    self.redirect = self.headers.get('location')
+                elif self.code == 404:
                     logger.warning(f"Not Found {self.url}")
                     self.code = 404
                     self.reason = 'Not Found'
+                elif self.code in [502, 503, 401]:
+                    logger.warning(f"HTTP response code {self.code} for URL {self.url}")
                 else:
-                    logger.error(f"Unexpected HTTP response code {resp.status_code} for URL {self.url}")
-            for header, directive in resp.headers.items():
-                self.headers[header.lower()] = directive
+                    logger.error(f"Unexpected HTTP response code {self.code} for URL {self.url}")
 
         except ReadTimeout:
             self.code = 504
@@ -521,7 +528,7 @@ class HTTPMetadata:
             reverse_octet = ipaddress.ip_address(addr).reverse_pointer.replace('.in-addr.arpa', '').replace('.ip6.arpa', '')
             query = f'{config.projecthoneypot_key}.{reverse_octet}.dnsbl.httpbl.org'
             logger.info(query)
-            res, err = HTTPMetadata.dig(query, rdtype=1)
+            res, err = Metadata.dig(query, rdtype=1)
             if err:
                 logger.error(err)
             if res is not None:
@@ -535,34 +542,44 @@ class HTTPMetadata:
         return self
 
     def verification_check(self):
-        answers = []
+        self.verification_hash, self.dns_answer = self.get_txt_value(self.host, 'trivialsec')
         registered = True
-        res, err = HTTPMetadata.dig(self.host)
-        if res is not None:
-            for rrdata in res.response.answer:
-                self.dns_answer = str(rrdata)
-                for rtype in rrdata:
-                    if isinstance(rtype, rdtypes.txtbase.TXTBase):
-                        answers.append(str(rtype))
-        if err == 'DNS Timeout':
+        if self.verification_hash is False:
             registered = False
-
-        if len(answers) > 0:
-            for record in answers:
-                if 'trivialsec=' not in record:
-                    continue
-                self.verification_hash = record.replace('"', '').split('=')[1]
-
-        if err and 'None of DNS query names exist' in err:
-            registered = False
+            self.verification_hash = None
 
         self.registered = registered
 
         return self
 
+    @staticmethod
+    def get_txt_value(domain_name: str, txt_key: str):
+        dns_answer = None
+        answers = []
+        res, err = Metadata.dig(domain_name)
+        if res is not None:
+            for rrdata in res.response.answer:
+                dns_answer = str(rrdata)
+                for rtype in rrdata:
+                    if isinstance(rtype, rdtypes.txtbase.TXTBase):
+                        answers.append(str(rtype))
+
+        if err == 'DNS Timeout':
+            return False
+
+        if len(answers) > 0:
+            for record in answers:
+                if f'{txt_key}=' not in record:
+                    continue
+                return record.replace('"', '').split('=')[1]
+
+        if err and 'None of DNS query names exist' in err:
+            return False
+
+        return None, dns_answer
+
 @retry((SocketError), tries=5, delay=1.5, backoff=3)
-def download_file(remote_file: str, temp_name: str = None, temp_dir: str = '/tmp'):
-    cached = False
+def download_file(remote_file: str, temp_name: str = None, temp_dir: str = '/tmp') -> str:
     session = requests.Session()
     remote_file = remote_file.replace(":80/", "/").replace(":443/", "/")
     resp = session.head(remote_file, verify=remote_file.startswith('https'), allow_redirects=True, timeout=2)
@@ -571,10 +588,10 @@ def download_file(remote_file: str, temp_name: str = None, temp_dir: str = '/tmp
             logger.warning(f"Forbidden {remote_file}")
         elif resp.status_code == 404:
             logger.warning(f"Not Found {remote_file}")
-            return None, cached
+            return None
         else:
             logger.error(f"Unexpected HTTP response code {resp.status_code} for URL {remote_file}")
-            return None, cached
+            return None
 
     file_size = int(resp.headers.get('Content-Length', 0))
     dest_file = None
@@ -597,8 +614,7 @@ def download_file(remote_file: str, temp_name: str = None, temp_dir: str = '/tmp
             else:
                 raise
         if local_size == file_size:
-            cached = True
-            return temp_path, cached
+            return temp_path
 
     etag = resp.headers.get('ETag')
     if etag:
@@ -607,8 +623,7 @@ def download_file(remote_file: str, temp_name: str = None, temp_dir: str = '/tmp
             with open(etag_path, 'r') as handle:
                 local_etag = handle.read()
         if local_etag == etag:
-            cached = True
-            return temp_path, cached
+            return temp_path
 
     resp = session.get(
         remote_file,
@@ -623,7 +638,7 @@ def download_file(remote_file: str, temp_name: str = None, temp_dir: str = '/tmp
         with open(etag_path, 'w') as handle:
             handle.write(etag)
 
-    return temp_path, cached
+    return temp_path
 
 @retry((SocketError), tries=5, delay=1.5, backoff=3, logger=logger)
 def http_status(url: str):
@@ -634,7 +649,7 @@ def http_status(url: str):
         titles = _codes[code]
         status, *_ = titles
     except ReadTimeout:
-        return 504, HTTPMetadata.HTTP_504
+        return 504, Metadata.HTTP_504
 
     return code, status
 

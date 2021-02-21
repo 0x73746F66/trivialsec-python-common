@@ -23,7 +23,7 @@ prep: ## cleans python for wheel
 	find . -type d -name '__pycache__' -delete 2>/dev/null || true
 	find . -type f -name '*.DS_Store' -delete 2>/dev/null || true
 	rm -rf build dist trivialsec_common.egg-info
-	rm -f **/*.zip
+	rm -f **/*.zip **/*.gz
 
 wheel: prep ## builds python wheel files
 	pip uninstall -y trivialsec-common || true
@@ -39,17 +39,18 @@ lint: ## checks code quality
 	pylint --jobs=0 --persistent=y --errors-only trivialsec/**/*.py
 
 package: wheel ## packages distribution
-	zip -9rq build.zip build/wheel
+	tar -ckzf build.tgz build/wheel
+	ls -l --block-size=M build.tgz
 
 package-local: package ## packages distribution for local dev
 	mkdir -p $(LOCAL_CACHE)
 	cp -fu dist/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl $(LOCAL_CACHE)/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl
-	cp -fu build.zip $(LOCAL_CACHE)/build.zip
+	cp -fu build.tgz $(LOCAL_CACHE)/build.tgz
 	$(CMD_AWS) s3 cp --only-show-errors dist/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl s3://trivialsec-assets/dev/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl
 
 package-upload-deps: ## packages distribution deps for local dev
-	$(CMD_AWS) s3 cp --only-show-errors build.zip s3://trivialsec-assets/dev/$(COMMON_VERSION)/build.zip
+	$(CMD_AWS) s3 cp --only-show-errors build.tgz s3://trivialsec-assets/dev/$(COMMON_VERSION)/build.tgz
 
 package-upload: package ## uploads distribution to s3
 	$(CMD_AWS) s3 cp --only-show-errors dist/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl s3://trivialsec-assets/deploy-packages/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl
-	$(CMD_AWS) s3 cp --only-show-errors build.zip s3://trivialsec-assets/deploy-packages/$(COMMON_VERSION)/build.zip
+	$(CMD_AWS) s3 cp --only-show-errors build.tgz s3://trivialsec-assets/deploy-packages/$(COMMON_VERSION)/build.tgz

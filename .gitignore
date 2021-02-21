@@ -84,4 +84,5 @@ terraform.*
 **/.monit*
 **/*.whl
 *.zip
-*.tar.gz
+*.tgz
+*.gz

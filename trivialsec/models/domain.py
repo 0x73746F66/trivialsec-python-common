@@ -3,7 +3,7 @@ from datetime import datetime
 from OpenSSL.crypto import X509, X509Name
 from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 from trivialsec.helpers.database import mysql_adapter
-from trivialsec.helpers.transport import HTTPMetadata
+from trivialsec.helpers.transport import Metadata
 from trivialsec.helpers.log_manager import logger
 from .account import Account
 
@@ -82,16 +82,19 @@ class Domain(DatabaseHelpers):
             logger.warning('called Domain.fetch_metadata before initialising data')
             return self
 
-        self._http_metadata = HTTPMetadata(f'http://{self.name}')
+        self._http_metadata = Metadata(f'https://{self.name}')
         try:
             self._http_metadata.head()
         except Exception as ex:
             logger.exception(ex)
-        try:
-            self._http_metadata.url = f'https://{self.name}'
-            self._http_metadata.head()
-        except Exception as ex:
-            logger.exception(ex)
+
+        if not str(self._http_metadata.code).startswith('2'):
+            try:
+                self._http_metadata.url = f'http://{self.name}'
+                self._http_metadata.head()
+            except Exception as ex:
+                logger.exception(ex)
+
         try:
             self._http_metadata.verification_check()
         except Exception as ex:
@@ -238,7 +241,7 @@ class Domain(DatabaseHelpers):
                     created_at=now
                 ))
 
-                not_before = datetime.strptime(self._http_metadata.server_certificate.get_notBefore().decode('ascii'), HTTPMetadata.X509_DATE_FMT)
+                not_before = datetime.strptime(self._http_metadata.server_certificate.get_notBefore().decode('ascii'), Metadata.X509_DATE_FMT)
                 logger.info(f'notBefore {self._http_metadata.server_certificate.get_notBefore()} {not_before}')
                 domain_stats.append(DomainStat(
                     domain_id=self.domain_id,
@@ -248,7 +251,7 @@ class Domain(DatabaseHelpers):
                     created_at=now
                 ))
 
-                not_after = datetime.strptime(self._http_metadata.server_certificate.get_notAfter().decode('ascii'), HTTPMetadata.X509_DATE_FMT)
+                not_after = datetime.strptime(self._http_metadata.server_certificate.get_notAfter().decode('ascii'), Metadata.X509_DATE_FMT)
                 logger.info(f'notAfter {self._http_metadata.server_certificate.get_notAfter()} {not_after}')
                 domain_stats.append(DomainStat(
                     domain_id=self.domain_id,
@@ -397,6 +400,9 @@ class DomainStat(DatabaseHelpers):
     HTML_SIZE = 'html_size'
     DNS_REGISTERED = 'dns_registered'
     DNS_ANSWER = 'dns_answer'
+    HIBP_BREACH = 'hibp_breach'
+    HIBP_EXPOSURE = 'hibp_exposure'
+    HIBP_DISCLOSURE = 'hibp_disclosure'
 
     def __init__(self, **kwargs):
         super().__init__('domain_stats', 'domain_stats_id')
