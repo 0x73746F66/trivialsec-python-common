@@ -36,6 +36,7 @@ install-dev: ## setup for development of this project
 	pip install -q -U --no-cache-dir --isolated -r requirements.txt
 
 lint: ## checks code quality
+	pylint --jobs=0 --persistent=y --errors-only trivialsec/**/*.py
 	semgrep -q --strict --timeout=0 --config=p/ci --lang=py trivialsec/**/*.py
 	semgrep -q --strict --config p/minusworld.flask-xss --lang=py trivialsec/**/*.py
 
