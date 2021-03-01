@@ -1,4 +1,6 @@
 import json
+import socket
+from ssl import create_default_context, _create_unverified_context, SSLCertVerificationError, Purpose
 from datetime import datetime
 from OpenSSL.crypto import X509, X509Name
 from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
@@ -86,35 +88,35 @@ class Domain(DatabaseHelpers):
         try:
             self._http_metadata.head()
         except Exception as ex:
-            logger.exception(ex)
+            logger.error(ex)
 
         if not str(self._http_metadata.code).startswith('2'):
             try:
                 self._http_metadata.url = f'http://{self.name}'
                 self._http_metadata.head()
             except Exception as ex:
-                logger.exception(ex)
+                logger.error(ex)
 
         try:
             self._http_metadata.verification_check()
         except Exception as ex:
-            logger.exception(ex)
+            logger.error(ex)
         try:
             self._http_metadata.safe_browsing_check()
         except Exception as ex:
-            logger.exception(ex)
+            logger.error(ex)
         try:
             self._http_metadata.phishtank_check()
         except Exception as ex:
-            logger.exception(ex)
+            logger.error(ex)
         try:
             self._http_metadata.projecthoneypot()
         except Exception as ex:
-            logger.exception(ex)
+            logger.error(ex)
         try:
             self._http_metadata.honeyscore_check()
         except Exception as ex:
-            logger.exception(ex)
+            logger.error(ex)
         return self
 
     def gather_stats(self):
@@ -215,6 +217,41 @@ class Domain(DatabaseHelpers):
                     domain_value=self._http_metadata.pubkey_type,
                     created_at=now
                 ))
+
+            if self._http_metadata._json_certificate == '{}': # pylint: disable=protected-access
+                self._http_metadata._json_certificate = '' # pylint: disable=protected-access
+                try:
+                    ctx0 = _create_unverified_context(check_hostname=False, purpose=Purpose.CLIENT_AUTH) # NOSONAR get the cert regardless of validation
+                    with ctx0.wrap_socket(socket.socket(), server_hostname=self.name) as sock:
+                        sock.connect((self.name, 443))
+                        cert = sock.getpeercert()
+                        self._http_metadata._json_certificate = json.dumps(cert, default=str) # pylint: disable=protected-access
+                except SSLCertVerificationError as err:
+                    logger.warning(err)
+
+            try:
+                ctx1 = create_default_context(purpose=Purpose.CLIENT_AUTH)
+                with ctx1.wrap_socket(socket.socket(), server_hostname=self.name) as sock:
+                    sock.connect((self.name, 443))
+
+            except SSLCertVerificationError as err:
+                if 'self signed certificate' in err.verify_message:
+                    domain_stats.append(DomainStat(
+                        domain_id=self.domain_id,
+                        domain_stat=DomainStat.HTTP_CERTIFICATE_IS_SELF_SIGNED,
+                        domain_value=1,
+                        domain_data=str(err),
+                        created_at=now
+                    ))
+                else:
+                    domain_stats.append(DomainStat(
+                        domain_id=self.domain_id,
+                        domain_stat=DomainStat.HTTP_CERTIFICATE_ERROR,
+                        domain_value=err.verify_message,
+                        domain_data=str(err),
+                        created_at=now
+                    ))
+
             if isinstance(self._http_metadata.server_certificate, X509):
                 serial_number = self._http_metadata.server_certificate.get_serial_number()
                 domain_stats.append(DomainStat(
@@ -240,7 +277,6 @@ class Domain(DatabaseHelpers):
                     domain_data=self._http_metadata._json_certificate, # pylint: disable=protected-access
                     created_at=now
                 ))
-
                 not_before = datetime.strptime(self._http_metadata.server_certificate.get_notBefore().decode('ascii'), Metadata.X509_DATE_FMT)
                 logger.info(f'notBefore {self._http_metadata.server_certificate.get_notBefore()} {not_before}')
                 domain_stats.append(DomainStat(
@@ -333,24 +369,23 @@ class Domain(DatabaseHelpers):
             created_at=now
         ))
 
-        if self._http_metadata.get_site_title():
-            domain_stats.append(DomainStat(
-                domain_id=self.domain_id,
-                domain_stat=DomainStat.HTML_TITLE,
-                domain_value=self._http_metadata.get_site_title(),
-                created_at=now
-            ))
-
         html_content = None
         try:
             html_content = self._http_metadata.get_site_content()
         except Exception as ex:
-            logger.exception(ex)
+            logger.error(ex)
         if html_content:
             domain_stats.append(DomainStat(
                 domain_id=self.domain_id,
                 domain_stat=DomainStat.HTML_SIZE,
                 domain_value=len(html_content),
+                created_at=now
+            ))
+        if self._http_metadata.get_site_title():
+            domain_stats.append(DomainStat(
+                domain_id=self.domain_id,
+                domain_stat=DomainStat.HTML_TITLE,
+                domain_value=self._http_metadata.get_site_title(),
                 created_at=now
             ))
 
@@ -391,6 +426,8 @@ class DomainStat(DatabaseHelpers):
     HTTP_CERTIFICATE_ISSUER_COUNTRY = 'http_certificate_issuer_country'
     HTTP_CERTIFICATE_ISSUED = 'http_certificate_issued'
     HTTP_CERTIFICATE_EXPIRY = 'http_certificate_expiry'
+    HTTP_CERTIFICATE_IS_SELF_SIGNED = 'http_certificate_is_self_signed'
+    HTTP_CERTIFICATE_ERROR = 'http_certificate_error'
     HTTP_CODE = 'http_code'
     HTTP_HEADERS = 'http_headers'
     HTTP_COOKIES = 'http_cookies'
@@ -403,6 +440,9 @@ class DomainStat(DatabaseHelpers):
     HIBP_BREACH = 'hibp_breach'
     HIBP_EXPOSURE = 'hibp_exposure'
     HIBP_DISCLOSURE = 'hibp_disclosure'
+    PHISH_DOMAIN = 'phish_domain'
+    DOMAIN_REPUTATION = 'domain_reputation'
+    DOMAIN_REGISTRATION = 'domain_registration'
 
     def __init__(self, **kwargs):
         super().__init__('domain_stats', 'domain_stats_id')

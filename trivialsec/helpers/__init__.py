@@ -147,3 +147,60 @@ def check_email_rules(email_addr: str) -> bool:
         return False
 
     return True
+
+def extract_server_version(str_value: str) -> tuple:
+    trim_values = [
+        'via:',
+        'x-cache: miss',
+        'x-cache: miss from',
+    ]
+    clean_names = [
+        'cloudfront',
+        'varnish',
+        'wp engine',
+        'microsoft-httpapi',
+        'amazons3'
+    ]
+    ignore_list = [
+        'no "server" line in header',
+        'server-processing-duration-in-ticks:',
+        'iterable-links',
+        'x-cacheable: non',
+        'x-cacheable: short',
+        'nib.com.au',
+    ]
+    server_name = str_value.lower()
+    for ignore_str in ignore_list:
+        if ignore_str in server_name:
+            return None, None
+
+    for drop_str in trim_values:
+        server_name = server_name.replace(drop_str, '').strip()
+
+    server_version = None
+    if '/' in server_name and len(server_name.split('/')) == 2:
+        server_name, server_version = server_name.split('/')
+        matches = re.search(r'\d+(=?\.(\d+(=?\.(\d+)*)*)*)*', server_version)
+        if matches:
+            server_version = matches.group()
+
+    if server_version is None:
+        matches = re.search(r'\d+(=?\.(\d+(=?\.(\d+)*)*)*)*', server_name)
+        if matches:
+            server_version = matches.group()
+
+    if server_version is not None and server_version in server_name:
+        server_name = server_name.replace(server_version, '')
+
+    for name in clean_names:
+        if name in str_value.lower():
+            server_name = name
+
+    if server_name == '':
+        server_name = None
+    if server_version is not None:
+        server_version = server_version.strip()
+    if server_name is not None:
+        server_name = server_name.strip()
+
+    return server_name, server_version

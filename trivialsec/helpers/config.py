@@ -59,7 +59,7 @@ class Config:
             sys.exit(1)
 
         self.node_id: str = node_id
-        self.log_level: int = app_log_level if isinstance(app_log_level, int) else logging._nameToLevel.get(app_log_level)
+        self.log_level: int = app_log_level if isinstance(app_log_level, int) else logging._nameToLevel.get(app_log_level) # pylint: disable=protected-access
         self.log_file: str = app_conf.get('log_file', '/tmp/application.log')
         self.nameservers: list = list(set(app_conf.get('nameservers', list())))
         self.external_dsn_provider: str = self.nameservers[0]
@@ -71,12 +71,13 @@ class Config:
         self.sendgrid_api_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/SendGridApiKey')
         self.stripe_publishable_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/StripePublishableKey')
         self.stripe_secret_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/StripeSecretKey')
-        self.stripe_webhook_secret: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/StripeWebhookSecret', default='whsec_jZhj4vRAWZotw2hdgl118i7Xevn1GZ3G')
+        self.stripe_webhook_secret: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/StripeWebhookSecret')
         self.google_api_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/GoogleAPIKey')
         self.phishtank_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/PhishtankKey')
         self.phishtank_username: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/PhishtankUsername')
         self.honeyscore_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/HoneyScoreKey')
         self.projecthoneypot_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/ProjectHoneypot')
+        self.whoisxmlapi_key: str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/WhoisXMLAPI')
 
     @retry((ConnectionClosedError, ReadTimeoutError, ConnectTimeoutError, CapacityNotAvailableError), tries=5, delay=1.5, backoff=3)
     def ssm_secret(self, parameter: str, default=None, **kwargs) -> str:

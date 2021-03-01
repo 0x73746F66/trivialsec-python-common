@@ -32,11 +32,12 @@ wheel: prep ## builds python wheel files
 	pip install --no-cache-dir --find-links=build/wheel --no-index dist/trivialsec_common-*-py2.py3-none-any.whl
 
 install-dev: ## setup for development of this project
-	pip install -q -U pip setuptools pylint wheel awscli
+	pip install -q -U pip setuptools wheel awscli semgrep
 	pip install -q -U --no-cache-dir --isolated -r requirements.txt
 
 lint: ## checks code quality
-	pylint --jobs=0 --persistent=y --errors-only trivialsec/**/*.py
+	semgrep -q --strict --timeout=0 --config=p/ci --lang=py trivialsec/**/*.py
+	semgrep -q --strict --config p/minusworld.flask-xss --lang=py trivialsec/**/*.py
 
 package: wheel ## packages distribution
 	tar -ckzf build.tgz build/wheel

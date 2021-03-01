@@ -23,7 +23,7 @@ def control_timing_attacks(seconds: float):
             try:
                 ret = func(*args, **kwargs)
             except Exception as err:
-                logger.exception(err)
+                logger.error(err)
                 ret = err
             end = time()
             elapsed_time = end - start
@@ -79,7 +79,7 @@ def require_recaptcha(action: str):
             try:
                 ret = func(*args, **kwargs)
             except Exception as err:
-                logger.exception(err)
+                logger.error(err)
                 ret = err
 
             return ret
@@ -108,7 +108,7 @@ def require_hmac(not_before_seconds: int = 3, expire_after_seconds: int = 3):
                 login_user(member)
                 ret = func(*args, **kwargs)
             except Exception as err:
-                logger.exception(err)
+                logger.error(err)
                 ret = abort(401)
             return ret
 
@@ -121,7 +121,7 @@ def internal_users(func):
         authorised = is_internal_member(current_user)
 
         if not current_user.is_authenticated:
-            return redirect(url_for('public.login', next=request.url))
+            return redirect(url_for('root.login', next=request.url))
 
         if not authorised:
             return abort(403)
@@ -135,7 +135,7 @@ def requires_support(func):
         authorised = is_support_member(current_user)
 
         if not current_user.is_authenticated:
-            return redirect(url_for('public.login', next=request.url))
+            return redirect(url_for('root.login', next=request.url))
 
         if not authorised:
             return abort(403)
@@ -149,7 +149,7 @@ def requires_billing(func):
         authorised = is_billing_member(current_user)
 
         if not current_user.is_authenticated:
-            return redirect(url_for('public.login', next=request.url))
+            return redirect(url_for('root.login', next=request.url))
 
         if not authorised:
             return abort(403)
@@ -163,7 +163,7 @@ def requires_audit(func):
         authorised = is_audit_member(current_user)
 
         if not current_user.is_authenticated:
-            return redirect(url_for('public.login', next=request.url))
+            return redirect(url_for('root.login', next=request.url))
 
         if not authorised:
             return abort(403)
@@ -177,7 +177,7 @@ def requires_owner(func):
         authorised = is_owner_member(current_user)
 
         if not current_user.is_authenticated:
-            return redirect(url_for('public.login', next=request.url))
+            return redirect(url_for('root.login', next=request.url))
 
         if not authorised:
             return abort(403)

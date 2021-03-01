@@ -181,7 +181,7 @@ class MySQLDatabase:
                 redis_value = self.redis.get(f'{config.app_version}{cache_key}')
                 logger.debug(f'{cache_key} {redis_value}')
         except Exception as ex:
-            logger.exception(ex)
+            logger.error(ex)
             return None
 
         if redis_value is not None:
@@ -458,7 +458,7 @@ class DatabaseHelpers:
                         setattr(self, col, val)
 
         except Exception as ex:
-            logger.exception(ex)
+            logger.error(ex)
             return False
 
         return True

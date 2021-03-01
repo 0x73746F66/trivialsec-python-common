@@ -20,7 +20,6 @@ setup(
     ],
     install_requires=[
         'passlib>=1.7<1.8',
-        'colorlog>=4.1<4.2',
         'boto3>=1.15<1.16',
         'botocore>=1.18<1.19',
         'retry>=0.9<1.0',
@@ -33,7 +32,8 @@ setup(
         'stripe>=2.51<2.52',
         'pysafebrowsing>=0.1.1<1.0',
         'pyOpenSSL>=19.1.0<20.0',
-        'beautifulsoup4>=4.9.3<5.0'
+        'beautifulsoup4>=4.9.3<5.0',
+        'stackprinter>=0.2.5'
     ],
     include_package_data=True
 )

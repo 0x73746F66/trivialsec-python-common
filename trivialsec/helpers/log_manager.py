@@ -1,10 +1,17 @@
 import logging
-import colorlog
+import stackprinter
 
 
 __module__ = 'trivialsec.helpers.log_manager'
 
 logging.getLogger().setLevel(logging.WARNING)
+
+class VerboseExceptionFormatter(logging.Formatter):
+    def formatException(self, exc_info):
+        msg = stackprinter.format(exc_info)
+        msg_indented = '    ' + '\n    '.join(msg.split('\n')).strip()
+        return msg_indented
+
 class LogManager(logging.Logger):
     _format_str = None
     _date_format = None
@@ -30,24 +37,14 @@ class LogManager(logging.Logger):
         file_handler.setFormatter(formatter)
         self.addHandler(file_handler)
 
-    def create_stream_logger(self, colourise: bool = True, format_str: str = None, date_format: str = None):
+    def create_stream_logger(self, pretty: bool = True, format_str: str = None, date_format: str = None):
         stream_handler = logging.StreamHandler()
         if format_str is None:
             format_str = self._format_str
         if date_format is None:
             date_format = self._date_format
-        if colourise is not True:
-            formatter = logging.Formatter(format_str, date_format)
-        else:
-            cformat = '%(log_color)s' + format_str
-            colors = {
-                'DEBUG': 'reset',
-                'INFO': 'bold_blue',
-                'WARNING': 'bold_yellow',
-                'ERROR': 'bold_red',
-                'CRITICAL': 'bold_red'
-            }
-            formatter = colorlog.ColoredFormatter(cformat, date_format, log_colors=colors)
+        if pretty is True:
+            formatter = VerboseExceptionFormatter(format_str, date_format)
 
         stream_handler.setFormatter(formatter)
         self.addHandler(stream_handler)

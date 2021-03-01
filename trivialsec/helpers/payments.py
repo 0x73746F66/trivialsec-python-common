@@ -109,7 +109,7 @@ def upsert_plan_invoice(stripe_invoice_data: dict) -> int:
     plan_invoice.cost = Decimal(int(stripe_invoice_data['total'])/100).quantize(Decimal('.01'), rounding=ROUND_DOWN)
     # plan_invoice.cost = Decimal(int(stripe_invoice_data['lines']['data'][0]['amount'])/100).quantize(Decimal('.01'), rounding=ROUND_DOWN)
     plan_invoice.currency = stripe_invoice_data['lines']['data'][0]['currency'].upper()
-    if 'discount' in stripe_invoice_data and 'coupon' in stripe_invoice_data['discount']:
+    if 'discount' in stripe_invoice_data and isinstance(stripe_invoice_data['discount'], dict) and 'coupon' in stripe_invoice_data['discount']:
         plan_invoice.coupon_code = stripe_invoice_data['discount']['coupon']['id']
         plan_invoice.coupon_desc = stripe_invoice_data['discount']['coupon']['name']
         plan_invoice.stripe_promotion_id = stripe_invoice_data['discount']['promotion_code']
@@ -135,14 +135,14 @@ def payment_intent_succeeded(stripe_customer: str, stripe_charge_data: dict):
         plan.persist()
         return plan.plan_id
 
-    return None
+    return f'missing stripe_customer_id {stripe_customer}'
 
 def invoice_paid(stripe_customer: str, stripe_data: dict):
     plan = Plan(stripe_customer_id=stripe_customer)
     if plan.hydrate('stripe_customer_id'):
         plan.currency = stripe_data['currency'].upper()
         plan.interval = stripe_data['lines']['data'][0]['plan']['interval'].upper()
-        plan.cost = Decimal(stripe_data['subtotal']/100).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+        plan.cost = Decimal(int(stripe_data['subtotal'])/100).quantize(Decimal('.01'), rounding=ROUND_DOWN)
         plan.stripe_product_id = stripe_data['lines']['data'][0]['price']['product']
         plan.stripe_price_id = stripe_data['lines']['data'][0]['price']['id']
         plan.stripe_subscription_id = stripe_data['lines']['data'][0]['subscription']
@@ -155,7 +155,7 @@ def invoice_paid(stripe_customer: str, stripe_data: dict):
             account.persist()
         return upsert_plan_invoice(stripe_data)
 
-    return None
+    return f'missing stripe_customer_id {stripe_customer}'
 
 def subscription_created(stripe_customer: str, stripe_subscription_id: str, default_payment_method: str, stripe_plan_data: dict):
     plan = Plan(stripe_customer_id=stripe_customer)
@@ -164,7 +164,7 @@ def subscription_created(stripe_customer: str, stripe_subscription_id: str, defa
         plan.stripe_product_id = stripe_plan_data['product']
         plan.stripe_price_id = stripe_plan_data['id']
         plan.stripe_payment_method_id = default_payment_method
-        plan.cost = Decimal(stripe_plan_data['amount_decimal']/100).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+        plan.cost = Decimal(int(stripe_plan_data['amount_decimal'])/100).quantize(Decimal('.01'), rounding=ROUND_DOWN)
         plan.currency = stripe_plan_data['currency'].upper()
         plan.interval = stripe_plan_data['interval'].upper()
         plan.persist()
@@ -175,4 +175,4 @@ def subscription_created(stripe_customer: str, stripe_subscription_id: str, defa
             account.persist()
         return plan.plan_id
 
-    return None
+    return f'missing stripe_customer_id {stripe_customer}'

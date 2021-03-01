@@ -21,6 +21,8 @@ class QueueData:
         self.service_type_id = kwargs.get('service_type_id')
         self.service_type_name = kwargs.get('service_type_name')
         self.service_type_category = kwargs.get('service_type_category')
+        scan_next = kwargs.get('scan_next')
+        self.scan_next = scan_next if isinstance(scan_next, list) else scan_next.split(',')
         # amass, drill
         self.target = kwargs.get('target')
         # timings
@@ -53,10 +55,11 @@ class QueueData:
                 'started_at': self.started_at,
                 'completed_at': self.completed_at,
             },
-            'report_summary': self.report_summary
+            'report_summary': self.report_summary,
+            'scan_next': self.scan_next
         }.items()
 
-def queue_job(params: dict, service_type: ServiceType, member: Member, project=Project, priority: int = 0, on_demand: bool = True) -> JobRun:
+def queue_job(params: dict, service_type: ServiceType, member: Member, project=Project, priority: int = 0, on_demand: bool = True, scan_next: list = []) -> JobRun:
     queue_data = QueueData(
         queued_by_member_id=member.member_id,
         on_demand=on_demand,
@@ -64,7 +67,8 @@ def queue_job(params: dict, service_type: ServiceType, member: Member, project=P
         service_type_id=service_type.service_type_id,
         service_type_name=service_type.name,
         service_type_category=service_type.category,
-        target=params.get('target')
+        scan_next=scan_next,
+        target=params.get('target'),
     )
     new_job_run = JobRun(
         account_id=member.account_id,
