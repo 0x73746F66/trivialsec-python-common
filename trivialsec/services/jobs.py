@@ -21,8 +21,7 @@ class QueueData:
         self.service_type_id = kwargs.get('service_type_id')
         self.service_type_name = kwargs.get('service_type_name')
         self.service_type_category = kwargs.get('service_type_category')
-        scan_next = kwargs.get('scan_next')
-        self.scan_next = scan_next if isinstance(scan_next, list) else scan_next.split(',')
+        self.scan_next = kwargs.get('scan_next')
         # amass, drill
         self.target = kwargs.get('target')
         # timings
