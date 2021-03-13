@@ -112,9 +112,12 @@ class Config:
 
     def get_app(self)->dict:
         return {
-            'host_scheme': self.frontend.get('site_scheme'),
-            'host_domain': self.frontend.get('site_domain'),
-            'host_url': f"{self.frontend.get('site_scheme')}{self.frontend.get('site_domain')}",
+            'site_scheme': self.frontend.get('site_scheme'),
+            'site_domain': self.frontend.get('site_domain'),
+            'site_url': f"{self.frontend.get('site_scheme')}{self.frontend.get('site_domain')}",
+            'app_scheme': self.frontend.get('app_scheme'),
+            'app_domain': self.frontend.get('app_domain'),
+            'app_url': f"{self.frontend.get('app_scheme')}{self.frontend.get('app_domain')}",
             'api_scheme': self.frontend.get('api_scheme'),
             'api_domain': self.frontend.get('api_domain'),
             'api_url': f"{self.frontend.get('api_scheme')}{self.frontend.get('api_domain')}",

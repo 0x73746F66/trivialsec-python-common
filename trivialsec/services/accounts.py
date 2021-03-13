@@ -2,7 +2,7 @@ import string
 import secrets
 import uuid
 from trivialsec.helpers.config import config
-from trivialsec.helpers import check_email_rules, hash_password, oneway_hash
+from trivialsec.helpers import check_email_rules, oneway_hash
 from trivialsec.models.account import Account, AccountConfig
 from trivialsec.models.apikey import ApiKey
 from trivialsec.models.member import Member
@@ -19,7 +19,7 @@ def generate_api_key_secret(sequence_range: int = 8):
 def generate_api_key():
     return generate_api_key_secret(32).upper()
 
-def register(email_addr: str, passwd: str, selected_plan: dict, alias=None, verified=False, account_id=None, role_id=Role.ROLE_OWNER_ID) -> Member:
+def register(email_addr: str, company=None, verified=False, account_id=None, role_id=Role.ROLE_OWNER_ID) -> Member:
     res = check_email_rules(email_addr)
     if not res:
         return None
@@ -31,7 +31,7 @@ def register(email_addr: str, passwd: str, selected_plan: dict, alias=None, veri
     account = Account(
         billing_email=email_addr,
         account_id=account_id,
-        alias=alias or email_addr,
+        alias=company,
         verification_hash=oneway_hash(email_addr),
         socket_key=str(uuid.uuid5(uuid.NAMESPACE_URL, email_addr))
     )
@@ -43,13 +43,12 @@ def register(email_addr: str, passwd: str, selected_plan: dict, alias=None, veri
         account.persist()
         account_config = AccountConfig(account_id=account.account_id)
         account_config.persist()
-        selected_plan['account_id'] = account.account_id
-        plan = Plan(**selected_plan)
+        plan = Plan()
+        plan.name = 'Trial'
         plan.account_id = account.account_id
         plan.persist()
 
     member.account_id = account.account_id
-    member.password = hash_password(passwd)
     member.confirmation_url = f"/confirmation/{account.verification_hash}" if not verified else 'verified'
     if verified:
         member.verified = True
@@ -62,7 +61,7 @@ def register(email_addr: str, passwd: str, selected_plan: dict, alias=None, veri
         api_key_secret=generate_api_key_secret(),
         member_id=member.member_id,
         comment='public-api',
-        allowed_origin=config.get_app().get("host_domain"),
+        allowed_origin=config.get_app().get("app_domain"),
         active=True
     ).persist()
 
