@@ -19,11 +19,11 @@ CMD_AWS += --region $(AWS_REGION)
 endif
 
 prep: ## cleans python for wheel
-	find . -type f -name '*.pyc' -delete 2>/dev/null || true
-	find . -type d -name '__pycache__' -delete 2>/dev/null || true
-	find . -type f -name '*.DS_Store' -delete 2>/dev/null || true
-	rm -rf build dist trivialsec_common.egg-info
-	rm -f **/*.zip **/*.gz
+	@find . -type f -name '*.pyc' -delete 2>/dev/null
+	@find . -type d -name '__pycache__' -delete 2>/dev/null
+	@find . -type f -name '*.DS_Store' -delete 2>/dev/null
+	@rm -rf build dist trivialsec_common.egg-info
+	@rm -f **/*.zip **/*.tgz **/*.gz
 
 wheel: prep ## builds python wheel files
 	pip uninstall -y trivialsec-common || true

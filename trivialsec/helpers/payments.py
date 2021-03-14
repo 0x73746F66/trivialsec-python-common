@@ -86,8 +86,8 @@ def checkout(price_id: str, customer_id: str):
                 'price': price_id,
                 'quantity': 1,
             }],
-            success_url=f"{config.frontend.get('app_url')}/account/setup/3",
-            cancel_url=f"{config.frontend.get('app_url')}/account/setup/2",
+            success_url=f"{config.get_app().get('app_url')}/account/setup/3",
+            cancel_url=f"{config.get_app().get('app_url')}/account/setup/2",
         )
 
     except stripe.error.InvalidRequestError:

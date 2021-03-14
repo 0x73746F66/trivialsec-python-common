@@ -47,3 +47,8 @@ build-upload:
   only:
     refs:
       - master
+  release:
+    name: 'trivialsec-common-$COMMON_VERSION'
+    description: 'trivialsec-common python wheel'
+    tag_name: '$COMMON_VERSION'
+    ref: '$CI_COMMIT_SHA'
