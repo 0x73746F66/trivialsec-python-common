@@ -6,6 +6,7 @@ before_script:
   - python3 --version
   - pylint --version
   - echo semgrep $(semgrep --version)
+  - make install
 
 stages:
   - build
@@ -46,7 +47,7 @@ build:wheel:
     - linode
   stage: build
   script:
-    - make install
+    - make wheel
   only:
     refs:
       - merge_request
