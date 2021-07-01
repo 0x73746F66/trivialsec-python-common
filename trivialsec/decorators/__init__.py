@@ -4,15 +4,17 @@ from functools import wraps
 from urllib.parse import urlencode
 from urllib import request as urlrequest
 from flask_login import login_user, current_user
-from flask import abort, request, url_for, redirect, jsonify
-from trivialsec.helpers.hmac import validate
+from flask import abort, request, url_for, redirect, jsonify, Response
+from gunicorn.glogging import logging
 from trivialsec.helpers.config import config
-from trivialsec.helpers.log_manager import logger
+from trivialsec.helpers import hawk
 from trivialsec.models.apikey import ApiKey
 from trivialsec.models.member import Member
+from trivialsec.services.apikey import get_valid_key
 from trivialsec.services.roles import is_internal_member, is_support_member, is_billing_member, is_audit_member, is_owner_member
 
 
+logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.decorators'
 
 def control_timing_attacks(seconds: float):
@@ -87,33 +89,39 @@ def require_recaptcha(action: str):
         return f_require_recaptcha
     return deco_require_recaptcha
 
-def require_hmac(not_before_seconds: int = 3, expire_after_seconds: int = 3):
-    def deco_require_hmac(func):
+def hawk_authentication(not_before_seconds: int = 3, expire_after_seconds: int = 3):
+    def _deco(func):
         @wraps(func)
-        def f_require_hmac(*args, **kwargs):
+        def f_hawk_auth(*args, **kwargs):
+            res_401 = Response('{"status": 401, "message": "Unauthorized"}', 401, {'WWW-Authenticate': 'Hawk realm="Login Required"', 'Content-Type': 'text/json'})
             try:
-                api_key = validate(
+                hawk_values = hawk.parse_auth_header(request.headers.get('Authorization'))
+                api_key = get_valid_key(hawk_values.get('id'))
+                if api_key is None or not isinstance(api_key, ApiKey):
+                    return res_401
+                is_valid = hawk.validate(
+                    api_key_secret=api_key.api_key_secret,
                     raw=request.get_data(as_text=True),
                     request_method=request.method,
                     uri=request.path,
-                    headers=request.headers,
+                    hawk_values=hawk_values,
                     not_before_seconds=not_before_seconds,
                     expire_after_seconds=expire_after_seconds
                 )
-                if not isinstance(api_key, ApiKey):
-                    return abort(401)
+                if not is_valid:
+                    return res_401
                 # Success - application login and process the request
                 member = Member(member_id=api_key.member_id)
                 member.hydrate(ttl_seconds=30)
                 login_user(member)
-                ret = func(*args, **kwargs)
+                return func(*args, **kwargs)
             except Exception as err:
                 logger.error(err)
-                ret = abort(401)
-            return ret
 
-        return f_require_hmac
-    return deco_require_hmac
+            return res_401
+
+        return f_hawk_auth
+    return _deco
 
 def internal_users(func):
     @wraps(func)
