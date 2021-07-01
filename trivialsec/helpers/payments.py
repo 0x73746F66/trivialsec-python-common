@@ -3,12 +3,13 @@ from datetime import datetime
 import stripe
 from stripe.error import RateLimitError, APIConnectionError
 from retry.api import retry
-from trivialsec.helpers.log_manager import logger
+from gunicorn.glogging import logging
 from trivialsec.helpers.config import config
 from trivialsec.models.plan import Plan, PlanInvoice
 from trivialsec.models.account import Account
 
 
+logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.helpers.payments'
 
 stripe.api_version = "2020-08-27"

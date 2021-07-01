@@ -8,9 +8,10 @@ import botocore
 from hashlib import sha224
 from dateutil.tz import tzlocal
 from passlib.hash import pbkdf2_sha256
-from .log_manager import logger
+from gunicorn.glogging import logging
 
 
+logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.helpers'
 
 def check_password_policy(passwd: str) -> bool:
@@ -82,8 +83,8 @@ def get_boto3_client(service: str, region_name: str, aws_profile: str = None, ro
     if aws_profile:
         session_params['profile_name'] = aws_profile
     else:
-        session_params['aws_access_key_id'] = getenv('AWS_ACCESS_KEY_ID')
-        session_params['aws_secret_access_key'] = getenv('AWS_SECRET_ACCESS_KEY')
+        session_params['aws_access_key_id'] = getenv('AWS_ACCESS_KEY_ID', default=getenv('TF_VAR_aws_access_key_id'))
+        session_params['aws_secret_access_key'] = getenv('AWS_SECRET_ACCESS_KEY', default=getenv('TF_VAR_aws_secret_access_key'))
 
     base_session = boto3.session.Session(**session_params)
 

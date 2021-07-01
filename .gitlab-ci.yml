@@ -1,49 +1,51 @@
 variables:
-  COMMON_VERSION: 0.4.4
-  AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
-  AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
-  AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+  COMMON_VERSION: 0.5.0
 
 before_script:
-  - pip install -q -U setuptools wheel
+  - make --version
   - python3 --version
   - pylint --version
-  - aws --version
+  - echo semgrep $(semgrep --version)
 
 stages:
   - test
-  - build
 
-lint:
-  retry: 2
+test:lint:
   tags:
     - python
   stage: test
   script:
-    - pip install -q -U pylint
     - make lint
   only:
     refs:
       - merge_request
 
-build-package:
-  retry: 2
+test:sast:
   tags:
     - python
-  stage: build
+  stage: test
   script:
-    - make package
+    - make sast
   only:
     refs:
       - merge_request
 
-build-upload:
-  retry: 2
+test:xss:
   tags:
     - python
-  stage: build
+  stage: test
   script:
-    - make package-upload
+    - make xss
   only:
     refs:
-      - master
+      - merge_request
+
+test:package:
+  tags:
+    - python
+  stage: test
+  script:
+    - make install
+  only:
+    refs:
+      - merge_request

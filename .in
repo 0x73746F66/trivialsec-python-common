@@ -22,6 +22,10 @@ fi
 if [[ -f .env ]]; then
   source .env
 fi
+if ! [[ -d .venv ]]; then
+  python3 -m venv .venv
+fi
+source .venv/bin/activate
 echo -e "\033[0;36m"
 echo $(make --version)
 pip --version
@@ -34,15 +38,11 @@ echo
 if [[ -f "$(which git-secrets 2>/dev/null)" ]]; then
   git-secrets --scan
 else
-  echo "Please install git-secrets"
+  echo -e "\033[0;31mPlease install git-secrets \033[0m"
 fi
 pip install -q -U pip
 
-if ! [[ -d .venv ]]; then
-  python3 -m venv .venv
-fi
-source .venv/bin/activate
 pip install -q -U setuptools pylint wheel awscli
 pip install -q -U --no-cache-dir --isolated -r ./requirements.txt
-make lint
 make package-local
+make lint

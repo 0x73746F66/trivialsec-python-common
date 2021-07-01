@@ -3,9 +3,10 @@ from datetime import datetime, timedelta
 import hashlib
 import hmac
 from trivialsec.models.apikey import ApiKey
-from .log_manager import logger
+from gunicorn.glogging import logging
 
 
+logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.helpers'
 
 supported_digests = {

@@ -5,14 +5,15 @@ from urllib.parse import urlencode
 from urllib import request as urlrequest
 from flask_login import login_user, current_user
 from flask import abort, request, url_for, redirect, jsonify
+from gunicorn.glogging import logging
 from trivialsec.helpers.hmac import validate
 from trivialsec.helpers.config import config
-from trivialsec.helpers.log_manager import logger
 from trivialsec.models.apikey import ApiKey
 from trivialsec.models.member import Member
 from trivialsec.services.roles import is_internal_member, is_support_member, is_billing_member, is_audit_member, is_owner_member
 
 
+logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.decorators'
 
 def control_timing_attacks(seconds: float):
