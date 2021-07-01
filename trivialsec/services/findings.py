@@ -1,11 +1,12 @@
 import re
 from datetime import datetime
-from trivialsec.helpers.log_manager import logger
+from gunicorn.glogging import logging
 from trivialsec.models.activity_log import ActivityLog
 from trivialsec.models.member import Member
 from trivialsec.models.finding import Finding, FindingNote
 
 
+logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.services.findings'
 
 def score_to_rating(score: int) -> str:

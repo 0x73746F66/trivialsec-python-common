@@ -7,9 +7,10 @@ import mysql.connector
 from datetime import datetime, timedelta
 from retry.api import retry
 from .config import config
-from .log_manager import logger
+from gunicorn.glogging import logging
 
 
+logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.helpers.database'
 
 class MySQLDatabase:
@@ -17,12 +18,10 @@ class MySQLDatabase:
     cur = None
     retry_count = 0
     user = None
-    password = None
     host = None
     database = None
     pool_size = None
     raise_on_warnings = True
-    redis = redis.Redis(host=config.redis.get('host'), ssl=bool(config.redis.get('ssl')))
 
     def __enter__(self):
         self.connect()
@@ -36,7 +35,6 @@ class MySQLDatabase:
 
     def __init__(self, **kwargs):
         self.user = kwargs.get('user')
-        self.password = kwargs.get('password')
         self.host = kwargs.get('host')
         self.database = kwargs.get('database')
         self.raise_on_warnings = kwargs.get('raise_on_warnings', True)
@@ -60,7 +58,7 @@ class MySQLDatabase:
     def connect(self):
         params = {
             'user': self.user,
-            'password': self.password,
+            'password': config.mysql_password,
             'host': self.host,
             'database': self.database,
         }
@@ -88,7 +86,7 @@ class MySQLDatabase:
 
     def invalidate_cache(self, invalidations: list):
         for invalidation_key in invalidations:
-            self.redis.delete(f'{config.app_version}{invalidation_key}')
+            config._redis.delete(f'{config.app_version}{invalidation_key}')
 
     def query_one(self, sql, params=None, cache_key: str = None, invalidations: list = None, cache_ttl: timedelta = timedelta(seconds=int(config.redis.get('ttl', 300)))):
         if cache_key:
@@ -178,7 +176,7 @@ class MySQLDatabase:
         redis_value = None
         try:
             if isinstance(cache_key, str):
-                redis_value = self.redis.get(f'{config.app_version}{cache_key}')
+                redis_value = config._redis.get(f'{config.app_version}{cache_key}')
                 logger.debug(f'{cache_key} {redis_value}')
         except Exception as ex:
             logger.error(ex)
@@ -197,7 +195,7 @@ class MySQLDatabase:
             redis_data = list(results)
         logger.debug(f'CACHE STORE {cache_key}')
         str_value = json.dumps(redis_data, default=str)
-        return self.redis.set(f'{config.app_version}{cache_key}', str_value, ex=cache_ttl)
+        return config._redis.set(f'{config.app_version}{cache_key}', str_value, ex=cache_ttl)
 
 mysql_adapter = MySQLDatabase(**config.mysql)
 

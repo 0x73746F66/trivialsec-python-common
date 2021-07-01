@@ -19,6 +19,13 @@ setup(
         'Private :: Do Not Upload'
     ],
     install_requires=[
+        'flask>=2.0.1',
+        'flask-login>=0.5.0',
+        'flask-sessionstore>=0.4.5',
+        'redis>=3.5.3',
+        'mysql-connector-python>=8.0.25',
+        'PyYAML>=5.4.1',
+        'python-dotenv>=0.17.1',
         'passlib>=1.7<1.8',
         'boto3>=1.15<1.16',
         'botocore>=1.18<1.19',
@@ -33,7 +40,8 @@ setup(
         'pysafebrowsing>=0.1.1<1.0',
         'pyOpenSSL>=19.1.0<20.0',
         'beautifulsoup4>=4.9.3<5.0',
-        'stackprinter>=0.2.5'
+        'stackprinter>=0.2.5',
+        'gunicorn>=20.1.0'
     ],
     include_package_data=True
 )

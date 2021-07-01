@@ -18,10 +18,11 @@ from requests.exceptions import ReadTimeout, ConnectTimeout
 from urllib3.exceptions import ConnectTimeoutError, SSLError, MaxRetryError, NewConnectionError
 from urllib3.connectionpool import HTTPSConnectionPool
 from urllib3.poolmanager import PoolManager, SSL_KEYWORDS
-from .log_manager import logger
+from gunicorn.glogging import logging
 from .config import config
 
 
+logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.helpers.transport'
 
 class InspectedHTTPSConnectionPool(HTTPSConnectionPool):
