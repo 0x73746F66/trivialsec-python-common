@@ -12,7 +12,7 @@ stages:
 
 test:lint:
   tags:
-    - python
+    - linode
   stage: test
   script:
     - make lint
@@ -22,7 +22,7 @@ test:lint:
 
 test:sast:
   tags:
-    - python
+    - linode
   stage: test
   script:
     - make sast
@@ -32,7 +32,7 @@ test:sast:
 
 test:xss:
   tags:
-    - python
+    - linode
   stage: test
   script:
     - make xss
@@ -42,7 +42,7 @@ test:xss:
 
 test:package:
   tags:
-    - python
+    - linode
   stage: test
   script:
     - make install
