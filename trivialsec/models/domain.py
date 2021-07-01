@@ -3,12 +3,14 @@ import socket
 from ssl import create_default_context, _create_unverified_context, SSLCertVerificationError, Purpose
 from datetime import datetime
 from OpenSSL.crypto import X509, X509Name
+from gunicorn.glogging import logging
 from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 from trivialsec.helpers.database import mysql_adapter
 from trivialsec.helpers.transport import Metadata
-from trivialsec.helpers.log_manager import logger
 from .account import Account
 
+
+logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.models.domain'
 
 class Domain(DatabaseHelpers):
