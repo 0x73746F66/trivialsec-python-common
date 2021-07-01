@@ -8,6 +8,7 @@ before_script:
   - echo semgrep $(semgrep --version)
 
 stages:
+  - build
   - test
 
 test:lint:
@@ -40,10 +41,10 @@ test:xss:
     refs:
       - merge_request
 
-test:package:
+build:wheel:
   tags:
     - linode
-  stage: test
+  stage: build
   script:
     - make install
   only:
