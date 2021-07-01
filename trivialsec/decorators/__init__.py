@@ -100,7 +100,6 @@ def hawk_authentication(not_before_seconds: int = 3, expire_after_seconds: int =
                 if api_key is None or not isinstance(api_key, ApiKey):
                     return res_401
                 is_valid = hawk.validate(
-                    api_key=api_key.api_key,
                     api_key_secret=api_key.api_key_secret,
                     raw=request.get_data(as_text=True),
                     request_method=request.method,
