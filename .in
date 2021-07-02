@@ -7,30 +7,31 @@ echo -e "\033[0;36m
  \/   |_|  |_| \_/ |_|\__,_|_\__/\___|\___|  
                                              \033[0m"
 
-if [[ ! -z "$(pwd)/bin" ]] && [[ $PATH != *"$(pwd)/bin"* ]]; then
-  export PATH="$PATH:$(pwd)/bin"
+if [[ -f .venv/bin/activate ]]; then
+  source .venv/bin/activate
+else
+  python3 -m venv .venv --copies
+  source .venv/bin/activate
 fi
-
-if [[ ! -z "$(pwd)/src/lib/bin" ]] && [[ $PATH != *"$(pwd)/src/lib/bin"* ]]; then
-  export PATH="$PATH:$(pwd)/bin"
-fi
-
-if [[ $PATH != *$(npm bin)* ]]; then
-  export PATH="$PATH:$(npm bin)"
-fi
-
 if [[ -f .env ]]; then
   source .env
+else
+  cp .env-example .env
+  nano .env
+  source .env
 fi
-if ! [[ -d .venv ]]; then
-  python3 -m venv .venv
-fi
-source .venv/bin/activate
 echo -e "\033[0;36m"
 echo $(make --version)
 pip --version
-echo $(pylint --version)
 echo -e "\033[0m"
+
+make install-deps
+
+echo -e "\033[0;36m"
+echo $(pylint --version)
+echo semgrep $(semgrep --version)
+echo -e "\033[0m"
+
 git fetch
 git status
 echo
@@ -40,9 +41,5 @@ if [[ -f "$(which git-secrets 2>/dev/null)" ]]; then
 else
   echo -e "\033[0;31mPlease install git-secrets \033[0m"
 fi
-pip install -q -U pip
-
-pip install -q -U setuptools pylint wheel awscli
-pip install -q -U --no-cache-dir --isolated -r ./requirements.txt
-make package-local
+make install
 make lint
