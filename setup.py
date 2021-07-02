@@ -41,7 +41,8 @@ setup(
         'pyOpenSSL>=19.1.0<20.0',
         'beautifulsoup4>=4.9.3<5.0',
         'stackprinter>=0.2.5',
-        'gunicorn>=20.1.0'
+        'gunicorn>=20.1.0',
+        'setproctitle>=1.2.2'
     ],
     include_package_data=True
 )
