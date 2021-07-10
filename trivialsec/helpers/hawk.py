@@ -26,31 +26,11 @@ supported_digests = {
     'HMAC-BLAKE2B512': hashlib.blake2b,
 }
 
-"""
-Usage:
-    authorization_header = request.headers.get('Authorization')
-    content_type = request.headers.get('Content-Type')
-    if not authorization_header:
-        logger.error('no Authorization header')
-        return res_401
-
-    hawk = Hawk(
-        authorization_header,
-        content_type=content_type,
-        request_method=request.method,
-        path_uri=f'{request.path}{request.query_string.decode("utf-8")}',
-        origin=request.origin,
-        utf8_body=request.get_data(as_text=True).encode("utf-8"),
-        options={'payload_validation': True}
-    )
-    apikey :ApiKey = get_valid_key(hawk.incoming_id)
-    if not hawk.validate(apikey.api_key_secret):
-        logger.error(f'hawk_validate failed {authorization_header} calculated mac {hawk.server_mac}')
-        return res_401
-"""
 
 class Hawk:
     version :int = 1
+    algorithm :str
+    incoming_scheme :str
     incoming_id :str
     incoming_ts :int
     incoming_nonce :str
@@ -62,7 +42,11 @@ class Hawk:
     server_hash :str
     server_mac :str
     _authorization_header :str
+    _request_method :str
+    _request_host :str
+    _path_uri :str
     _raw :str
+    _content_type :str
     _optional_payload_validation :bool = False
     _not_before_seconds :int = 3
     _expire_after_seconds :int = 3
@@ -79,11 +63,11 @@ class Hawk:
         'HMAC-BLAKE2B512': hashlib.blake2b,
     }
 
-    def __init__(self, authorization_header :str, request_method :str, path_uri :str, origin :str, utf8_body :str = None, content_type :str = None, algorithm :str = "HMAC-SHA256", options :dict = {}) -> None:
+    def __init__(self, authorization_header :str, request_method :str, path_uri :str, host :str, utf8_body :str = None, content_type :str = None, algorithm :str = "HMAC-SHA256", options :dict = {}) -> None:
         self._authorization_header = authorization_header.strip()
         self.algorithm = algorithm
         self._request_method = request_method
-        self._request_origin = origin
+        self._request_host = host
         self._path_uri = path_uri
         self._raw = utf8_body
         self._content_type = content_type.split(';')[0].strip().lower()
@@ -150,7 +134,7 @@ class Hawk:
             self._append_only_file = options.get('file_path', '/tmp/hawk_nonce_store.log')
 
     def _signing_data(self) -> str:
-        parsed_url = urlparse(self._request_origin)
+        parsed_url = urlparse(self._request_host)
         port = 443 if parsed_url.port is None else parsed_url.port
 
         bits = [
