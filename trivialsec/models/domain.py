@@ -223,7 +223,7 @@ class Domain(DatabaseHelpers):
             if self._http_metadata._json_certificate == '{}': # pylint: disable=protected-access
                 self._http_metadata._json_certificate = '' # pylint: disable=protected-access
                 try:
-                    ctx0 = _create_unverified_context(check_hostname=False, purpose=Purpose.CLIENT_AUTH) # NOSONAR get the cert regardless of validation
+                    ctx0 = _create_unverified_context(check_hostname=False, purpose=Purpose.CLIENT_AUTH) # nosemgrep NOSONAR get the cert regardless of validation
                     with ctx0.wrap_socket(socket.socket(), server_hostname=self.name) as sock:
                         sock.connect((self.name, 443))
                         cert = sock.getpeercert()

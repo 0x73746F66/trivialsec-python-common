@@ -61,7 +61,6 @@ class Config:
         self.sendgrid: dict = conf.get('sendgrid', dict())
         self.stripe: dict = conf.get('stripe', dict())
         self.nmap: dict = app_conf.get('nmap', dict())
-        self.log_file: str = app_conf.get('log_file', '/tmp/application.log')
         self.nameservers: list = list(set(app_conf.get('nameservers', list())))
         self.external_dsn_provider: str = self.nameservers[0]
         self.queue_wait_timeout: int = app_conf.get('queue_wait_timeout', 5)
@@ -169,7 +168,6 @@ class Config:
             'socket_scheme': self.frontend.get('socket_scheme'),
             'socket_domain': self.frontend.get('socket_domain'),
             'socket_url': f"{self.frontend.get('socket_scheme')}{self.frontend.get('socket_domain')}",
-            
         }
 
     def _get_from_redis(self, cache_key: str):

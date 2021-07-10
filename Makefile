@@ -42,7 +42,12 @@ sast: ## semgrep ci
 xss: ## checks for flask xss
 	semgrep -q --strict --config p/minusworld.flask-xss --lang=py trivialsec/**/*.py
 
-test-all: lint sast xss
+test-all: lint sast xss ## Run all CI tests
+
+test-local: ## Prettier test outputs
+	pylint --exit-zero -f colorized --persistent=y -r y --jobs=0 trivialsec/**/*.py
+	semgrep -q --strict --timeout=0 --config=p/ci --lang=py trivialsec/**/*.py
+	semgrep -q --strict --config p/minusworld.flask-xss --lang=py trivialsec/**/*.py
 
 archive: wheel ## packages as a tgz for distribution
 	tar -ckzf $(APP_NAME).tgz build/wheel

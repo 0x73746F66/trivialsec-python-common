@@ -19,7 +19,7 @@ from .project import *
 from .role import *
 from .security_alert import *
 from .service_type import *
-from .subscriber import *
+
 
 __module__ = 'trivialsec.models'
 
