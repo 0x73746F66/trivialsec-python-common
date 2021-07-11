@@ -89,6 +89,11 @@ release:tag:
     - linode
   stage: release
   script:
+    - mkdir -p ~/.ssh
+    - aws s3 cp --only-show-errors s3://tfplans-trivialsec/deploy-keys/gitlab_ci ~/.ssh/gitlab_ci
+    - chmod 400 ~/.ssh/gitlab_ci
+    - eval $(ssh-agent)>/dev/null
+    - ssh-add ~/.ssh/gitlab_ci >/dev/null 2>&1
     - git remote set-url --push origin git@gitlab.com:$CI_PROJECT_PATH.git
     - git remote show origin
     - git config user.name $GIT_COMMIT_NAME
