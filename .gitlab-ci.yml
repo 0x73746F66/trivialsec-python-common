@@ -94,6 +94,7 @@ release:tag:
     - git config user.name $GIT_COMMIT_NAME
     - git config user.email $GIT_COMMIT_EMAIL
     - git tag -f $COMMON_VERSION
+    - ssh-keyscan -H gitlab.com >> ~/.ssh/known_hosts
     - git push --follow-tags origin HEAD:$CI_COMMIT_REF_NAME
   only:
     refs:
