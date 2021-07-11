@@ -88,8 +88,8 @@ release:tag:
   stage: release
   script:
     - git tag -f $COMMON_VERSION
-    - git push origin --delete $COMMON_VERSION
-    - git push origin $COMMON_VERSION
+    - git push -f origin --delete $COMMON_VERSION
+    - git push -f origin $COMMON_VERSION
   only:
     refs:
       - main
