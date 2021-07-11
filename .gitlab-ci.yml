@@ -92,6 +92,7 @@ release:tag:
     - echo "$TRIVIALSEC_DEPLOY_KEY" > $CI_PROJECT_DIR/gitlab_ci
     - chmod 400 $CI_PROJECT_DIR/gitlab_ci
     - ssh-agent bash -c 'ssh-add $CI_PROJECT_DIR/gitlab_ci'
+    - git config --global url.ssh://git@.insteadOf https://
     - git config user.name $GIT_COMMIT_NAME
     - git config user.email $GIT_COMMIT_EMAIL
     - git tag -f $COMMON_VERSION
