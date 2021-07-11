@@ -30,17 +30,9 @@ supported_digests = {
 class Hawk:
     version :int = 1
     algorithm :str
-    incoming_scheme :str
-    incoming_id :str
-    incoming_ts :int
-    incoming_nonce :str
-    incoming_hash :str
-    incoming_mac :str
-    incoming_app :str
-    incoming_dlg :str
-    incoming_ext :str
     server_hash :str
     server_mac :str
+    _params :dict = dict()
     _authorization_header :str
     _request_method :str
     _request_host :str
@@ -63,7 +55,43 @@ class Hawk:
         'HMAC-BLAKE2B512': hashlib.blake2b,
     }
 
-    def __init__(self, authorization_header :str, request_method :str, path_uri :str, host :str, utf8_body :str = None, content_type :str = None, algorithm :str = "HMAC-SHA256", options :dict = {}) -> None:
+    @property
+    def scheme(self):
+        return self._params.get('scheme')
+
+    @property
+    def id(self):
+        return self._params.get('id')
+
+    @property
+    def ts(self):
+        return self._params.get('ts')
+
+    @property
+    def nonce(self):
+        return self._params.get('nonce')
+
+    @property
+    def hash(self):
+        return self._params.get('hash')
+
+    @property
+    def mac(self):
+        return self._params.get('mac')
+
+    @property
+    def app(self):
+        return self._params.get('app', '')
+
+    @property
+    def dlg(self):
+        return self._params.get('dlg', '')
+
+    @property
+    def ext(self):
+        return self._params.get('ext', '')
+
+    def __init__(self, authorization_header :str, request_method :str, path_uri :str, host :str, utf8_body :str = None, content_type :str = None, algorithm :str = "HMAC-SHA256", options :dict = None) -> None:
         self._authorization_header = authorization_header.strip()
         self.algorithm = algorithm
         self._request_method = request_method
@@ -72,7 +100,8 @@ class Hawk:
         self._raw = utf8_body
         self._content_type = content_type.split(';')[0].strip().lower()
         self._parse_auth_header()
-        self._apply_options(options)
+        if options is not None:
+            self._apply_options(options)
         if self._nonce_store == 'redis' and self._redis_config:
             self._init_redis()
         if self._optional_payload_validation is True and (content_type is None or utf8_body is None):
@@ -86,9 +115,7 @@ class Hawk:
     def _parse_auth_header(self) -> None:
         auth_param_re = r'([a-zA-Z0-9_\-]+)=(([a-zA-Z0-9_\-]+)|("")|(".*[^\\]"))'
         auth_param_re = re.compile(r"^\s*" + auth_param_re + r"\s*$")
-        unesc_quote_re = r'(^")|([^\\]")'
-        unesc_quote_re = re.compile(unesc_quote_re)
-        escaped_char = re.compile(r"\\.")
+        unesc_quote_re = re.compile(r'(^")|([^\\]")')
         authz = self._authorization_header
         scheme, pairs_str = authz.split(None, 1)
         self._params = {"scheme": scheme}
@@ -108,20 +135,12 @@ class Hawk:
                 value = value[1:-1]
                 if unesc_quote_re.search(value):
                     raise ValueError("Unescaped quote in quoted-string")
-                value = escaped_char.sub(lambda m: m.group(0)[1], value)
+                value = re.compile(r"\\.").sub(lambda m: m.group(0)[1], value)
             self._params[key] = value
 
-        self.incoming_scheme = self._params.get('scheme')
-        self.incoming_id = self._params.get('id')
-        self.incoming_ts = int(self._params.get('ts'))
-        self.incoming_nonce = self._params.get('nonce')
-        self.incoming_hash = self._params.get('hash')
-        self.incoming_mac = self._params.get('mac')
-        self.incoming_app = self._params.get('app', '')
-        self.incoming_dlg = self._params.get('dlg', '')
-        self.incoming_ext = self._params.get('ext', '')
-
-    def _apply_options(self, options :dict) -> None:
+    def _apply_options(self, options :dict = None) -> None:
+        if options is None:
+            return
         self._not_before_seconds = options.get('not_before', self._not_before_seconds)
         self._expire_after_seconds = options.get('expire_after', self._expire_after_seconds)
         self._optional_payload_validation = options.get('payload_validation', self._optional_payload_validation)
@@ -139,18 +158,18 @@ class Hawk:
 
         bits = [
             "hawk.1.header",
-            str(self.incoming_ts),
-            self.incoming_nonce,
+            str(self.ts),
+            self.nonce,
             self._request_method.upper(),
             self._path_uri,
             parsed_url.hostname.lower(),
             str(port),
             self.server_hash,
-            self.incoming_ext
+            self.ext
         ]
-        if self.incoming_app:
-            bits.append(self.incoming_app)
-            bits.append(self.incoming_dlg)
+        if self.app:
+            bits.append(self.app)
+            bits.append(self.dlg)
 
         bits.append('') # trailing newline
         return "\n".join(bits).encode("utf-8")
@@ -169,11 +188,11 @@ class Hawk:
         payload_hash.update(self._raw)
         payload_hash.update(b"\n")
         self.server_hash = b64encode(payload_hash.digest()).decode('utf-8')
-        return hmac.compare_digest(self.server_hash, self.incoming_hash)
+        return hmac.compare_digest(self.server_hash, self.hash)
 
     def is_valid_timestamp(self) -> bool:
         # not_before prevents replay attacks
-        compare_date = datetime.fromtimestamp(self.incoming_ts)
+        compare_date = datetime.fromtimestamp(self.ts)
         not_before = datetime.utcnow() - timedelta(seconds=self._not_before_seconds)
         expire_after = datetime.utcnow() + timedelta(seconds=self._expire_after_seconds)
         # expire_after can assist with support for offline/aeroplane mode
@@ -187,13 +206,13 @@ class Hawk:
             logger.error('incompatible authorization scheme, expected "Authorization: Hawk ..."')
             return False
         if not self.is_valid_nonce():
-            logger.error(f'bad nonce {self.incoming_nonce}')
+            logger.error(f'bad nonce {self.nonce}')
             return False
         if not self.is_valid_timestamp():
-            logger.error(f'jitter detected {self.incoming_ts}')
+            logger.error(f'jitter detected {self.ts}')
             return False
         if self._optional_payload_validation is True and not self.is_valid_payload():
-            logger.error(f'payload validation failed content_type {self._content_type} raw {self._raw} server_hash {self.server_hash} incoming_hash {self.incoming_hash}')
+            logger.error(f'payload validation failed content_type {self._content_type} raw {self._raw} server_hash {self.server_hash} hash {self.hash}')
             return False
         if self.algorithm not in self._supported_digests.keys():
             logger.error(f'algorithm {self.algorithm} is not supported')
@@ -207,4 +226,4 @@ class Hawk:
         digest = hmac.new(secret.encode('ascii'), signing_data, hash_algorithm).digest()
         self.server_mac = b64encode(digest).decode("utf-8")
         # Compare server-side HMAC with client provided HMAC
-        return hmac.compare_digest(self.server_mac, self.incoming_mac)
+        return hmac.compare_digest(self.server_mac, self.mac)
