@@ -1,5 +1,7 @@
 variables:
   COMMON_VERSION: 0.5.1
+  GIT_COMMIT_EMAIL: support@trivialsec.com
+  GIT_COMMIT_NAME: gitlab-ci
 
 before_script:
   - make --version
@@ -87,6 +89,10 @@ release:tag:
     - linode
   stage: release
   script:
+    - echo "$TRIVIALSEC_DEPLOY_KEY" > /tmp/gitlab_ci
+    - ssh-agent bash -c 'ssh-add /tmp/gitlab_ci'
+    - git config user.name $GIT_COMMIT_NAME
+    - git config user.email $GIT_COMMIT_EMAIL
     - git tag -f $COMMON_VERSION
     - git push -f origin --delete $COMMON_VERSION
     - git push -f origin $COMMON_VERSION
