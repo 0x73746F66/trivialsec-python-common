@@ -67,6 +67,16 @@ build:wheel:
   only:
     refs:
       - merge_request
+
+release:wheel:
+  tags:
+    - linode
+  stage: release
+  script:
+    - make archive
+  only:
+    refs:
+      - main
   artifacts:
     name: trivialsec_common-${COMMON_VERSION}-py2.py3-none-any.whl
     paths:
