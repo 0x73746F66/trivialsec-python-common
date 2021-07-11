@@ -21,7 +21,7 @@ wheel: prep ## builds python wheel files
 	pip uninstall -y trivialsec-common || true
 	python3 setup.py check && pip --no-cache-dir wheel --wheel-dir=build/wheel -r requirements.txt && \
 		python3 setup.py bdist_wheel --universal
-	pip install --no-cache-dir --find-links=build/wheel --no-index dist/trivialsec_common-*-py2.py3-none-any.whl
+	pip install --no-cache-dir --find-links=build/wheel --no-index dist/trivialsec_common-$(COMMON_VERSION)-py2.py3-none-any.whl
 
 install: ## Install trivialsec modules
 	python3 setup.py check
@@ -33,22 +33,22 @@ install-deps: prep ## setup for development of this project
 	pip install -q -U pip setuptools wheel semgrep pylint
 	pip install -q -U --no-cache-dir --isolated -r requirements.txt
 
-lint: ## checks code quality
-	pylint --jobs=0 --persistent=y --errors-only trivialsec/**/*.py
-
-sast: ## semgrep ci
-	semgrep -q --strict --timeout=0 --config=p/ci --lang=py trivialsec/**/*.py
-
-xss: ## checks for flask xss
-	semgrep -q --strict --config p/minusworld.flask-xss --lang=py trivialsec/**/*.py
-
-test-all: lint sast xss ## Run all CI tests
-
-test-local: ## Prettier test outputs
-	pylint --exit-zero -f colorized --persistent=y -r y --jobs=0 trivialsec/**/*.py
-	semgrep -q --strict --timeout=0 --config=p/ci --lang=py trivialsec/**/*.py
-	semgrep -q --strict --config p/minusworld.flask-xss --lang=py trivialsec/**/*.py
-
 archive: wheel ## packages as a tgz for distribution
 	tar -ckzf $(APP_NAME).tgz build/wheel
 	ls -l --block-size=M $(APP_NAME).tgz
+
+test-local: ## Prettier test outputs
+	pylint --exit-zero -f colorized --persistent=y -r y --jobs=0 trivialsec/**/*.py
+	semgrep -q --strict --timeout=0 --config=p/r2c-ci --lang=py trivialsec/**/*.py
+	semgrep -q --strict --config p/minusworld.flask-xss --lang=py trivialsec/**/*.py
+
+pylint-ci: ## run pylint for CI
+	pylint --exit-zero --persistent=n -f json -r n --jobs=0 --errors-only trivialsec/**/*.py > pylint.json
+
+semgrep-sast-ci: ## run core semgrep rules for CI
+	semgrep --disable-version-check -q --strict --error -o semgrep-ci.json --json --timeout=0 --config=p/r2c-ci --lang=py trivialsec/**/*.py
+
+semgrep-xss-ci: ## run Flask XSS semgrep rules for CI
+	semgrep --disable-version-check -q --strict --error -o semgrep-flask-xss.json --json --config p/minusworld.flask-xss --lang=py trivialsec/**/*.py
+
+test-all: semgrep-xss-ci semgrep-sast-ci pylint-ci ## Run all CI tests
