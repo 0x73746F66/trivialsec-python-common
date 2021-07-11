@@ -94,12 +94,12 @@ release:tag:
     - chmod 400 ~/.ssh/gitlab_ci
     - ssh-agent bash -c 'ssh-add ~/.ssh/gitlab_ci'
     - ssh-keyscan -H gitlab.com >> ~/.ssh/known_hosts
-    - git config --global url.ssh://git@.insteadOf https://
+    - git remote add gitlab git@gitlab.com:$CI_PROJECT_PATH.git
     - git config user.name $GIT_COMMIT_NAME
     - git config user.email $GIT_COMMIT_EMAIL
     - git tag -f $COMMON_VERSION
-    - git push -f origin --delete $COMMON_VERSION
-    - git push -f origin $COMMON_VERSION
+    - git push -f gitlab --delete $COMMON_VERSION
+    - git push -f gitlab $COMMON_VERSION
   only:
     refs:
       - main
