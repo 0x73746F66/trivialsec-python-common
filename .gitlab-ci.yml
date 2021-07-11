@@ -89,9 +89,11 @@ release:tag:
     - linode
   stage: release
   script:
-    - echo "$TRIVIALSEC_DEPLOY_KEY" > $CI_PROJECT_DIR/gitlab_ci
-    - chmod 400 $CI_PROJECT_DIR/gitlab_ci
-    - ssh-agent bash -c 'ssh-add $CI_PROJECT_DIR/gitlab_ci'
+    - mkdir -p ~/.ssh
+    - echo "$TRIVIALSEC_DEPLOY_KEY" > ~/.ssh/gitlab_ci
+    - chmod 400 ~/.ssh/gitlab_ci
+    - ssh-agent bash -c 'ssh-add ~/.ssh/gitlab_ci'
+    - ssh-keyscan -H gitlab.com >> ~/.ssh/known_hosts
     - git config --global url.ssh://git@.insteadOf https://
     - git config user.name $GIT_COMMIT_NAME
     - git config user.email $GIT_COMMIT_EMAIL
