@@ -11,6 +11,7 @@ before_script:
 stages:
   - build
   - test
+  - release
 
 test:lint:
   tags:
@@ -21,6 +22,7 @@ test:lint:
   only:
     refs:
       - merge_request
+      - main
 
 test:sast:
   tags:
@@ -31,6 +33,7 @@ test:sast:
   only:
     refs:
       - merge_request
+      - main
 
 test:xss:
   tags:
@@ -41,6 +44,7 @@ test:xss:
   only:
     refs:
       - merge_request
+      - main
 
 build:wheel:
   tags:
@@ -51,3 +55,19 @@ build:wheel:
   only:
     refs:
       - merge_request
+
+release:tag:
+  tags:
+    - linode
+  stage: release
+  script:
+    - git tag -f $COMMON_VERSION
+    - git push origin --delete $COMMON_VERSION
+    - git push origin $COMMON_VERSION
+  only:
+    refs:
+      - main
+  release:
+      name: 'v$COMMON_VERSION'
+      tag_name: '$CI_COMMIT_TAG'
+      description: '$CI_COMMIT_MESSAGE'
