@@ -89,10 +89,12 @@ release:tag:
     - linode
   stage: release
   script:
+    - git remote set-url --push origin git@gitlab:$CI_PROJECT_PATH
+    - git remote show origin
     - git config user.name $GIT_COMMIT_NAME
     - git config user.email $GIT_COMMIT_EMAIL
     - git tag -f $COMMON_VERSION
-    - git push -f origin $COMMON_VERSION
+    - git push --follow-tags origin HEAD:$CI_COMMIT_REF_NAME
   only:
     refs:
       - main
