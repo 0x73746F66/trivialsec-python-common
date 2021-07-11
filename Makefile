@@ -33,9 +33,9 @@ install-deps: prep ## setup for development of this project
 	pip install -q -U pip setuptools wheel semgrep pylint
 	pip install -q -U --no-cache-dir --isolated -r requirements.txt
 
-archive: wheel ## packages as a tgz for distribution
-	tar -ckzf $(APP_NAME).tgz build/wheel
-	ls -l --block-size=M $(APP_NAME).tgz
+archive: wheel ## packages as a tar.gz for distribution
+	tar -ckzf $(APP_NAME).tar.gz build/wheel
+	ls -l --block-size=M $(APP_NAME).tar.gz
 
 test-local: ## Prettier test outputs
 	pylint --exit-zero -f colorized --persistent=y -r y --jobs=0 trivialsec/**/*.py

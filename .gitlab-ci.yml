@@ -80,7 +80,7 @@ release:wheel:
   artifacts:
     name: trivialsec_common-${COMMON_VERSION}-py2.py3-none-any.whl
     paths:
-      - trivialsec.tgz
+      - trivialsec.tar.gz
 
 release:tag:
   tags:
