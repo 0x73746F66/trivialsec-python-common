@@ -98,7 +98,6 @@ release:tag:
     - git config user.name $GIT_COMMIT_NAME
     - git config user.email $GIT_COMMIT_EMAIL
     - git tag -f $COMMON_VERSION
-    - git push -f gitlab --delete $COMMON_VERSION
     - git push -f gitlab $COMMON_VERSION
   only:
     refs:
