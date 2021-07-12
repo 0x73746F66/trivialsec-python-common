@@ -163,7 +163,7 @@ class Hawk:
             bits.append(self.dlg or '')
 
         bits.append('') # trailing newline
-        return "\n".join(bits).encode("utf-8")
+        return "\n".join(bits).encode("utf8")
 
     def is_valid_scheme(self) -> bool:
         return self._authorization_header.startswith('Hawk')
@@ -178,8 +178,8 @@ class Hawk:
         payload_hash.update(b"\n")
         payload_hash.update(self._raw)
         payload_hash.update(b"\n")
-        self.server_hash = b64encode(payload_hash.digest()).decode('utf-8')
-        return hmac.compare_digest(self.server_hash, self.hash)
+        self.server_hash = b64encode(payload_hash.digest())
+        return hmac.compare_digest(self.server_hash.decode('utf8'), self.hash)
 
     def is_valid_timestamp(self) -> bool:
         # not_before prevents replay attacks
@@ -210,11 +210,19 @@ class Hawk:
             return False
 
         digestmod = supported_digests.get(self.algorithm)
-        signing_data = self._signing_data() # FIXME https://github.com/mozilla-services/hawkauthlib
-        logger.info(f'signing_data {signing_data}')
-
         # Sign HMAC using server-side secret
-        digest = hmac.new(secret.encode('ascii'), signing_data, digestmod).digest()
+        digest = hmac.new(secret.encode('ascii'), self._signing_data(), digestmod).digest()
         self.server_mac = b64encode(digest)
         # Compare server-side HMAC with client provided HMAC
-        return hmac.compare_digest(self.server_mac, self.mac)
+        return self.strings_match(self.server_mac.decode('utf8'), self.mac)
+
+    @staticmethod
+    def strings_match(_a, _b):
+        # Constant time string comparision, mitigates side channel attacks.
+        if len(_a) != len(_b):
+            return False
+        result = 0
+        # In Python 3, if we have a bytes object, iterating it will already get the integer value
+        for _x, _y in zip(_a, _b):
+            result |= _x ^ _y
+        return result == 0
