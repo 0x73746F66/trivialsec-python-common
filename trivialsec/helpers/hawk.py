@@ -57,7 +57,7 @@ class Hawk:
 
     @property
     def ts(self):
-        return self._params.get('ts')
+        return int(self._params.get('ts'))
 
     @property
     def nonce(self):
