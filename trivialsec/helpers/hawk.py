@@ -157,12 +157,10 @@ class Hawk:
         bits.append(parsed_url.hostname.lower())
         bits.append(str(port))
         bits.append(self.server_hash)
-        if self.ext is not None:
-            bits.append(self.ext)
+        bits.append(self.ext or '')
         if self.app is not None:
             bits.append(self.app)
-        if self.dlg is not None:
-            bits.append(self.dlg)
+            bits.append(self.dlg or '')
 
         bits.append('') # trailing newline
         return "\n".join(bits).encode("utf-8")
@@ -211,12 +209,12 @@ class Hawk:
             logger.error(f'algorithm {self.algorithm} is not supported')
             return False
 
-        hash_algorithm = supported_digests.get(self.algorithm)
+        digestmod = supported_digests.get(self.algorithm)
         signing_data = self._signing_data() # FIXME https://github.com/mozilla-services/hawkauthlib
         logger.info(f'signing_data {signing_data}')
 
         # Sign HMAC using server-side secret
-        digest = hmac.new(secret.encode('ascii'), signing_data, hash_algorithm).digest()
-        self.server_mac = b64encode(digest).decode("utf-8")
+        digest = hmac.new(secret.encode('ascii'), signing_data, digestmod).digest()
+        self.server_mac = b64encode(digest)
         # Compare server-side HMAC with client provided HMAC
         return hmac.compare_digest(self.server_mac, self.mac)
