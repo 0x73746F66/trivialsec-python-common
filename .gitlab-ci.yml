@@ -8,7 +8,6 @@ before_script:
   - python3 --version
   - pylint --version
   - echo semgrep $(semgrep --version)
-  - release-cli -v
 
 stages:
   - build
