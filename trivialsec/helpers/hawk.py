@@ -145,7 +145,7 @@ class Hawk:
             self._append_only_file = options.get('file_path', '/tmp/hawk_nonce_store.log')
 
     def _signing_data(self) -> str:
-        parsed_url = urlparse(self._request_host)
+        parsed_url = urlparse(f'http://{self._request_host}')
         port = 443 if parsed_url.port is None else parsed_url.port
 
         bits = []
