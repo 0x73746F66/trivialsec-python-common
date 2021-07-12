@@ -100,7 +100,7 @@ release:tag:
     - git config user.email $GIT_COMMIT_EMAIL
     - git tag -f $COMMON_VERSION
     - ssh-keyscan -H gitlab.com >> ~/.ssh/known_hosts
-    - git push origin $COMMON_VERSION
+    - git push -f origin $COMMON_VERSION
   only:
     refs:
       - main
