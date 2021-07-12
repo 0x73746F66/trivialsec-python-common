@@ -46,14 +46,6 @@ class Hawk:
     _redis_config :dict
     _redis :redis.Redis
     _append_only_file :str
-    _supported_digests :dict = {
-        'HMAC-SHA256': hashlib.sha256,
-        'HMAC-SHA512': hashlib.sha512,
-        'HMAC-SHA3-256': hashlib.sha3_256,
-        'HMAC-SHA3-384': hashlib.sha3_384,
-        'HMAC-SHA3-512': hashlib.sha3_512,
-        'HMAC-BLAKE2B512': hashlib.blake2b,
-    }
 
     @property
     def scheme(self):
@@ -81,15 +73,15 @@ class Hawk:
 
     @property
     def app(self):
-        return self._params.get('app', '')
+        return self._params.get('app')
 
     @property
     def dlg(self):
-        return self._params.get('dlg', '')
+        return self._params.get('dlg')
 
     @property
     def ext(self):
-        return self._params.get('ext', '')
+        return self._params.get('ext')
 
     def __init__(self, authorization_header :str, request_method :str, path_uri :str, host :str, utf8_body :str = None, content_type :str = None, algorithm :str = "HMAC-SHA256", options :dict = None) -> None:
         self._authorization_header = authorization_header.strip()
@@ -156,19 +148,20 @@ class Hawk:
         parsed_url = urlparse(self._request_host)
         port = 443 if parsed_url.port is None else parsed_url.port
 
-        bits = [
-            "hawk.1.header",
-            str(self.ts),
-            self.nonce,
-            self._request_method.upper(),
-            self._path_uri,
-            parsed_url.hostname.lower(),
-            str(port),
-            self.server_hash,
-            self.ext
-        ]
-        if self.app:
+        bits = []
+        bits.append("hawk.1.header")
+        bits.append(str(self.ts))
+        bits.append(self.nonce)
+        bits.append(self._request_method.upper())
+        bits.append(self._path_uri)
+        bits.append(parsed_url.hostname.lower())
+        bits.append(str(port))
+        bits.append(self.server_hash)
+        if self.ext is not None:
+            bits.append(self.ext)
+        if self.app is not None:
             bits.append(self.app)
+        if self.dlg is not None:
             bits.append(self.dlg)
 
         bits.append('') # trailing newline
@@ -181,7 +174,7 @@ class Hawk:
         return True
 
     def is_valid_payload(self) -> bool:
-        payload_hash = self._supported_digests.get(self.algorithm)()
+        payload_hash = supported_digests.get(self.algorithm)()
         payload_hash.update(b"hawk.1.payload\n")
         payload_hash.update(self._content_type.encode("utf8"))
         payload_hash.update(b"\n")
@@ -214,11 +207,11 @@ class Hawk:
         if self._optional_payload_validation is True and not self.is_valid_payload():
             logger.error(f'payload validation failed content_type {self._content_type} raw {self._raw} server_hash {self.server_hash} hash {self.hash}')
             return False
-        if self.algorithm not in self._supported_digests.keys():
+        if self.algorithm not in supported_digests.keys():
             logger.error(f'algorithm {self.algorithm} is not supported')
             return False
 
-        hash_algorithm = self._supported_digests.get(self.algorithm)
+        hash_algorithm = supported_digests.get(self.algorithm)
         signing_data = self._signing_data() # FIXME https://github.com/mozilla-services/hawkauthlib
         logger.info(f'signing_data {signing_data}')
 
