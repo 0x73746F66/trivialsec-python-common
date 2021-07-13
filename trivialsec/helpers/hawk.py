@@ -225,7 +225,7 @@ class Hawk:
         """
         # In Python 3, if we have a bytes object, iterating it will already get the integer value
         def chk_bytes(val):
-            return val if isinstance(val, (bytes, bytearray)) else val.encode('utf8')
+            return ord(val if isinstance(val, (bytes, bytearray)) else val.encode('utf8'))
         result = 0
         for index, this in enumerate(values):
             if index == 0: # first index has nothing to compare
@@ -234,6 +234,6 @@ class Hawk:
             # Constant time string comparision, mitigates side channel attacks.
             if len(prev) != len(this):
                 return False
-            for _x, _y in zip(prev, this):
-                result |= chk_bytes(_x) ^ chk_bytes(_y)
+            for _x, _y in zip(chk_bytes(prev), chk_bytes(this)):
+                result |= _x ^ _y
         return result == 0
