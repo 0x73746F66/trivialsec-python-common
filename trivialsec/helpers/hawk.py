@@ -180,7 +180,7 @@ class Hawk:
         payload_hash.update(b"\n") # trailing newline
         server_hash = b64encode(payload_hash.digest())
         self.server_hash = server_hash
-        return self.strings_match(server_hash.decode('utf8'), self.hash)
+        return self._compare(server_hash.decode('utf8'), self.hash)
 
     def is_valid_timestamp(self) -> bool:
         # not_before prevents replay attacks
@@ -215,15 +215,25 @@ class Hawk:
         digest = hmac.new(secret.encode('ascii'), self._signing_data(), digestmod).digest()
         self.server_mac = b64encode(digest)
         # Compare server-side HMAC with client provided HMAC
-        return self.strings_match(self.server_mac.decode('utf8'), self.mac)
+        return self._compare(self.server_mac.decode('utf8'), self.mac)
 
     @staticmethod
-    def strings_match(_a, _b):
-        # Constant time string comparision, mitigates side channel attacks.
-        if len(_a) != len(_b):
-            return False
-        result = 0
+    def _compare(*values):
+        """
+        _compare() takes two or more str or byte-like inputs and compares
+        each to return True if they match or False if there is any mismatch
+        """
         # In Python 3, if we have a bytes object, iterating it will already get the integer value
-        for _x, _y in zip(_a, _b):
-            result |= _x ^ _y
+        def chk_bytes(val):
+            return val if isinstance(val, (bytes, bytearray)) else val.encode('utf8')
+        result = 0
+        for index, this in enumerate(values):
+            if index == 0: # first index has nothing to compare
+                continue
+            prev = values[index-1]              # use the index variable i to locate prev
+            # Constant time string comparision, mitigates side channel attacks.
+            if len(prev) != len(this):
+                return False
+            for _x, _y in zip(prev, this):
+                result |= chk_bytes(_x) ^ chk_bytes(_y)
         return result == 0
