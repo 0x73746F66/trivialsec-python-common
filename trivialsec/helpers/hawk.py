@@ -177,10 +177,10 @@ class Hawk:
         payload_hash.update(self._content_type.encode("utf8"))
         payload_hash.update(b"\n")
         payload_hash.update(self._raw)
-        payload_hash.update(b"\n")
+        payload_hash.update(b"\n") # trailing newline
         server_hash = b64encode(payload_hash.digest())
-        self.server_hash = server_hash.decode('utf8')
-        return self.strings_match(server_hash, self.hash)
+        self.server_hash = server_hash
+        return self.strings_match(server_hash.decode('utf8'), self.hash)
 
     def is_valid_timestamp(self) -> bool:
         # not_before prevents replay attacks
