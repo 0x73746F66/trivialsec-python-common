@@ -16,3 +16,15 @@ def get_valid_key(key :str) -> ApiKey:
         return None
 
     return api_key
+
+def get_public_api_key(member_id :int) -> ApiKey:
+    api_key = ApiKey(member_id=member_id, comment='public-api')
+    api_key.hydrate(['member_id', 'comment'], ttl_seconds=3)
+    if api_key.api_key_secret is None:
+        logger.info(f'Missing public-api key for member_id: {member_id}')
+        return None
+    if api_key.active is not True:
+        logger.info(f'Disabled public-api key for member_id: {member_id}')
+        return None
+
+    return api_key

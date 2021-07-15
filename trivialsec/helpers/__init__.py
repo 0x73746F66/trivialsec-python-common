@@ -218,12 +218,12 @@ def mohawk_receiver(request, algorithm :str = 'sha256'):
 
     def seen_nonce(sender_id, nonce, timestamp):
         key = '{id}:{nonce}:{ts}'.format(id=sender_id, nonce=nonce, ts=timestamp)
-        if config._redis.get(key):
+        if config._redis.get(key): # pylint: disable=protected-access
             # We have already processed this nonce + timestamp.
             return True
         else:
             # Save this nonce + timestamp for later.
-            config._redis.set(key, '1')
+            config._redis.set(key, '1') # pylint: disable=protected-access
             return False
     def lookup_credentials(sender_id):
         apikey :ApiKey = get_valid_key(sender_id)
@@ -237,7 +237,7 @@ def mohawk_receiver(request, algorithm :str = 'sha256'):
         return credentials
     content_type = request.headers.get('Content-Type')
     content = request.get_data(as_text=True)
-    logger.info(f'url {request.base_url} method {request.method} content {content} content_type {content_type} algorithm {algorithm}')
+    logger.debug(f'mohawk_receiver url {request.base_url} method {request.method} content {content} content_type {content_type} algorithm {algorithm}')
     try:
         return Receiver(
             credentials_map=lookup_credentials,
