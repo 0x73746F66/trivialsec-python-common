@@ -27,6 +27,23 @@ supported_digests = {
 }
 
 
+"""
+        authorization_header = request.headers.get('Authorization')
+        content_type = request.headers.get('Content-Type')
+        hawk = Hawk(
+            authorization_header,
+            content_type=content_type,
+            request_method=request.method,
+            path_uri=f'{request.path}{request.query_string.decode("utf-8")}',
+            host=request.host,
+            utf8_body=request.get_data(as_text=True).encode("utf-8"),
+            options={'payload_validation': True}
+        )
+        apikey :ApiKey = get_valid_key(hawk.id)
+        if not hawk.validate(apikey.api_key_secret):
+            logger.error(f'hawk_validate failed {authorization_header} calculated mac {hawk.server_mac}')
+            return res_401
+"""
 class Hawk:
     version :int = 1
     algorithm :str
