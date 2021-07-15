@@ -7,7 +7,6 @@ from flask_login import login_user, current_user
 from flask import abort, request, url_for, redirect, jsonify, Response
 from gunicorn.glogging import logging
 from trivialsec.helpers.config import config
-from trivialsec.helpers.hawk import Hawk
 from trivialsec.models.apikey import ApiKey
 from trivialsec.models.member import Member
 from trivialsec.services.apikey import get_valid_key
@@ -88,52 +87,6 @@ def require_recaptcha(action: str):
 
         return f_require_recaptcha
     return deco_require_recaptcha
-
-def hawk_authentication(not_before_seconds: int = 3, expire_after_seconds: int = 3):
-    def _deco(func):
-        @wraps(func)
-        def f_hawk_auth(*args, **kwargs):
-            res_401 = Response('{"status": 401, "message": "Unauthorized"}', 401, {'WWW-Authenticate': 'Hawk realm="Login Required"', 'Content-Type': 'text/json'})
-            try:
-                authorization_header = request.headers.get('Authorization')
-                content_type = request.headers.get('Content-Type')
-                if not authorization_header:
-                    logger.error('no Authorization header')
-                    return res_401
-                hawk = Hawk(
-                    authorization_header,
-                    content_type=content_type,
-                    request_method=request.method,
-                    path_uri=f'{request.path}{request.query_string.decode("utf-8")}',
-                    host=request.host,
-                    utf8_body=request.get_data(as_text=True).encode("utf-8"),
-                    options={
-                        'payload_validation': True,
-                        'not_before': not_before_seconds,
-                        'expire_after': expire_after_seconds,
-                    }
-                )
-                api_key = get_valid_key(hawk.id)
-                if api_key is None or not isinstance(api_key, ApiKey):
-                    return res_401
-                if api_key.allowed_origin and request.referrer != api_key.allowed_origin:
-                    logger.error(f'referrer {request.referrer} not an allowed origin')
-                    return res_401
-                if not hawk.validate(api_key.api_key_secret):
-                    logger.error(f'hawk_validate failed {authorization_header} calculated mac {hawk.server_mac}')
-                    return res_401
-                # Success - application login and process the request
-                member = Member(member_id=api_key.member_id)
-                member.hydrate(ttl_seconds=30)
-                login_user(member)
-                return func(*args, **kwargs)
-            except Exception as err:
-                logger.error(err)
-
-            return res_401
-
-        return f_hawk_auth
-    return _deco
 
 def internal_users(func):
     @wraps(func)
