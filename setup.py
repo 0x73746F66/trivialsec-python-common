@@ -42,7 +42,8 @@ setup(
         'beautifulsoup4>=4.9.3<5.0',
         'stackprinter>=0.2.5',
         'gunicorn>=20.1.0',
-        'setproctitle>=1.2.2'
+        'setproctitle>=1.2.2',
+        'mohawk>=1.1.0'
     ],
     include_package_data=True
 )

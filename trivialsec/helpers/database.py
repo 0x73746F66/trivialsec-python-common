@@ -2,7 +2,6 @@ import importlib
 import re
 import time
 import json
-import redis
 import mysql.connector
 from datetime import datetime, timedelta
 from retry.api import retry
