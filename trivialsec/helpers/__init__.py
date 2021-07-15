@@ -210,7 +210,7 @@ def extract_server_version(str_value: str) -> tuple:
 
     return server_name, server_version
 
-def mohawk_receiver(request):
+def mohawk_receiver(request, algorithm :str = 'sha256'):
     authorization_header = request.headers.get('Authorization')
     if not authorization_header:
         logger.error('no Authorization header')
@@ -233,12 +233,11 @@ def mohawk_receiver(request):
         if apikey.allowed_origin and request.referrer != apikey.allowed_origin:
             logger.error(f'referrer {request.referrer} not an allowed origin')
             return None
-        credentials = {'id': sender_id, 'key': apikey.api_key_secret, 'algorithm': 'sha1'}
-        logger.info(f'credentials {credentials}')
+        credentials = {'id': sender_id, 'key': apikey.api_key_secret, 'algorithm': algorithm}
         return credentials
     content_type = request.headers.get('Content-Type')
     content = request.get_data(as_text=True)
-    logger.info(f'url {request.base_url} method {request.method} content {content} content_type {content_type}')
+    logger.info(f'url {request.base_url} method {request.method} content {content} content_type {content_type} algorithm {algorithm}')
     try:
         return Receiver(
             credentials_map=lookup_credentials,
