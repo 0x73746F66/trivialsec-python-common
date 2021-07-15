@@ -1,5 +1,5 @@
 variables:
-  COMMON_VERSION: 0.5.1
+  COMMON_VERSION: 0.5.2
   GIT_COMMIT_EMAIL: support@trivialsec.com
   GIT_COMMIT_NAME: gitlab-ci
 
