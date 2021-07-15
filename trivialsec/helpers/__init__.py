@@ -223,7 +223,7 @@ def mohawk_receiver(request):
             return True
         else:
             # Save this nonce + timestamp for later.
-            config._redis.set(key, True)
+            config._redis.set(key, '1')
             return False
     def lookup_credentials(sender_id):
         apikey :ApiKey = get_valid_key(sender_id)
