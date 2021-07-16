@@ -1,7 +1,8 @@
 __module__ = 'trivialsec.helpers.messages'
 
 OK_GENERIC = 'ok'
-ERR_INCORRECT_PASSWORD = 'Incorrect password provided'
+ERR_INCORRECT_SCRATCH_CODE = 'Incorrect scratch code provided'
+ERR_ACCEPT_EULA = 'Please accept the Terms of Service and Privacy Policy'
 ERR_ACCESS_DENIED = 'Unauthorised'
 ERR_MEMBER_EXIST = 'member already registered, try resetting your password'
 ERR_DOMAIN_EXIST = 'domain already monitored, contact your administrator for access'
