@@ -9,10 +9,10 @@ class MemberMfa(DatabaseHelpers):
         self.member_id = kwargs.get('member_id')
         self.type = kwargs.get('type')
         self.name = kwargs.get('name')
-        self.webauthn_id = bool(kwargs.get('webauthn_id'))
+        self.webauthn_id = kwargs.get('webauthn_id')
         self.webauthn_public_key = kwargs.get('webauthn_public_key')
         self.webauthn_metadata = kwargs.get('webauthn_metadata')
-        self.created_at = bool(kwargs.get('created_at'))
+        self.created_at = kwargs.get('created_at')
 
 class MemberMfas(DatabaseIterators):
     def __init__(self):
