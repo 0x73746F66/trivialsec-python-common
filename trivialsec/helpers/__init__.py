@@ -72,7 +72,7 @@ def cidr_address_list(cidr: str)->list:
 def oneway_hash(input_string: str)->str:
     return sha224(bytes(input_string, 'ascii')).hexdigest()
 
-def hash_password(password, rounds: int = 8000, salt_size: int = 10):
+def hash_passphrase(password, rounds: int = 8000, salt_size: int = 10):
     return pbkdf2_sha256.using(rounds=rounds, salt_size=salt_size).hash(password) # pylint: disable=no-member
 
 def check_encrypted_password(password, hashed):

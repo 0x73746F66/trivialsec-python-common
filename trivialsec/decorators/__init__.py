@@ -6,6 +6,7 @@ from urllib import request as urlrequest
 from flask_login import login_user, current_user
 from flask import abort, request, url_for, redirect, jsonify, Response
 from gunicorn.glogging import logging
+from trivialsec.helpers import messages
 from trivialsec.helpers.config import config
 from trivialsec.models.apikey import ApiKey
 from trivialsec.models.member import Member
@@ -157,3 +158,19 @@ def requires_owner(func):
 
         return func(*args, **kwargs)
     return decorated_view
+
+def prepared_json(func):
+    """
+    Must be the last decorator
+    """
+    @wraps(func)
+    def deco_prepared_json(*args, **kwargs):
+        params = request.get_json(force=True, silent=True)
+        if params is None:
+            params = {}
+        params['status'] = 'error'
+        params['message'] = messages.ERR_ACCESS_DENIED
+        if 'recaptcha_token' in params:
+            del params['recaptcha_token']
+        return func(params, *args, **kwargs)
+    return deco_prepared_json
