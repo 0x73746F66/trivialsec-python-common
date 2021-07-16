@@ -11,7 +11,7 @@ class MemberMfa(DatabaseHelpers):
         self.name = kwargs.get('name')
         self.webauthn_id = kwargs.get('webauthn_id')
         self.webauthn_public_key = kwargs.get('webauthn_public_key')
-        self.webauthn_metadata = kwargs.get('webauthn_metadata')
+        self.webauthn_challenge = kwargs.get('webauthn_challenge')
         self.created_at = kwargs.get('created_at')
 
 class MemberMfas(DatabaseIterators):
