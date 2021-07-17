@@ -18,11 +18,6 @@ from trivialsec.services.apikey import get_valid_key
 logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.helpers'
 
-def check_password_policy(passwd: str) -> bool:
-    if len(passwd) < 16:
-        return False
-    return True
-
 def check_domain_rules(domain_name: str):
     # TODO implement
     return True
@@ -72,11 +67,11 @@ def cidr_address_list(cidr: str)->list:
 def oneway_hash(input_string: str)->str:
     return sha224(bytes(input_string, 'ascii')).hexdigest()
 
-def hash_passphrase(password, rounds: int = 8000, salt_size: int = 10):
-    return pbkdf2_sha256.using(rounds=rounds, salt_size=salt_size).hash(password) # pylint: disable=no-member
+def hash_passphrase(passphrase, rounds: int = 8000, salt_size: int = 10):
+    return pbkdf2_sha256.using(rounds=rounds, salt_size=salt_size).hash(passphrase) # pylint: disable=no-member
 
-def check_encrypted_password(password, hashed):
-    return pbkdf2_sha256.verify(password, hashed)
+def check_encrypted_passphrase(passphrase, hashed):
+    return pbkdf2_sha256.verify(passphrase, hashed)
 
 def get_boto3_client(service: str, region_name: str, aws_profile: str = None, role_arn: str = None):
     boto_params = {

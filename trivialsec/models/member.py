@@ -23,6 +23,7 @@ class Member(UserMixin, DatabaseHelpers):
         self.email = kwargs.get('email')
         self.account_id = kwargs.get('account_id')
         self.verified = bool(kwargs.get('verified'))
+        self.scratch_code = kwargs.get('scratch_code')
         self.registered = kwargs.get('registered')
         self.confirmation_url = kwargs.get('confirmation_url')
         self.confirmation_sent = bool(kwargs.get('confirmation_sent'))
