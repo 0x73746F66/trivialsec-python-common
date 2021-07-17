@@ -4,7 +4,7 @@ from functools import wraps
 from urllib.parse import urlencode
 from urllib import request as urlrequest
 from flask_login import current_user
-from flask import abort, request, url_for, redirect, jsonify
+from flask import abort, request, url_for, redirect, jsonify, current_app as app
 from gunicorn.glogging import logging
 from trivialsec.helpers import messages
 from trivialsec.helpers.config import config
@@ -39,6 +39,8 @@ def require_recaptcha(action: str):
     def deco_require_recaptcha(func):
         @wraps(func)
         def f_require_recaptcha(*args, **kwargs):
+            if app.debug:
+                return func(*args, **kwargs)
             body = request.get_json(force=True, silent=True)
             if body is None:
                 body = {}
