@@ -3,14 +3,11 @@ from time import time, sleep
 from functools import wraps
 from urllib.parse import urlencode
 from urllib import request as urlrequest
-from flask_login import login_user, current_user
-from flask import abort, request, url_for, redirect, jsonify, Response
+from flask_login import current_user
+from flask import abort, request, url_for, redirect, jsonify
 from gunicorn.glogging import logging
 from trivialsec.helpers import messages
 from trivialsec.helpers.config import config
-from trivialsec.models.apikey import ApiKey
-from trivialsec.models.member import Member
-from trivialsec.services.apikey import get_valid_key
 from trivialsec.services.roles import is_internal_member, is_support_member, is_billing_member, is_audit_member, is_owner_member
 
 
@@ -42,14 +39,17 @@ def require_recaptcha(action: str):
     def deco_require_recaptcha(func):
         @wraps(func)
         def f_require_recaptcha(*args, **kwargs):
-            body = request.get_json()
-            if 'recaptcha_token' not in body:
+            body = request.get_json(force=True, silent=True)
+            if body is None:
+                body = {}
+            recaptcha_token = body.get('recaptcha_token')
+            if recaptcha_token is None:
                 logger.warning('missing recaptcha_token')
                 return abort(403)
 
             params = urlencode({
                 'secret': config.recaptcha_secret_key,
-                'response': body['recaptcha_token']
+                'response': body.get('recaptcha_token')
             }).encode('ascii')
             url = 'https://www.google.com/recaptcha/api/siteverify'
             req = urlrequest.Request(url)
@@ -59,23 +59,25 @@ def require_recaptcha(action: str):
                 req.set_proxy(config.https_proxy, 'https')
             with urlrequest.urlopen(req, data=params) as resp:
                 siteverify = json.loads(resp.read().decode('utf8'))
-                logger.info(siteverify)
-                logger.info(f'resp.code {resp.code}')
+                logger.debug(siteverify)
                 if resp.code != 200:
-                    logger.warning(f'{action} recaptcha code {resp.code}')
+                    logger.warning(f'recaptcha siteverify response code {resp.code} {action}')
                     return abort(403)
-                if siteverify['success']:
-                    if siteverify['score'] < 0.6:
-                        logger.warning(f'recaptcha score {siteverify["score"]}')
-                        return abort(403)
-                    if action and siteverify['action'] != action:
-                        logger.warning(f'{action} recaptcha code {resp.code}')
-                        return abort(403)
-                elif len(siteverify['error-codes']) > 0:
-                    logger.error(f"recaptcha {'|'.join(siteverify['error-codes'])}")
-                    if 'timeout-or-duplicate' in siteverify['error-codes']:
+                error_codes = siteverify.get('error-codes', [])
+                score = siteverify.get('score', 1.0)
+                if siteverify.get('success', False) and score < 0.6:
+                    logger.warning(f'recaptcha score {score}')
+                    return abort(403)
+                siteverify_action = siteverify.get('action')
+                if siteverify_action != action:
+                    logger.warning(f'{siteverify_action} not match {action}')
+                    return abort(403)
+                if len(error_codes) > 0:
+                    logger.error(f"recaptcha {'|'.join(error_codes)}")
+                    if 'timeout-or-duplicate' in siteverify.get('error-codes', []):
                         return jsonify({
-                            'status': 'retry'
+                            'status': 'retry',
+                            'action': action
                         })
                     return abort(403)
             try:
