@@ -248,26 +248,3 @@ def mohawk_receiver(request, algorithm :str = 'sha256'):
     except Exception as ex:
         logger.exception(ex)
         return ex
-
-def generate_16char_base32(pre :str) -> bytes:
-    """
-    Encode a string of 16 length in base32
-    with a given string - maximum length of 10 chars -
-    Note: 10 char = 16 char string in base32
-    Warning: Decoding is not a part of this example
-    since it adds a random integer to the end of string
-    """
-    prefix = str(pre, 'utf-8')
-    prefix_len = len(prefix)
-    if prefix_len > 10:
-        return None
-    remaining = 10 - prefix_len
-    random_int_str = ''
-    if remaining != 0:
-        random_from = 10 ** (remaining-1)
-        random_to = (10 ** remaining) - 1
-        random_int = randint(random_from, random_to)
-        random_int_str = str(random_int)
-    str_to_encode = prefix + random_int_str
-    encoded_str = b32encode(str_to_encode)
-    return encoded_str
