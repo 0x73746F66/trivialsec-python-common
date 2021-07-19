@@ -1,11 +1,12 @@
 from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 
-
 __module__ = 'trivialsec.models.known_ip'
+__table__ = 'known_ips'
+__pk__ = 'known_ip_id'
 
 class KnownIp(DatabaseHelpers):
     def __init__(self, **kwargs):
-        super().__init__('known_ips', 'known_ip_id')
+        super().__init__(__table__, __pk__)
         self.known_ip_id = kwargs.get('known_ip_id')
         self.account_id = kwargs.get('account_id')
         self.project_id = kwargs.get('project_id')
@@ -19,4 +20,4 @@ class KnownIp(DatabaseHelpers):
 
 class KnownIps(DatabaseIterators):
     def __init__(self):
-        super().__init__('KnownIp')
+        super().__init__('KnownIp', __table__, __pk__)

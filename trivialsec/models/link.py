@@ -1,11 +1,12 @@
 from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 
-
 __module__ = 'trivialsec.models.link'
+__table__ = 'links'
+__pk__ = 'link_id'
 
 class Link(DatabaseHelpers):
     def __init__(self, **kwargs):
-        super().__init__('links', 'link_id')
+        super().__init__(__table__, __pk__)
         self.link_id = kwargs.get('link_id')
         self.campaign = kwargs.get('campaign')
         self.channel = kwargs.get('channel')
@@ -21,4 +22,4 @@ class Link(DatabaseHelpers):
 
 class Links(DatabaseIterators):
     def __init__(self):
-        super().__init__('Link')
+        super().__init__('Link', __table__, __pk__)

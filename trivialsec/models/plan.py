@@ -1,12 +1,13 @@
 from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 from decimal import Decimal, ROUND_DOWN
 
-
 __module__ = 'trivialsec.models.plan'
+__table__ = 'plans'
+__pk__ = 'plan_id'
 
 class Plan(DatabaseHelpers):
     def __init__(self, **kwargs):
-        super().__init__('plans', 'plan_id')
+        super().__init__(__table__, __pk__)
         self.plan_id = kwargs.get('plan_id')
         self.account_id = kwargs.get('account_id')
         self.name = kwargs.get('name')
@@ -43,24 +44,4 @@ class Plan(DatabaseHelpers):
 
 class Plans(DatabaseIterators):
     def __init__(self):
-        super().__init__('Plan')
-
-class PlanInvoice(DatabaseHelpers):
-    def __init__(self, **kwargs):
-        super().__init__('plan_invoices', 'plan_id')
-        self.plan_id = kwargs.get('plan_id')
-        self.stripe_invoice_id = kwargs.get('stripe_invoice_id')
-        self.hosted_invoice_url = kwargs.get('hosted_invoice_url')
-        self.cost = kwargs.get('cost')
-        self.currency = kwargs.get('currency')
-        self.coupon_code = kwargs.get('coupon_code')
-        self.coupon_desc = kwargs.get('coupon_desc')
-        self.stripe_promotion_id = kwargs.get('stripe_promotion_id')
-        self.interval = kwargs.get('interval')
-        self.status = kwargs.get('status')
-        self.due_date = kwargs.get('due_date')
-        self.created_at = kwargs.get('created_at')
-
-class PlanInvoices(DatabaseIterators):
-    def __init__(self):
-        super().__init__('PlanInvoice')
+        super().__init__('Plan', __table__, __pk__)

@@ -5,7 +5,8 @@ from stripe.error import RateLimitError, APIConnectionError
 from retry.api import retry
 from gunicorn.glogging import logging
 from trivialsec.helpers.config import config
-from trivialsec.models.plan import Plan, PlanInvoice
+from trivialsec.models.plan_invoice import PlanInvoice
+from trivialsec.models.plan import Plan
 from trivialsec.models.account import Account
 
 

@@ -1,7 +1,8 @@
 from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 
-
 __module__ = 'trivialsec.models.dns_record'
+__table__ = 'dns_records'
+__pk__ = 'dns_record_id'
 
 class DnsRecord(DatabaseHelpers):
     RECORDS = {
@@ -94,7 +95,7 @@ class DnsRecord(DatabaseHelpers):
         'DLV': 'DNSSEC Lookaside Validation (OBSOLETE)  [RFC-ietf-dnsop-obsolete-dlv-02][RFC4431]'
     }
     def __init__(self, **kwargs):
-        super().__init__('dns_records', 'dns_record_id')
+        super().__init__(__table__, __pk__)
         self.dns_record_id = kwargs.get('dns_record_id')
         self.domain_id = kwargs.get('domain_id')
         self.ttl = kwargs.get('ttl')
@@ -106,4 +107,4 @@ class DnsRecord(DatabaseHelpers):
 
 class DnsRecords(DatabaseIterators):
     def __init__(self):
-        super().__init__('DnsRecord')
+        super().__init__('DnsRecord', __table__, __pk__)

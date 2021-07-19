@@ -3,7 +3,8 @@ import secrets
 import uuid
 from trivialsec.helpers.config import config
 from trivialsec.helpers import check_email_rules, oneway_hash
-from trivialsec.models.account import Account, AccountConfig
+from trivialsec.models.account import Account
+from trivialsec.models.account_config import AccountConfig
 from trivialsec.models.apikey import ApiKey
 from trivialsec.models.member import Member
 from trivialsec.models.plan import Plan

@@ -3,7 +3,8 @@ from datetime import datetime
 from gunicorn.glogging import logging
 from trivialsec.models.activity_log import ActivityLog
 from trivialsec.models.member import Member
-from trivialsec.models.finding import Finding, FindingNote
+from trivialsec.models.finding import Finding
+from trivialsec.models.finding_note import FindingNote
 
 
 logger = logging.getLogger(__name__)

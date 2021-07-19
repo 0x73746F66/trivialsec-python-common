@@ -3,12 +3,13 @@ from string import ascii_lowercase
 from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 from trivialsec.helpers.database import mysql_adapter
 
-
 __module__ = 'trivialsec.models.job_run'
+__table__ = 'job_runs'
+__pk__ = 'job_run_id'
 
 class JobRun(DatabaseHelpers):
     def __init__(self, **kwargs):
-        super().__init__('job_runs', 'job_run_id')
+        super().__init__(__table__, __pk__)
         self.job_run_id = kwargs.get('job_run_id')
         self.account_id = kwargs.get('account_id')
         self.project_id = kwargs.get('project_id')
@@ -27,7 +28,7 @@ class JobRun(DatabaseHelpers):
 
 class JobRuns(DatabaseIterators):
     def __init__(self):
-        super().__init__('JobRun')
+        super().__init__('JobRun', __table__, __pk__)
 
     def query_json(self, search_filter: list, limit: int = 1, offset: int = 0, conditional = ' AND '):
         data = {}

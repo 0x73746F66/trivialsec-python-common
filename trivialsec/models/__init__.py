@@ -1,11 +1,16 @@
 import importlib
+from .account_config import *
 from .account import *
 from .activity_log import *
 from .apikey import *
 from .dns_record import *
+from .domain_stat import *
 from .domain import *
 from .feed import *
+from .finding_detail import *
+from .finding_note import *
 from .finding import *
+from .inventory import *
 from .invitation import *
 from .job_run import *
 from .key_value import *
@@ -14,6 +19,7 @@ from .link import *
 from .member_mfa import *
 from .member import *
 from .notification import *
+from .plan_invoice import *
 from .plan import *
 from .program import *
 from .project import *
@@ -21,7 +27,6 @@ from .role import *
 from .security_alert import *
 from .service_type import *
 from .webhook import *
-
 
 __module__ = 'trivialsec.models'
 

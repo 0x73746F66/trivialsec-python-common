@@ -2,6 +2,8 @@ from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 
 
 __module__ = 'trivialsec.models.role'
+__table__ = 'roles'
+__pk__ = 'role_id'
 
 class Role(DatabaseHelpers):
     ROLE_SUPPORT = 'Support'
@@ -16,7 +18,7 @@ class Role(DatabaseHelpers):
     ROLE_OWNER_ID = 1
 
     def __init__(self, **kwargs):
-        super().__init__('roles', 'role_id')
+        super().__init__(__table__, __pk__)
         self.role_id = kwargs.get('role_id')
         self.name = kwargs.get('name')
         self.internal_only = bool(kwargs.get('internal_only', 0))
@@ -28,4 +30,4 @@ class Role(DatabaseHelpers):
 
 class Roles(DatabaseIterators):
     def __init__(self):
-        super().__init__('Role')
+        super().__init__('Role', __table__, __pk__)

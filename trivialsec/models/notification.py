@@ -2,10 +2,12 @@ from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 
 
 __module__ = 'trivialsec.models.notification'
+__table__ = 'notifications'
+__pk__ = 'notification_id'
 
 class Notification(DatabaseHelpers):
     def __init__(self, **kwargs):
-        super().__init__('notifications', 'notification_id')
+        super().__init__(__table__, __pk__)
         self.notification_id = kwargs.get('notification_id')
         self.account_id = kwargs.get('account_id')
         self.description = kwargs.get('description')
@@ -16,4 +18,4 @@ class Notification(DatabaseHelpers):
 
 class Notifications(DatabaseIterators):
     def __init__(self):
-        super().__init__('Notification')
+        super().__init__('Notification', __table__, __pk__)

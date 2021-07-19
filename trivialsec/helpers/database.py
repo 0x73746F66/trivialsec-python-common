@@ -200,12 +200,12 @@ class MySQLDatabase:
 mysql_adapter = MySQLDatabase(**config.mysql)
 
 class DatabaseIterators:
-    def __init__(self, class_name):
+    def __init__(self, class_name, table, primary_key):
         self.__class_name = class_name
+        self.__table = table
+        self.__pk = primary_key
         self.__index = 0
         self.__items = []
-        class_ = getattr(__models_module__, self.__class_name)
-        self.__table = class_().__table # pylint: disable=protected-access
 
     def _load_items(self, results: list):
         class_ = getattr(__models_module__, self.__class_name)
@@ -302,7 +302,7 @@ class DatabaseIterators:
         cls = class_()
         _cols = cls.cols()
         data = {}
-        sql = f"SELECT COUNT(*) as count FROM `{self.__table}`"
+        sql = f"SELECT COUNT({self.__pk}) as count FROM `{self.__table}`"
         if isinstance(query_filter, list):
             conditions = []
             for key, val in query_filter:
@@ -334,7 +334,7 @@ class DatabaseIterators:
         cls = class_()
         _cols = cls.cols()
         data = {}
-        sql = f"SELECT count(*) as records FROM {self.__table}"
+        sql = f"SELECT count({self.__pk}) as records FROM {self.__table}"
         if isinstance(search_filter, list):
             conditions = []
             for col in search_filter:

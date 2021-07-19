@@ -1,8 +1,12 @@
 from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 from trivialsec.helpers.database import mysql_adapter
 from .member import Member
+from .finding_note import FindingNote
+from .finding_detail import FindingDetail
 
 __module__ = 'trivialsec.models.finding'
+__table__ = 'findings'
+__pk__ = 'finding_id'
 
 class Finding(DatabaseHelpers):
     CONFIDENCE_HIGH_RGB = [7, 189, 152]
@@ -56,7 +60,7 @@ class Finding(DatabaseHelpers):
     STATE_ARCHIVED = 'ARCHIVED'
 
     def __init__(self, **kwargs):
-        super().__init__('findings', 'finding_id')
+        super().__init__(__table__, __pk__)
         self.finding_id = kwargs.get('finding_id')
         self.finding_detail_id = kwargs.get('finding_detail_id')
         self.account_id = kwargs.get('account_id')
@@ -82,7 +86,7 @@ class Finding(DatabaseHelpers):
         self.watchers = []
 
     def __setattr__(self, name, value):
-        if name in ['archived']:
+        if name in ['archived', 'is_passive']:
             value = bool(value)
         super().__setattr__(name, value)
 
@@ -122,7 +126,7 @@ class Finding(DatabaseHelpers):
 
 class Findings(DatabaseIterators):
     def __init__(self):
-        super().__init__('Finding')
+        super().__init__('Finding', __table__, __pk__)
 
     def load_details(self):
         items = []
@@ -266,45 +270,3 @@ class Findings(DatabaseIterators):
                 num_results = int(result['count'])
 
         return num_results
-
-class FindingDetail(DatabaseHelpers):
-    def __init__(self, **kwargs):
-        super().__init__('finding_details', 'finding_detail_id')
-        self.finding_detail_id = kwargs.get('finding_detail_id')
-        self.title = kwargs.get('title')
-        self.description = kwargs.get('description')
-        self.type_namespace = kwargs.get('type_namespace')
-        self.type_category = kwargs.get('type_category')
-        self.type_classifier = kwargs.get('type_classifier')
-        self.confidence = kwargs.get('confidence', 0)
-        self.severity_product = kwargs.get('severity_product', 0)
-        self.recommendation = kwargs.get('recommendation')
-        self.recommendation_url = kwargs.get('recommendation_url')
-        self.cvss_vector = kwargs.get('cvss_vector')
-        self.created_at = kwargs.get('created_at')
-        self.review = kwargs.get('review')
-        self.updated_at = kwargs.get('updated_at')
-        self.modified_by_id = kwargs.get('modified_by_id')
-
-class FindingDetails(DatabaseIterators):
-    def __init__(self):
-        super().__init__('FindingDetail')
-
-class FindingNote(DatabaseHelpers):
-    def __init__(self, **kwargs):
-        super().__init__('finding_notes', 'finding_note_id')
-        self.finding_note_id = kwargs.get('finding_note_id')
-        self.finding_id = kwargs.get('finding_id')
-        self.member_id = kwargs.get('member_id')
-        self.text = kwargs.get('text')
-        self.updated_at = kwargs.get('updated_at')
-        self.deleted = bool(kwargs.get('deleted'))
-
-    def __setattr__(self, name, value):
-        if name in ['deleted']:
-            value = bool(value)
-        super().__setattr__(name, value)
-
-class FindingNotes(DatabaseIterators):
-    def __init__(self):
-        super().__init__('FindingNote')

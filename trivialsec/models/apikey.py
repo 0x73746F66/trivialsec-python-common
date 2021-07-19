@@ -1,11 +1,12 @@
 from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 
-
 __module__ = 'trivialsec.models.apikey'
+__table__ = 'api_keys'
+__pk__ = 'api_key'
 
 class ApiKey(DatabaseHelpers):
     def __init__(self, **kwargs):
-        super().__init__('api_keys', 'api_key')
+        super().__init__(__table__, __pk__)
         self.api_key = kwargs.get('api_key')
         self.api_key_secret = kwargs.get('api_key_secret')
         self.comment = kwargs.get('comment')
@@ -21,4 +22,4 @@ class ApiKey(DatabaseHelpers):
 
 class ApiKeys(DatabaseIterators):
     def __init__(self):
-        super().__init__('ApiKey')
+        super().__init__('ApiKey', __table__, __pk__)

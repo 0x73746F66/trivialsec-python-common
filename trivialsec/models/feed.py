@@ -3,12 +3,13 @@ from datetime import datetime, timedelta
 from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 from trivialsec.helpers.database import mysql_adapter
 
-
 __module__ = 'trivialsec.models.feed'
+__table__ = 'feeds'
+__pk__ = 'feed_id'
 
 class Feed(DatabaseHelpers):
     def __init__(self, **kwargs):
-        super().__init__('feeds', 'feed_id')
+        super().__init__(__table__, __pk__)
         self.feed_id = kwargs.get('feed_id')
         self.name = kwargs.get('name')
         self.category = kwargs.get('category')
@@ -35,7 +36,7 @@ class Feed(DatabaseHelpers):
 
 class Feeds(DatabaseIterators):
     def __init__(self):
-        super().__init__('Feed')
+        super().__init__('Feed', __table__, __pk__)
 
     def num_running(self, category: str) -> int:
         with mysql_adapter as database:

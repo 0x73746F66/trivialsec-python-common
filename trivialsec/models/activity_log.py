@@ -1,7 +1,8 @@
 from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 
-
 __module__ = 'trivialsec.models.activity_log'
+__table__ = 'activity_logs'
+__pk__ = 'activity_log_id'
 
 class ActivityLog(DatabaseHelpers):
     ACTION_USER_LOGIN = 'user_login'
@@ -28,7 +29,7 @@ class ActivityLog(DatabaseHelpers):
     ACTION_USER_CHANGED_MEMBER = 'user_changed_member'
 
     def __init__(self, **kwargs):
-        super().__init__('activity_logs', 'activity_log_id')
+        super().__init__(__table__, __pk__)
         self.activity_log_id = kwargs.get('activity_log_id')
         self.member_id = kwargs.get('member_id')
         self.action = kwargs.get('action')
@@ -37,4 +38,4 @@ class ActivityLog(DatabaseHelpers):
 
 class ActivityLogs(DatabaseIterators):
     def __init__(self):
-        super().__init__('ActivityLog')
+        super().__init__('ActivityLog', __table__, __pk__)

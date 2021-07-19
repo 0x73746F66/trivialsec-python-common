@@ -1,11 +1,12 @@
 from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 
-
 __module__ = 'trivialsec.models.invitation'
+__table__ = 'invitations'
+__pk__ = 'invitation_id'
 
 class Invitation(DatabaseHelpers):
     def __init__(self, **kwargs):
-        super().__init__('invitations', 'invitation_id')
+        super().__init__(__table__, __pk__)
         self.invitation_id = kwargs.get('invitation_id')
         self.account_id = kwargs.get('account_id')
         self.invited_by_member_id = kwargs.get('invited_by_member_id')
@@ -25,4 +26,4 @@ class Invitation(DatabaseHelpers):
 
 class Invitations(DatabaseIterators):
     def __init__(self):
-        super().__init__('Invitation')
+        super().__init__('Invitation', __table__, __pk__)

@@ -4,6 +4,8 @@ from .role import Role
 
 
 __module__ = 'trivialsec.models.member'
+__table__ = 'members'
+__pk__ = 'member_id'
 
 try:
     from flask_login import UserMixin
@@ -18,7 +20,7 @@ except Exception:
 
 class Member(UserMixin, DatabaseHelpers):
     def __init__(self, **kwargs):
-        super().__init__('members', 'member_id')
+        super().__init__(__table__, __pk__)
         self.member_id = kwargs.get('member_id')
         self.email = kwargs.get('email')
         self.account_id = kwargs.get('account_id')
@@ -71,4 +73,4 @@ class Member(UserMixin, DatabaseHelpers):
 
 class Members(DatabaseIterators):
     def __init__(self):
-        super().__init__('Member')
+        super().__init__('Member', __table__, __pk__)

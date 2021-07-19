@@ -1,11 +1,12 @@
 from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 
-
 __module__ = 'trivialsec.models.key_value'
+__table__ = 'key_values'
+__pk__ = 'key_value_id'
 
 class KeyValue(DatabaseHelpers):
     def __init__(self, **kwargs):
-        super().__init__('key_values', 'key_value_id')
+        super().__init__(__table__, __pk__)
         self.key_value_id = kwargs.get('key_value_id')
         self.type = kwargs.get('type')
         self.key = kwargs.get('key')
@@ -21,4 +22,4 @@ class KeyValue(DatabaseHelpers):
 
 class KeyValues(DatabaseIterators):
     def __init__(self):
-        super().__init__('KeyValue')
+        super().__init__('KeyValue', __table__, __pk__)

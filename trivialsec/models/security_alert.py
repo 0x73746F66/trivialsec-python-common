@@ -2,10 +2,12 @@ from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 
 
 __module__ = 'trivialsec.models.security_alert'
+__table__ = 'security_alerts'
+__pk__ = 'security_alert_id'
 
 class SecurityAlert(DatabaseHelpers):
     def __init__(self, **kwargs):
-        super().__init__('security_alerts', 'security_alert_id')
+        super().__init__(__table__, __pk__)
         self.security_alert_id = kwargs.get('security_alert_id')
         self.account_id = kwargs.get('account_id')
         self.type = kwargs.get('type')
@@ -22,4 +24,4 @@ class SecurityAlert(DatabaseHelpers):
 
 class SecurityAlerts(DatabaseIterators):
     def __init__(self):
-        super().__init__('SecurityAlert')
+        super().__init__('SecurityAlert', __table__, __pk__)

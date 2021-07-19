@@ -1,11 +1,12 @@
 from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
 
-
 __module__ = 'trivialsec.models.member_mfa'
+__table__ = 'member_mfa'
+__pk__ = 'mfa_id'
 
 class MemberMfa(DatabaseHelpers):
     def __init__(self, **kwargs):
-        super().__init__('member_mfa', 'mfa_id')
+        super().__init__(__table__, __pk__)
         self.mfa_id = kwargs.get('mfa_id')
         self.member_id = kwargs.get('member_id')
         self.type = kwargs.get('type')
@@ -17,6 +18,11 @@ class MemberMfa(DatabaseHelpers):
         self.webauthn_challenge = kwargs.get('webauthn_challenge')
         self.created_at = kwargs.get('created_at')
 
+    def __setattr__(self, name, value):
+        if name in ['active']:
+            value = bool(value)
+        super().__setattr__(name, value)
+
 class MemberMfas(DatabaseIterators):
     def __init__(self):
-        super().__init__('MemberMfa')
+        super().__init__('MemberMfa', __table__, __pk__)
