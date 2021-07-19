@@ -11,6 +11,7 @@ from gunicorn.glogging import logging
 
 logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.helpers.database'
+__models_module__ = importlib.import_module('trivialsec.models')
 
 class MySQLDatabase:
     con = None
@@ -85,7 +86,7 @@ class MySQLDatabase:
 
     def invalidate_cache(self, invalidations: list):
         for invalidation_key in invalidations:
-            config._redis.delete(f'{config.app_version}{invalidation_key}')
+            config._redis.delete(f'{config.app_version}{invalidation_key}') # pylint: disable=protected-access
 
     def query_one(self, sql, params=None, cache_key: str = None, invalidations: list = None, cache_ttl: timedelta = timedelta(seconds=int(config.redis.get('ttl', 300)))):
         if cache_key:
@@ -194,20 +195,20 @@ class MySQLDatabase:
             redis_data = list(results)
         logger.debug(f'CACHE STORE {cache_key}')
         str_value = json.dumps(redis_data, default=str)
-        return config._redis.set(f'{config.app_version}{cache_key}', str_value, ex=cache_ttl)
+        return config._redis.set(f'{config.app_version}{cache_key}', str_value, ex=cache_ttl) # pylint: disable=protected-access
 
 mysql_adapter = MySQLDatabase(**config.mysql)
 
 class DatabaseIterators:
     def __init__(self, class_name):
-        self.__table = f"{re.sub(r'(?<!^)(?=[A-Z])', '_', class_name).lower()}s"
         self.__class_name = class_name
         self.__index = 0
         self.__items = []
+        class_ = getattr(__models_module__, self.__class_name)
+        self.__table = class_().__table # pylint: disable=protected-access
 
     def _load_items(self, results: list):
-        module = importlib.import_module('trivialsec.models')
-        class_ = getattr(module, self.__class_name)
+        class_ = getattr(__models_module__, self.__class_name)
         for result in results:
             model = class_()
             for col, val in result.items():
@@ -216,8 +217,7 @@ class DatabaseIterators:
         self.__index = 0
 
     def find_by(self, search_filter: list, conditional: str = 'AND', order_by: list = None, limit: int = 1000, offset: int = 0, cache_key: str = None, ttl_seconds: int = 30):
-        module = importlib.import_module('trivialsec.models')
-        class_ = getattr(module, self.__class_name)
+        class_ = getattr(__models_module__, self.__class_name)
         cls = class_()
         _cols = cls.cols()
         data = {}
@@ -258,8 +258,7 @@ class DatabaseIterators:
         return self
 
     def load(self, order_by: list = None, limit: int = 1000, offset: int = 0, cache_key: str = None, ttl_seconds: int = 30):
-        module = importlib.import_module('trivialsec.models')
-        class_ = getattr(module, self.__class_name)
+        class_ = getattr(__models_module__, self.__class_name)
         cls = class_()
         sql = f"SELECT * FROM `{self.__table}`"
         if order_by and isinstance(order_by, list):
@@ -277,8 +276,7 @@ class DatabaseIterators:
         return self
 
     def distinct(self, column: str, limit: int = 1000, cache_key: str = None, ttl_seconds: int = 300) -> list:
-        module = importlib.import_module('trivialsec.models')
-        class_ = getattr(module, self.__class_name)
+        class_ = getattr(__models_module__, self.__class_name)
         cls = class_()
         if column not in cls.cols():
             return []
@@ -300,8 +298,7 @@ class DatabaseIterators:
         return list(values)
 
     def count(self, query_filter: list = None, conditional: str = 'AND', cache_key: str = None, ttl_seconds: int = 5) -> int:
-        module = importlib.import_module('trivialsec.models')
-        class_ = getattr(module, self.__class_name)
+        class_ = getattr(__models_module__, self.__class_name)
         cls = class_()
         _cols = cls.cols()
         data = {}
@@ -333,8 +330,7 @@ class DatabaseIterators:
             return res.get('count', 0)
 
     def pagination(self, search_filter: list = None, page_size: int = 10, page_num: int = 0, show_pages: int = 10, conditional: str = 'AND', ttl_seconds: int = 5)->dict:
-        module = importlib.import_module('trivialsec.models')
-        class_ = getattr(module, self.__class_name)
+        class_ = getattr(__models_module__, self.__class_name)
         cls = class_()
         _cols = cls.cols()
         data = {}
