@@ -11,6 +11,7 @@ from .job_run import *
 from .key_value import *
 from .known_ip import *
 from .link import *
+from .member_mfa import *
 from .member import *
 from .notification import *
 from .plan import *
@@ -19,6 +20,7 @@ from .project import *
 from .role import *
 from .security_alert import *
 from .service_type import *
+from .webhook import *
 
 
 __module__ = 'trivialsec.models'
