@@ -77,12 +77,13 @@ class Members(DatabaseIterators):
 
     def find_by_role_id(self, role_id :int, account_id :int):
         sql = 'SELECT r.member_id FROM members_roles r LEFT JOIN members m ON r.member_id = m.member_id WHERE r.role_id = %(role_id)s and m.account_id = %(account_id)s'
+        items = []
         with mysql_adapter as database:
             results = database.query(sql, {'role_id': role_id, 'account_id': account_id})
             for val in results:
                 if not any(isinstance(x, Member) and x.member_id == val['member_id'] for x in self.__items):
                     member = Member(member_id=val['member_id'])
                     if member.hydrate():
-                        self.__items.append(member)
-
+                        items.append(member)
+        self.set_items(items)
         return self
