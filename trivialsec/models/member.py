@@ -76,7 +76,7 @@ class Members(DatabaseIterators):
         super().__init__('Member', __table__, __pk__)
 
     def find_by_role_id(self, role_id :int, account_id :int):
-        sql = 'SELECT member_id FROM members_roles WHERE role_id = %(role_id)s account_id = %(account_id)s'
+        sql = 'SELECT r.member_id FROM members_roles r LEFT JOIN members m ON r.member_id = m.member_id WHERE r.role_id = %(role_id)s and m.account_id = %(account_id)s'
         with mysql_adapter as database:
             results = database.query(sql, {'role_id': role_id, 'account_id': account_id})
             for val in results:
