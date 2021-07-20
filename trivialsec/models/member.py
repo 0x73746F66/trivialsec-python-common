@@ -81,7 +81,7 @@ class Members(DatabaseIterators):
         with mysql_adapter as database:
             results = database.query(sql, {'role_id': role_id, 'account_id': account_id})
             for val in results:
-                if not any(isinstance(x, Member) and x.member_id == val['member_id'] for x in self.__items):
+                if not any(isinstance(x, Member) and x.member_id == val['member_id'] for x in items):
                     member = Member(member_id=val['member_id'])
                     if member.hydrate():
                         items.append(member)
