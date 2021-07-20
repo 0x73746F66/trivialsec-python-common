@@ -90,7 +90,7 @@ class SafeBrowsing:
     def __init__(self, key):
         self.api_key = key
 
-    def lookup_urls(self, urls: list, platforms: list = None):
+    def lookup_urls(self, urls :list, platforms :list = None):
         if platforms is None:
             platforms = ["ANY_PLATFORM"]
 
@@ -158,7 +158,7 @@ class SafeBrowsing:
             )
         raise SafeBrowsingWeirdError(res.status_code, "", "", "")
 
-    def lookup_url(self, url: str, platforms: list = None):
+    def lookup_url(self, url :str, platforms :list = None):
         if platforms is None:
             platforms = ["ANY_PLATFORM"]
         return self.lookup_urls([url], platforms=platforms)[url]
@@ -234,7 +234,7 @@ class Metadata:
     def __repr__(self):
         return str(self.metadata)
 
-    def __init__(self, url: str, method: str = 'head'):
+    def __init__(self, url :str, method :str = 'head'):
         target_url = url.replace(":80/", "/").replace(":443/", "/")
         self.url = target_url
         self.method = method
@@ -282,15 +282,15 @@ class Metadata:
             self.code = 503
             self.reason = self.HTTP_503
 
-    def head(self, verify_tls: bool = False, allow_redirects: bool = False):
+    def head(self, verify_tls :bool = False, allow_redirects :bool = False):
         self.method = 'head'
         return self.fetch(verify_tls=verify_tls, allow_redirects=allow_redirects)
 
-    def get(self, verify_tls: bool = False, allow_redirects: bool = False):
+    def get(self, verify_tls :bool = False, allow_redirects :bool = False):
         self.method = 'get'
         return self.fetch(verify_tls=verify_tls, allow_redirects=allow_redirects)
 
-    def fetch(self, verify_tls: bool = False, allow_redirects: bool = False, http_timeout: int = 3):
+    def fetch(self, verify_tls :bool = False, allow_redirects :bool = False, http_timeout: int = 3):
         proxies = None
         if config.http_proxy or config.https_proxy:
             proxies = {
@@ -559,7 +559,7 @@ class Metadata:
         return self
 
     @staticmethod
-    def get_txt_value(domain_name: str, txt_key: str):
+    def get_txt_value(domain_name :str, txt_key :str):
         dns_answer = None
         answers = []
         res, err = Metadata.dig(domain_name)
@@ -585,7 +585,7 @@ class Metadata:
         return None, dns_answer
 
 @retry((SocketError), tries=3, delay=1.5, backoff=1)
-def download_file(remote_file: str, temp_name: str = None, temp_dir: str = '/tmp') -> str:
+def download_file(remote_file :str, temp_name :str = None, temp_dir :str = '/tmp') -> str:
     session = requests.Session()
     remote_file = remote_file.replace(":80/", "/").replace(":443/", "/")
     resp = session.head(remote_file, verify=remote_file.startswith('https'), allow_redirects=True, timeout=2)
@@ -647,7 +647,7 @@ def download_file(remote_file: str, temp_name: str = None, temp_dir: str = '/tmp
     return temp_path
 
 @retry((SocketError), tries=5, delay=1.5, backoff=3, logger=logger)
-def http_status(url: str):
+def http_status(url :str):
     session = requests.Session()
     try:
         resp = session.head(url, verify=url.startswith('https'), allow_redirects=False, timeout=3)
@@ -659,7 +659,7 @@ def http_status(url: str):
 
     return code, status
 
-def request_from_raw(raw: str, encoding: str = 'unicode-escape') -> dict:
+def request_from_raw(raw :str, encoding :str = 'unicode-escape') -> dict:
     body = parse_qs(raw.decode(encoding))
     data = {}
     for _, key in enumerate(body):
@@ -1555,7 +1555,7 @@ KNOWN_PORTS = {
     47822: ('BACnet'),
     47823: ('BACnet'),
 }
-def find_open_ports(hostname: str):
+def find_open_ports(hostname :str):
     for port, _ in KNOWN_PORTS.items():
         with socket(AF_INET, SOCK_STREAM) as sock:
             sock.settimeout(1)

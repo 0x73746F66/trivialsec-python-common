@@ -30,7 +30,7 @@ class JobRuns(DatabaseIterators):
     def __init__(self):
         super().__init__('JobRun', __table__, __pk__)
 
-    def query_json(self, search_filter: list, limit: int = 1, offset: int = 0, conditional = ' AND '):
+    def query_json(self, search_filter :list, limit: int = 1, offset: int = 0, conditional = ' AND '):
         data = {}
         conditionals = []
         columns = JobRun().cols()

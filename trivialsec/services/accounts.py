@@ -20,7 +20,7 @@ def generate_api_key_secret(sequence_range: int = 8):
 def generate_api_key():
     return generate_api_key_secret(32).upper()
 
-def register(email_addr: str, company=None, verified=False, account_id=None, role_id=Role.ROLE_OWNER_ID) -> Member:
+def register(email_addr :str, company=None, verified=False, account_id=None, role_id=Role.ROLE_OWNER_ID) -> Member:
     res = check_email_rules(email_addr)
     if not res:
         return None

@@ -38,7 +38,7 @@ class Feeds(DatabaseIterators):
     def __init__(self):
         super().__init__('Feed', __table__, __pk__)
 
-    def num_running(self, category: str) -> int:
+    def num_running(self, category :str) -> int:
         with mysql_adapter as database:
             results = database.query_one("""SELECT count(*) as num FROM feeds WHERE
                 category = %(category)s AND
@@ -48,7 +48,7 @@ class Feeds(DatabaseIterators):
                 """, {'category': category})
             return int(results['num'])
 
-    def num_errored(self, category: str) -> int:
+    def num_errored(self, category :str) -> int:
         with mysql_adapter as database:
             results = database.query_one("""SELECT count(*) as num FROM feeds WHERE
                 category = %(category)s AND
@@ -56,10 +56,10 @@ class Feeds(DatabaseIterators):
                 """, {'category': category})
             return int(results['num'])
 
-    def num_queued(self, category: str) -> int:
+    def num_queued(self, category :str) -> int:
         return len(self.get_queued(category, 1000))
 
-    def get_queued(self, category: str, limit: int = 10) -> list:
+    def get_queued(self, category :str, limit: int = 10) -> list:
         ret = []
         data = {
             'category': category,

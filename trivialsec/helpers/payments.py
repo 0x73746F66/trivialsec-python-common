@@ -19,7 +19,7 @@ if config.http_proxy is not None:
     stripe.proxy = config.http_proxy
 
 @retry((RateLimitError, APIConnectionError), tries=5, delay=1.5, backoff=3)
-def get_product(product: str) -> dict:
+def get_product(product :str) -> dict:
     if product not in config.stripe.products.keys():
         logger.error(f'attempted to call stripe with invalid product: {product}')
     product_id = config.stripe['products'][product].get('product_id')
@@ -37,7 +37,7 @@ def get_product(product: str) -> dict:
         logger.exception(ex)
 
 @retry((RateLimitError, APIConnectionError), tries=5, delay=1.5, backoff=3)
-def get_pricing_by_id(price_id: str) -> dict:
+def get_pricing_by_id(price_id :str) -> dict:
     try:
         return stripe.Price.retrieve(price_id)
 
@@ -51,7 +51,7 @@ def get_pricing_by_id(price_id: str) -> dict:
         logger.exception(ex)
 
 @retry((RateLimitError, APIConnectionError), tries=5, delay=1.5, backoff=3)
-def get_pricing(product: str) -> dict:
+def get_pricing(product :str) -> dict:
     if product not in config.stripe.products.keys():
         logger.error(f'attempted to call stripe with invalid product: {product}')
     if product == 'enterprise':
@@ -63,7 +63,7 @@ def get_pricing(product: str) -> dict:
     }
 
 @retry((RateLimitError, APIConnectionError), tries=5, delay=1.5, backoff=3)
-def create_customer(email: str):
+def create_customer(email :str):
     try:
         return stripe.Customer.create(
             email=email
@@ -77,7 +77,7 @@ def create_customer(email: str):
         logger.exception(ex)
 
 @retry((RateLimitError, APIConnectionError), tries=5, delay=1.5, backoff=3)
-def checkout(price_id: str, customer_id: str):
+def checkout(price_id :str, customer_id :str):
     try:
         return stripe.checkout.Session.create(
             allow_promotion_codes=True,
@@ -101,7 +101,7 @@ def checkout(price_id: str, customer_id: str):
     except Exception as ex:
         logger.exception(ex)
 
-def upsert_plan_invoice(stripe_invoice_data: dict) -> int:
+def upsert_plan_invoice(stripe_invoice_data :dict) -> int:
     plan = Plan(stripe_customer_id=stripe_invoice_data['customer'])
     plan.hydrate('stripe_customer_id')
     plan_invoice = PlanInvoice(stripe_invoice_id=stripe_invoice_data['id'])
@@ -126,7 +126,7 @@ def upsert_plan_invoice(stripe_invoice_data: dict) -> int:
         logger.exception(ex)
     return plan_invoice.plan_id
 
-def payment_intent_succeeded(stripe_customer: str, stripe_charge_data: dict):
+def payment_intent_succeeded(stripe_customer :str, stripe_charge_data :dict):
     plan = Plan(stripe_customer_id=stripe_customer)
     if plan.hydrate('stripe_customer_id'):
         plan.stripe_payment_method_id = stripe_charge_data['payment_method']
@@ -139,7 +139,7 @@ def payment_intent_succeeded(stripe_customer: str, stripe_charge_data: dict):
 
     return f'missing stripe_customer_id {stripe_customer}'
 
-def invoice_paid(stripe_customer: str, stripe_data: dict):
+def invoice_paid(stripe_customer :str, stripe_data :dict):
     plan = Plan(stripe_customer_id=stripe_customer)
     if plan.hydrate('stripe_customer_id'):
         plan.currency = stripe_data['currency'].upper()
@@ -159,7 +159,7 @@ def invoice_paid(stripe_customer: str, stripe_data: dict):
 
     return f'missing stripe_customer_id {stripe_customer}'
 
-def subscription_created(stripe_customer: str, stripe_subscription_id: str, default_payment_method: str, stripe_plan_data: dict):
+def subscription_created(stripe_customer :str, stripe_subscription_id :str, default_payment_method :str, stripe_plan_data :dict):
     plan = Plan(stripe_customer_id=stripe_customer)
     if plan.hydrate('stripe_customer_id'):
         plan.stripe_subscription_id = stripe_subscription_id

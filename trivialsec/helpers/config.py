@@ -14,12 +14,12 @@ __module__ = 'trivialsec.helpers.config'
 
 class Config:
     _redis = None
-    user_agent: str = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0 Safari/605.1.15'
-    config_file: str = getenv('CONFIG_FILE', 'config.yaml')
+    user_agent :str = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0 Safari/605.1.15'
+    config_file :str = getenv('CONFIG_FILE', 'config.yaml')
     app_env :str = getenv('APP_ENV', 'Dev')
     app_name :str = getenv('APP_NAME', 'trivialsec')
 
-    def __init__(self, custom_config: str = None):
+    def __init__(self, custom_config :str = None):
         if custom_config is not None:
             self.config_file = custom_config
         self.configure()
@@ -28,18 +28,18 @@ class Config:
         self.config_path = self.config_file if self.config_file.startswith('/') else path.realpath(path.join(getcwd(), self.config_file))
         try:
             with open(self.config_path) as stream:
-                conf: dict = yaml.safe_load(stream)
-            self.redis: dict = conf.get('redis', dict())
+                conf :dict = yaml.safe_load(stream)
+            self.redis :dict = conf.get('redis', dict())
             self._redis = redis.Redis(host=self.redis.get('host'), ssl=bool(self.redis.get('ssl')))
-            app_conf: dict = conf.get('app', dict())
-            app_log_level: str = app_conf.get('log_level', getenv('LOG_LEVEL', default='WARNING'))
+            app_conf :dict = conf.get('app', dict())
+            app_log_level :str = app_conf.get('log_level', getenv('LOG_LEVEL', default='WARNING'))
             self.log_level: int = app_log_level if isinstance(app_log_level, int) else logging._nameToLevel.get(app_log_level) # pylint: disable=protected-access
             proc = subprocess.run('cat /etc/hostname', shell=True, capture_output=True, check=True)
-            node_id: str = proc.stdout.decode('utf-8').strip()
+            node_id :str = proc.stdout.decode('utf-8').strip()
             err = proc.stderr.decode('utf-8')
             if err or not node_id:
                 raise OSError(f'/etc/hostname could not be used\ngot node_id {node_id}\n{err}')
-            self.node_id: str = node_id
+            self.node_id :str = node_id
 
         except Exception as ex:
             print(ex)
@@ -52,17 +52,17 @@ class Config:
         self.https_proxy = app_conf.get('https_proxy')
         self.session_expiry_minutes = app_conf.get('session_expiry_minutes', 1440)
         self.session_cookie_name = app_conf.get('session_cookie_name', 'trivialsec')
-        self.mysql: dict = conf.get('mysql', dict())
-        self.aws: dict = conf.get('aws', dict())
-        self.frontend: dict = app_conf.get('frontend', dict())
-        self.backend: dict = app_conf.get('backend', dict())
-        self.cve: dict = app_conf.get('cve', dict())
-        self.amass: dict = conf.get('amass', dict())
-        self.sendgrid: dict = conf.get('sendgrid', dict())
-        self.stripe: dict = conf.get('stripe', dict())
-        self.nmap: dict = app_conf.get('nmap', dict())
-        self.nameservers: list = list(set(app_conf.get('nameservers', list())))
-        self.external_dsn_provider: str = self.nameservers[0]
+        self.mysql :dict = conf.get('mysql', dict())
+        self.aws :dict = conf.get('aws', dict())
+        self.frontend :dict = app_conf.get('frontend', dict())
+        self.backend :dict = app_conf.get('backend', dict())
+        self.cve :dict = app_conf.get('cve', dict())
+        self.amass :dict = conf.get('amass', dict())
+        self.sendgrid :dict = conf.get('sendgrid', dict())
+        self.stripe :dict = conf.get('stripe', dict())
+        self.nmap :dict = app_conf.get('nmap', dict())
+        self.nameservers :list = list(set(app_conf.get('nameservers', list())))
+        self.external_dsn_provider :str = self.nameservers[0]
         self.queue_wait_timeout: int = app_conf.get('queue_wait_timeout', 5)
 
     @property
@@ -122,7 +122,7 @@ class Config:
         return self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/recaptcha_site_key')
 
     @retry((ConnectionClosedError, ReadTimeoutError, ConnectTimeoutError, CapacityNotAvailableError), tries=5, delay=1.5, backoff=3)
-    def ssm_secret(self, parameter: str, default=None, **kwargs) -> str:
+    def ssm_secret(self, parameter :str, default=None, **kwargs) -> str:
         redis_value = self._get_from_redis(parameter)
         if redis_value is not None:
             return redis_value
@@ -170,7 +170,7 @@ class Config:
             'socket_url': f"{self.frontend.get('socket_scheme')}{self.frontend.get('socket_domain')}",
         }
 
-    def _get_from_redis(self, cache_key: str):
+    def _get_from_redis(self, cache_key :str):
         redis_value = None
         if isinstance(cache_key, str):
             redis_value = self._redis.get(f'{self.app_version}{cache_key}')
@@ -180,7 +180,7 @@ class Config:
 
         return None
 
-    def _save_to_redis(self, cache_key: str, result: str):
+    def _save_to_redis(self, cache_key :str, result :str):
         cache_ttl = timedelta(seconds=int(self.redis.get('ttl', 300)))
         return self._redis.set(f'{self.app_version}{cache_key}', result, ex=cache_ttl)
 

@@ -35,7 +35,7 @@ def control_timing_attacks(seconds: float):
         return f_control_timing_attacks
     return deco_control_timing_attacks
 
-def require_recaptcha(action: str):
+def require_recaptcha(action :str):
     def deco_require_recaptcha(func):
         @wraps(func)
         def f_require_recaptcha(*args, **kwargs):

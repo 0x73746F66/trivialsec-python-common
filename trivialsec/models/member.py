@@ -74,3 +74,15 @@ class Member(UserMixin, DatabaseHelpers):
 class Members(DatabaseIterators):
     def __init__(self):
         super().__init__('Member', __table__, __pk__)
+
+    def find_by_role_id(self, role_id :int, account_id :int):
+        sql = 'SELECT member_id FROM members_roles WHERE role_id = %(role_id)s account_id = %(account_id)s'
+        with mysql_adapter as database:
+            results = database.query(sql, {'role_id': role_id, 'account_id': account_id})
+            for val in results:
+                if not any(isinstance(x, Member) and x.member_id == val['member_id'] for x in self.__items):
+                    member = Member(member_id=val['member_id'])
+                    if member.hydrate():
+                        self.__items.append(member)
+
+        return self

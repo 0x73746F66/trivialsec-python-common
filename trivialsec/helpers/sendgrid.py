@@ -7,7 +7,7 @@ from gunicorn.glogging import logging
 logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.helpers.sendgrid'
 
-def send_email(subject: str, template: str, data: dict, recipient: str, group: str = 'notifications', sender: str = 'support@trivialsec.com'):
+def send_email(subject :str, template :str, data :dict, recipient :str, group :str = 'notifications', sender :str = 'support@trivialsec.com'):
     sendgrid = SendGridAPIClient(config.sendgrid_api_key)
     tmp_url = sendgrid.client.mail.send._build_url(query_params={}) # pylint: disable=protected-access
     req_body = {
@@ -45,7 +45,7 @@ def send_email(subject: str, template: str, data: dict, recipient: str, group: s
     logger.debug(res.__dict__)
     return res
 
-def upsert_contact(recipient_email: str, list_name: str = 'subscribers'):
+def upsert_contact(recipient_email :str, list_name :str = 'subscribers'):
     sendgrid = SendGridAPIClient(config.sendgrid_api_key)
     # https://github.com/sendgrid/sendgrid-python/issues/409
     proxies = None

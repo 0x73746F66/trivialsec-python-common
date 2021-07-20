@@ -31,7 +31,7 @@ from .webhook import *
 __module__ = 'trivialsec.models'
 
 class UpdateTable:
-    def __init__(self, class_name: str, column: str, value, hydrate_using: list):
+    def __init__(self, class_name :str, column :str, value, hydrate_using :list):
         module = importlib.import_module(__module__)
         class_ = getattr(module, class_name)
         self.__cls = class_()
@@ -41,7 +41,7 @@ class UpdateTable:
         self.value = value
         setattr(self.__cls, column, value)
 
-    def setattr(self, attr: str, value):
+    def setattr(self, attr :str, value):
         setattr(self.__cls, attr, value)
 
     def persist(self):

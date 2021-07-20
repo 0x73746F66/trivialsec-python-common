@@ -139,7 +139,7 @@ class Findings(DatabaseIterators):
         self.set_items(items)
         return self
 
-    def count_informational(self, search_filter: list, conditional: str = 'AND') -> int:
+    def count_informational(self, search_filter :list, conditional :str = 'AND') -> int:
         num_results = 0
         data = {}
         _cols = Finding().cols()
@@ -172,7 +172,7 @@ class Findings(DatabaseIterators):
 
         return num_results
 
-    def count_low_severity(self, search_filter: list, conditional: str = 'AND') -> int:
+    def count_low_severity(self, search_filter :list, conditional :str = 'AND') -> int:
         num_results = 0
         data = {}
         _cols = Finding().cols()
@@ -205,7 +205,7 @@ class Findings(DatabaseIterators):
 
         return num_results
 
-    def count_medium_severity(self, search_filter: list, conditional: str = 'AND') -> int:
+    def count_medium_severity(self, search_filter :list, conditional :str = 'AND') -> int:
         num_results = 0
         data = {}
         _cols = Finding().cols()
@@ -238,7 +238,7 @@ class Findings(DatabaseIterators):
 
         return num_results
 
-    def count_high_severity(self, search_filter: list, conditional: str = 'AND') -> int:
+    def count_high_severity(self, search_filter :list, conditional :str = 'AND') -> int:
         num_results = 0
         data = {}
         _cols = Finding().cols()

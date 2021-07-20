@@ -24,7 +24,7 @@ def score_to_rating(score: int) -> str:
 
     return 'NOT SCORED'
 
-def rating_to_score(rating: str) -> int:
+def rating_to_score(rating :str) -> int:
     if rating == 'INFO':
         return 0
     if rating == 'LOW':
@@ -48,10 +48,10 @@ def score_to_confidence(score: int) -> str:
 
     return 'NOT SCORED'
 
-def aggregate_sum(findings: list, rating: str, using: str, scoring_func: str) -> int:
+def aggregate_sum(findings :list, rating :str, using :str, scoring_func :str) -> int:
     return sum(1 for i in findings if globals()[scoring_func](getattr(i, using)) == rating)
 
-def extract_cve_id(search_string: str) -> str:
+def extract_cve_id(search_string :str) -> str:
     cve = None
     try:
         matches = re.search(r'CVE-\d{4}-\d{4,7}', search_string)
@@ -61,7 +61,7 @@ def extract_cve_id(search_string: str) -> str:
         logger.error(ex)
     return cve
 
-def extract_cwe_id(search_string: str) -> str:
+def extract_cwe_id(search_string :str) -> str:
     cwe = None
     try:
         matches = re.search(r'CWE-\d{2,3}', search_string)
@@ -71,7 +71,7 @@ def extract_cwe_id(search_string: str) -> str:
         logger.error(ex)
     return cwe
 
-def handle_finding_actions(params: dict, member: Member) -> Finding:
+def handle_finding_actions(params :dict, member: Member) -> Finding:
     action = params.get('action')
     finding_id = params.get('finding_id')
     if action == 'archive':

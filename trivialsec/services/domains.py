@@ -7,7 +7,7 @@ from trivialsec.models.member import Member
 
 __module__ = 'trivialsec.services.domains'
 
-def handle_add_domain(domain_name: str, project: Project, current_user: Member) -> Domain:
+def handle_add_domain(domain_name :str, project: Project, current_user: Member) -> Domain:
     res = check_domain_rules(domain_name)
     if not res:
         return None

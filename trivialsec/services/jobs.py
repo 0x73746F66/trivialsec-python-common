@@ -58,7 +58,7 @@ class QueueData:
             'scan_next': self.scan_next
         }.items()
 
-def queue_job(params: dict, service_type: ServiceType, member: Member, project=Project, priority: int = 0, on_demand: bool = True, scan_next: list = []) -> JobRun:
+def queue_job(params :dict, service_type: ServiceType, member: Member, project=Project, priority: int = 0, on_demand :bool = True, scan_next :list = []) -> JobRun:
     queue_data = QueueData(
         queued_by_member_id=member.member_id,
         on_demand=on_demand,

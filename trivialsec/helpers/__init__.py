@@ -20,11 +20,11 @@ from trivialsec.services.apikey import get_valid_key
 logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.helpers'
 
-def check_domain_rules(domain_name: str):
+def check_domain_rules(domain_name :str):
     # TODO implement
     return True
 
-def check_subdomain_rules(sub_domain: str, domain_name: str = None) -> bool:
+def check_subdomain_rules(sub_domain :str, domain_name :str = None) -> bool:
     if domain_name is not None:
         return sub_domain.endswith(domain_name) and domain_name != sub_domain
 
@@ -55,7 +55,7 @@ def is_valid_ipv6_address(address):
         return False
     return True
 
-def cidr_address_list(cidr: str)->list:
+def cidr_address_list(cidr :str)->list:
     ret = []
     if '/' not in cidr:
         ret.append(cidr)
@@ -66,7 +66,7 @@ def cidr_address_list(cidr: str)->list:
 
     return ret
 
-def oneway_hash(input_string: str)->str:
+def oneway_hash(input_string :str)->str:
     return sha224(bytes(input_string, 'ascii')).hexdigest()
 
 def hash_passphrase(passphrase, rounds: int = 8000, salt_size: int = 10):
@@ -75,7 +75,7 @@ def hash_passphrase(passphrase, rounds: int = 8000, salt_size: int = 10):
 def check_encrypted_passphrase(passphrase, hashed):
     return pbkdf2_sha256.verify(passphrase, hashed)
 
-def get_boto3_client(service: str, region_name: str, aws_profile: str = None, role_arn: str = None):
+def get_boto3_client(service :str, region_name :str, aws_profile :str = None, role_arn :str = None):
     boto_params = {
         'service_name': service,
         'region_name': region_name
@@ -97,7 +97,7 @@ def get_boto3_client(service: str, region_name: str, aws_profile: str = None, ro
 
     return base_session.client(**boto_params)
 
-def assumed_role_session(role_arn: str, base_session: botocore.session.Session, session_name: str = None, external_id: str = None):
+def assumed_role_session(role_arn :str, base_session: botocore.session.Session, session_name :str = None, external_id :str = None):
     if isinstance(base_session, boto3.session.Session):
         base_session = base_session._session # pylint: disable=protected-access
 
@@ -133,7 +133,7 @@ def is_valid_email(address) -> bool:
     except Exception: # not a valid address
         return False
 
-def check_email_rules(email_addr: str) -> bool:
+def check_email_rules(email_addr :str) -> bool:
     parts = email_addr.split('@')
     if len(parts) != 2:
         logger.info('check_email_rules: invalid format')
@@ -150,7 +150,7 @@ def check_email_rules(email_addr: str) -> bool:
 
     return True
 
-def extract_server_version(str_value: str) -> tuple:
+def extract_server_version(str_value :str) -> tuple:
     trim_values = [
         'via:',
         'x-cache: miss',

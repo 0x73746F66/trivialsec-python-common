@@ -84,11 +84,11 @@ class MySQLDatabase:
 
         return self
 
-    def invalidate_cache(self, invalidations: list):
+    def invalidate_cache(self, invalidations :list):
         for invalidation_key in invalidations:
             config._redis.delete(f'{config.app_version}{invalidation_key}') # pylint: disable=protected-access
 
-    def query_one(self, sql, params=None, cache_key: str = None, invalidations: list = None, cache_ttl: timedelta = timedelta(seconds=int(config.redis.get('ttl', 300)))):
+    def query_one(self, sql, params=None, cache_key :str = None, invalidations :list = None, cache_ttl: timedelta = timedelta(seconds=int(config.redis.get('ttl', 300)))):
         if cache_key:
             redis_value = self._get_from_redis(cache_key)
             if redis_value is not None:
@@ -138,7 +138,7 @@ class MySQLDatabase:
 
         return cols
 
-    def query(self, sql, params=None, cache_key: str = None, invalidations: list = None, cache_ttl: timedelta = timedelta(seconds=int(config.redis.get('ttl', 300)))):
+    def query(self, sql, params=None, cache_key :str = None, invalidations :list = None, cache_ttl: timedelta = timedelta(seconds=int(config.redis.get('ttl', 300)))):
         if cache_key is not None:
             redis_value = self._get_from_redis(cache_key)
             if redis_value is not None:
@@ -172,7 +172,7 @@ class MySQLDatabase:
 
         return results
 
-    def _get_from_redis(self, cache_key: str):
+    def _get_from_redis(self, cache_key :str):
         redis_value = None
         try:
             if isinstance(cache_key, str):
@@ -189,7 +189,7 @@ class MySQLDatabase:
         logger.debug(f'CACHE MISS {cache_key}')
         return None
 
-    def _save_to_redis(self, cache_key: str, results, cache_ttl: timedelta = timedelta(seconds=int(config.redis.get('ttl', 300)))):
+    def _save_to_redis(self, cache_key :str, results, cache_ttl: timedelta = timedelta(seconds=int(config.redis.get('ttl', 300)))):
         redis_data = results
         if isinstance(results, set):
             redis_data = list(results)
@@ -207,7 +207,7 @@ class DatabaseIterators:
         self.__index = 0
         self.__items = []
 
-    def _load_items(self, results: list):
+    def _load_items(self, results :list):
         class_ = getattr(__models_module__, self.__class_name)
         for result in results:
             model = class_()
@@ -216,7 +216,7 @@ class DatabaseIterators:
             self.__items.append(model)
         self.__index = 0
 
-    def find_by(self, search_filter: list, conditional: str = 'AND', order_by: list = None, limit: int = 1000, offset: int = 0, cache_key: str = None, ttl_seconds: int = 30):
+    def find_by(self, search_filter :list, conditional :str = 'AND', order_by :list = None, limit: int = 1000, offset: int = 0, cache_key :str = None, ttl_seconds: int = 30):
         class_ = getattr(__models_module__, self.__class_name)
         cls = class_()
         _cols = cls.cols()
@@ -257,7 +257,7 @@ class DatabaseIterators:
 
         return self
 
-    def load(self, order_by: list = None, limit: int = 1000, offset: int = 0, cache_key: str = None, ttl_seconds: int = 30):
+    def load(self, order_by :list = None, limit: int = 1000, offset: int = 0, cache_key :str = None, ttl_seconds: int = 30):
         class_ = getattr(__models_module__, self.__class_name)
         cls = class_()
         sql = f"SELECT * FROM `{self.__table}`"
@@ -275,7 +275,7 @@ class DatabaseIterators:
 
         return self
 
-    def distinct(self, column: str, limit: int = 1000, cache_key: str = None, ttl_seconds: int = 300) -> list:
+    def distinct(self, column :str, limit: int = 1000, cache_key :str = None, ttl_seconds: int = 300) -> list:
         class_ = getattr(__models_module__, self.__class_name)
         cls = class_()
         if column not in cls.cols():
@@ -297,7 +297,7 @@ class DatabaseIterators:
 
         return list(values)
 
-    def count(self, query_filter: list = None, conditional: str = 'AND', cache_key: str = None, ttl_seconds: int = 5) -> int:
+    def count(self, query_filter :list = None, conditional :str = 'AND', cache_key :str = None, ttl_seconds: int = 5) -> int:
         class_ = getattr(__models_module__, self.__class_name)
         cls = class_()
         _cols = cls.cols()
@@ -329,7 +329,7 @@ class DatabaseIterators:
             res = database.query_one(sql, data, cache_key=cache_key, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
             return res.get('count', 0)
 
-    def pagination(self, search_filter: list = None, page_size: int = 10, page_num: int = 0, show_pages: int = 10, conditional: str = 'AND', ttl_seconds: int = 5)->dict:
+    def pagination(self, search_filter :list = None, page_size: int = 10, page_num: int = 0, show_pages: int = 10, conditional :str = 'AND', ttl_seconds: int = 5)->dict:
         class_ = getattr(__models_module__, self.__class_name)
         cls = class_()
         _cols = cls.cols()
@@ -374,7 +374,7 @@ class DatabaseIterators:
 
         return result
 
-    def set_items(self, items: list):
+    def set_items(self, items :list):
         self.__items = items
         self.__index = 0
         return self
@@ -408,7 +408,7 @@ class DatabaseHelpers:
         self.__pk = pk
         self.__cols = set()
 
-    def hydrate(self, by_column = None, value=None, conditional: str = 'AND', no_cache: bool = False, ttl_seconds: int = 30) -> bool:
+    def hydrate(self, by_column = None, value=None, conditional :str = 'AND', no_cache :bool = False, ttl_seconds: int = 30) -> bool:
         try:
             cache_key = f'{self.__table}/{self.__pk}/{self.__getattribute__(self.__pk)}'
             if by_column is None:
@@ -456,7 +456,7 @@ class DatabaseHelpers:
 
         return True
 
-    def exists(self, by_list: list = None, conditional: str = 'AND') -> bool:
+    def exists(self, by_list :list = None, conditional :str = 'AND') -> bool:
         value = self.__getattribute__(self.__pk)
         with mysql_adapter as database:
             if not by_list:
@@ -490,7 +490,7 @@ class DatabaseHelpers:
 
         return False
 
-    def persist(self, exists=None, invalidations: list = None) -> bool:
+    def persist(self, exists=None, invalidations :list = None) -> bool:
         data = {}
         values = []
         columns = []
