@@ -26,6 +26,8 @@ class ActivityLog(DatabaseHelpers):
     ACTION_USER_CHANGE_EMAIL_REQUEST = 'user_change_email_request'
     ACTION_USER_CREATED_INVITATION = 'user_created_invitation'
     ACTION_USER_RECOVERY_REQUEST = 'user_recovery_request'
+    ACTION_APPROVED_RECOVERY_REQUEST = 'approved_recovery_request'
+    ACTION_DENY_RECOVERY_REQUEST = 'deny_recovery_request'
     ACTION_USER_CHANGED_ACCOUNT = 'user_changed_account'
     ACTION_USER_CHANGED_MEMBER = 'user_changed_member'
 
