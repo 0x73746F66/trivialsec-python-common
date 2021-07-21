@@ -25,6 +25,7 @@ class ActivityLog(DatabaseHelpers):
     ACTION_AUTO_ACTIVE_SCAN = 'auto_active_scan'
     ACTION_USER_CHANGE_EMAIL_REQUEST = 'user_change_email_request'
     ACTION_USER_CREATED_INVITATION = 'user_created_invitation'
+    ACTION_USER_RECOVERY_REQUEST = 'user_recovery_request'
     ACTION_USER_CHANGED_ACCOUNT = 'user_changed_account'
     ACTION_USER_CHANGED_MEMBER = 'user_changed_member'
 
