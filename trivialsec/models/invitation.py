@@ -5,6 +5,8 @@ __table__ = 'invitations'
 __pk__ = 'invitation_id'
 
 class Invitation(DatabaseHelpers):
+    INVITATION_MESSAGE = "Please click the Activation link below, or copy and paste it into a browser if you prefer."
+
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
         self.invitation_id = kwargs.get('invitation_id')
