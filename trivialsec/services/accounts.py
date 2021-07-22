@@ -1,6 +1,7 @@
 import string
 import secrets
 import uuid
+from random import random
 from trivialsec.helpers.config import config
 from trivialsec.helpers import check_email_rules, oneway_hash
 from trivialsec.models.account import Account
@@ -33,7 +34,7 @@ def register(email_addr :str, company=None, verified=False, account_id=None, rol
         billing_email=email_addr,
         account_id=account_id,
         alias=company,
-        verification_hash=oneway_hash(email_addr),
+        verification_hash=oneway_hash(random()),
         socket_key=str(uuid.uuid5(uuid.NAMESPACE_URL, email_addr))
     )
     if account_id is not None:
@@ -50,7 +51,7 @@ def register(email_addr :str, company=None, verified=False, account_id=None, rol
         plan.persist()
 
     member.account_id = account.account_id
-    member.confirmation_url = f"/confirmation/{account.verification_hash}" if not verified else 'verified'
+    member.confirmation_url = f"/confirmation/{oneway_hash(random())}" if not verified else 'verified'
     if verified:
         member.verified = True
     member.persist()
