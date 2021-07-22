@@ -30,6 +30,7 @@ class ActivityLog(DatabaseHelpers):
     ACTION_DENY_RECOVERY_REQUEST = 'deny_recovery_request'
     ACTION_USER_CHANGED_ACCOUNT = 'user_changed_account'
     ACTION_USER_CHANGED_MEMBER = 'user_changed_member'
+    ACTION_RECOVERY_CODE_USED = 'recovery_code_used'
 
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
