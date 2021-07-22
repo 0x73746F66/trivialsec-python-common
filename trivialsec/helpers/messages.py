@@ -52,3 +52,4 @@ ERR_VALIDATION_TOTP = 'The TOTP Code was invalid, it may have just rotated. Plea
 OK_AUTHENTICATED = 'Authenticated'
 ERR_OWNER_RECOVERY = 'No other Owners in your account exist, as the only Owner you should use a Recovery Code'
 OK_REQUEST_RECOVERY = 'The organisation owners have been sent a request, If approved you\'ll get the invitation email sent to your new email address.'
+OK_RECOVERY_EMAIL = 'Please check your email inbox for the account recovery link, to confirm you\'re still the owner of the linked email account. Please use the email recovery method if you\'ve lost access to the linked email inbox.'
