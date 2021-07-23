@@ -11,7 +11,6 @@ class ApiKey(DatabaseHelpers):
         self.api_key_secret = kwargs.get('api_key_secret')
         self.comment = kwargs.get('comment')
         self.member_id = kwargs.get('member_id')
-        self.allowed_origin = kwargs.get('allowed_origin')
         self.active = bool(kwargs.get('active'))
         self.created_at = kwargs.get('created_at')
 

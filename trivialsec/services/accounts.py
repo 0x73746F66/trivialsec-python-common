@@ -63,7 +63,6 @@ def register(email_addr :str, company=None, verified=False, account_id=None, rol
         api_key_secret=generate_api_key_secret(),
         member_id=member.member_id,
         comment='public-api',
-        allowed_origin=config.get_app().get("app_domain"),
         active=True
     ).persist()
 

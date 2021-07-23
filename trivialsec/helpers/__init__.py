@@ -227,9 +227,6 @@ def mohawk_receiver(request, algorithm :str = 'sha256'):
         if apikey is None or not isinstance(apikey, ApiKey):
             logger.error('no apikey')
             return None
-        if apikey.allowed_origin and request.referrer != apikey.allowed_origin:
-            logger.error(f'referrer {request.referrer} not an allowed origin')
-            return None
         credentials = {'id': sender_id, 'key': apikey.api_key_secret, 'algorithm': algorithm}
         return credentials
     content_type = request.headers.get('Content-Type')
