@@ -64,6 +64,7 @@ class Config:
         self.nameservers :list = list(set(app_conf.get('nameservers', list())))
         self.external_dsn_provider :str = self.nameservers[0]
         self.queue_wait_timeout: int = app_conf.get('queue_wait_timeout', 5)
+        self.public_endpoints :list = list(app_conf.get('public_endpoints', list()))
 
     @property
     def mysql_password(self):
