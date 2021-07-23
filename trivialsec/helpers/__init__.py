@@ -231,7 +231,7 @@ def mohawk_receiver(request, algorithm :str = 'sha256'):
         return credentials
     content_type = request.headers.get('Content-Type')
     content = request.get_data(as_text=True)
-    logger.debug(f'mohawk_receiver url {request.base_url} method {request.method} content {content} content_type {content_type} algorithm {algorithm}')
+    logger.info(f'mohawk_receiver url {request.base_url} method {request.method} content {content} content_type {content_type} algorithm {algorithm}')
     try:
         return Receiver(
             credentials_map=lookup_credentials,
