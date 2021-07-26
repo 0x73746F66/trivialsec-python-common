@@ -5,16 +5,11 @@ import socket
 import ipaddress
 import boto3
 import botocore
-from hashlib import sha224
-from random import randint
-from base64 import b32encode
+import hashlib
 from dateutil.tz import tzlocal
 from passlib.hash import pbkdf2_sha256
 from gunicorn.glogging import logging
-from mohawk import Receiver
-from trivialsec.helpers.config import config
-from trivialsec.models.apikey import ApiKey
-from trivialsec.services.apikey import get_valid_key
+from datetime import datetime
 
 
 logger = logging.getLogger(__name__)
@@ -67,7 +62,7 @@ def cidr_address_list(cidr :str)->list:
     return ret
 
 def oneway_hash(input_string :str)->str:
-    return sha224(bytes(input_string, 'ascii')).hexdigest()
+    return hashlib.sha224(bytes(input_string, 'ascii')).hexdigest()
 
 def hash_passphrase(passphrase, rounds: int = 8000, salt_size: int = 10):
     return pbkdf2_sha256.using(rounds=rounds, salt_size=salt_size).hash(passphrase) # pylint: disable=no-member
@@ -206,42 +201,3 @@ def extract_server_version(str_value :str) -> tuple:
         server_name = server_name.strip()
 
     return server_name, server_version
-
-def mohawk_receiver(request, algorithm :str = 'sha256'):
-    authorization_header = request.headers.get('Authorization')
-    if not authorization_header:
-        logger.error('no Authorization header')
-        return None
-
-    def seen_nonce(sender_id, nonce, timestamp):
-        key = '{id}:{nonce}:{ts}'.format(id=sender_id, nonce=nonce, ts=timestamp)
-        if config._redis.get(key): # pylint: disable=protected-access
-            # We have already processed this nonce + timestamp.
-            return True
-        else:
-            # Save this nonce + timestamp for later.
-            config._redis.set(key, '1') # pylint: disable=protected-access
-            return False
-    def lookup_credentials(sender_id):
-        apikey :ApiKey = get_valid_key(sender_id)
-        if apikey is None or not isinstance(apikey, ApiKey):
-            logger.error('no apikey')
-            return None
-        credentials = {'id': sender_id, 'key': apikey.api_key_secret, 'algorithm': algorithm}
-        return credentials
-    content_type = request.headers.get('Content-Type')
-    content = request.get_data(as_text=True)
-    logger.info(f'mohawk_receiver url {request.base_url} method {request.method} content {content} content_type {content_type} algorithm {algorithm}')
-    try:
-        return Receiver(
-            credentials_map=lookup_credentials,
-            request_header=authorization_header,
-            url=request.base_url,
-            method=request.method,
-            content=content,
-            content_type=content_type,
-            seen_nonce=seen_nonce,
-            timestamp_skew_in_seconds=3)
-    except Exception as ex:
-        logger.exception(ex)
-        return ex
