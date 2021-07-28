@@ -186,8 +186,7 @@ def require_authz(func):
         if params is None:
             params = {}
         if params.get('authorization_token') is None:
-            params['message'] = messages.ERR_AUTHORIZATION
-            return jsonify(params)
+            return abort(403)
         try:
             request_path = request.path.lstrip('/v1')
             authorized = False
@@ -198,13 +197,10 @@ def require_authz(func):
                     authorized = True
             #TODO totp
             if authorized is False:
-                params['message'] = messages.ERR_AUTHORIZATION
-                raise jsonify(params)
+                return abort(403)
             ret = func(*args, **kwargs)
         except Exception as err:
-            logger.error(err)
-            ret = err
-
+            logger.exception(err)
+            return abort(403)
         return ret
-
     return deco_require_authz
