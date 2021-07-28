@@ -7,7 +7,7 @@ from functools import wraps
 from urllib.parse import urlencode
 from urllib import request as urlrequest
 from flask_login import current_user
-from flask import abort, request, url_for, redirect, jsonify, current_app as app
+from flask import Response, abort, request, url_for, redirect, jsonify, current_app as app
 from gunicorn.glogging import logging
 from trivialsec.helpers import messages
 from trivialsec.helpers.config import config
@@ -182,13 +182,13 @@ def prepared_json(func):
 def require_authz(func):
     @wraps(func)
     def deco_require_authz(*args, **kwargs):
-        params = request.get_json(force=True, silent=True)
-        if params is None:
-            params = {}
-        if params.get('authorization_token') is None:
-            return abort(403)
         try:
-            request_path = request.path.lstrip('/v1')
+            params = request.get_json(force=True, silent=True)
+            if params is None:
+                params = {}
+            if params.get('authorization_token') is None:
+                raise ValueError('authorization_token is None')
+            request_path = request.path[3:]
             authorized = False
             transaction_id = b64encode(hmac.new(bytes(current_user.apikey.api_key_secret, "ascii"), bytes(request_path, "ascii"), hashlib.sha1).digest()).decode()
             for u2f_key in current_user.u2f_keys:
@@ -197,10 +197,10 @@ def require_authz(func):
                     authorized = True
             #TODO totp
             if authorized is False:
-                return abort(403)
-            ret = func(*args, **kwargs)
+                raise ValueError('authorized is False')
+            return func(*args, **kwargs)
         except Exception as err:
             logger.exception(err)
-            return abort(403)
-        return ret
+            return Response('{"status": 401, "message": "Unauthorized"}', 401, {'Content-Type': 'application/json'})
+
     return deco_require_authz
