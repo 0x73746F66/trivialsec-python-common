@@ -1,5 +1,8 @@
 import json
+import hashlib
+import hmac
 from time import time, sleep
+from base64 import b64encode
 from functools import wraps
 from urllib.parse import urlencode
 from urllib import request as urlrequest
@@ -164,9 +167,6 @@ def requires_owner(func):
     return decorated_view
 
 def prepared_json(func):
-    """
-    Must be the last decorator
-    """
     @wraps(func)
     def deco_prepared_json(*args, **kwargs):
         params = request.get_json(force=True, silent=True)
@@ -178,3 +178,33 @@ def prepared_json(func):
             del params['recaptcha_token']
         return func(params, *args, **kwargs)
     return deco_prepared_json
+
+def require_authz(func):
+    @wraps(func)
+    def deco_require_authz(*args, **kwargs):
+        params = request.get_json(force=True, silent=True)
+        if params is None:
+            params = {}
+        if params.get('authorization_token') is None:
+            params['message'] = messages.ERR_AUTHORIZATION
+            return jsonify(params)
+        try:
+            request_path = request.path.lstrip('/v1')
+            authorized = False
+            transaction_id = b64encode(hmac.new(bytes(current_user.apikey.api_key_secret, "ascii"), bytes(request_path, "ascii"), hashlib.sha1).digest()).decode()
+            for u2f_key in current_user.u2f_keys:
+                check_token = b64encode(hmac.new(bytes(transaction_id, "ascii"), bytes(u2f_key.get('webauthn_id'), "ascii"), hashlib.sha1).digest()).decode()
+                if check_token == params.get('authorization_token'):
+                    authorized = True
+            #TODO totp
+            if authorized is False:
+                params['message'] = messages.ERR_AUTHORIZATION
+                raise jsonify(params)
+            ret = func(*args, **kwargs)
+        except Exception as err:
+            logger.error(err)
+            ret = err
+
+        return ret
+
+    return deco_require_authz
