@@ -183,17 +183,15 @@ def require_authz(func):
     @wraps(func)
     def deco_require_authz(*args, **kwargs):
         try:
-            params = request.get_json(force=True, silent=True)
-            if params is None:
-                params = {}
-            if params.get('authorization_token') is None:
-                raise ValueError('authorization_token is None')
+            authorization_token = request.headers.get('X-Authorization-Token')
+            if authorization_token is None:
+                raise ValueError('X-Authorization-Token header is required')
             request_path = request.path[3:]
             authorized = False
             transaction_id = b64encode(hmac.new(bytes(current_user.apikey.api_key_secret, "ascii"), bytes(request_path, "ascii"), hashlib.sha1).digest()).decode()
             for u2f_key in current_user.u2f_keys:
                 check_token = b64encode(hmac.new(bytes(transaction_id, "ascii"), bytes(u2f_key.get('webauthn_id'), "ascii"), hashlib.sha1).digest()).decode()
-                if check_token == params.get('authorization_token'):
+                if check_token == authorization_token:
                     authorized = True
             #TODO totp
             if authorized is False:
