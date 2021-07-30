@@ -573,3 +573,27 @@ class DatabaseHelpers:
                 columns.add(prop)
             self.__cols = list(columns)
             return self.__cols
+
+    def delete(self, invalidations :list = None) -> bool:
+        data = {}
+        if self.__getattribute__(self.__pk) is None:
+            return False
+        if invalidations is None:
+            invalidations = []
+
+        data[self.__pk] = self.__getattribute__(self.__pk)
+        inv1 = f'{self.__table}/cols'
+        if inv1 not in invalidations:
+            invalidations.append(inv1)
+        inv2 = f'{self.__table}/{self.__pk}/{data[self.__pk]}'
+        if inv2 not in invalidations:
+            invalidations.append(inv2)
+
+        with mysql_adapter as database:
+            stmt = f"DELETE FROM `{self.__table}` WHERE `{self.__pk}` = %({self.__pk})s LIMIT 1"
+            logger.info(f'{stmt} {repr(data)}')
+            changed = database.query(stmt, data, invalidations=invalidations)
+            if changed == 1:
+                return True
+
+        return False
