@@ -198,7 +198,7 @@ def require_authz(func):
             if hasattr(current_user, 'totp_mfa_id'):
                 mfa = MemberMfa(mfa_id=current_user.totp_mfa_id)
                 if mfa.hydrate():
-                    check_token = b64encode(hmac.new(bytes(transaction_id, "ascii"), bytes(mfa.mfa_id, "ascii"), hashlib.sha1).digest()).decode()
+                    check_token = b64encode(hmac.new(bytes(transaction_id, "ascii"), bytes(mfa.totp_code, "ascii"), hashlib.sha1).digest()).decode()
                     if check_token == authorization_token:
                         authorized = True
 
