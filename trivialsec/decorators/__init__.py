@@ -11,6 +11,7 @@ from flask import Response, abort, request, url_for, redirect, jsonify, current_
 from gunicorn.glogging import logging
 from trivialsec.helpers import messages
 from trivialsec.helpers.config import config
+from trivialsec.models.member_mfa import MemberMfa
 from trivialsec.services.roles import is_internal_member, is_support_member, is_billing_member, is_audit_member, is_owner_member
 
 
@@ -193,7 +194,14 @@ def require_authz(func):
                 check_token = b64encode(hmac.new(bytes(transaction_id, "ascii"), bytes(u2f_key.get('webauthn_id'), "ascii"), hashlib.sha1).digest()).decode()
                 if check_token == authorization_token:
                     authorized = True
-            #TODO totp
+
+            if hasattr(current_user, 'totp_mfa_id'):
+                mfa = MemberMfa(mfa_id=current_user.mfa_id)
+                if mfa.hydrate():
+                    check_token = b64encode(hmac.new(bytes(transaction_id, "ascii"), bytes(mfa.mfa_id, "ascii"), hashlib.sha1).digest()).decode()
+                    if check_token == authorization_token:
+                        authorized = True
+
             if authorized is False:
                 raise ValueError('authorized is False')
             return func(*args, **kwargs)
