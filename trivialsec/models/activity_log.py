@@ -32,6 +32,8 @@ class ActivityLog(DatabaseHelpers):
     ACTION_USER_CHANGED_MEMBER = 'user_changed_member'
     ACTION_RECOVERY_CODE_CHANGED = 'recovery_code_changed'
     ACTION_RECOVERY_CODE_USED = 'recovery_code_used'
+    ACTION_ADD_MFA_U2F = 'add_mfa_u2f'
+    ACTION_ADD_MFA_TOTP = 'add_mfa_totp'
 
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
