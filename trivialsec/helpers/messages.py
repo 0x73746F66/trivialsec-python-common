@@ -54,3 +54,5 @@ ERR_OWNER_RECOVERY = 'No other Owners in your account exist, as the only Owner y
 OK_REQUEST_RECOVERY = 'The organisation owners have been sent a request, If approved you\'ll get the invitation email sent to your new email address.'
 OK_RECOVERY_EMAIL = 'Please check your email inbox for the account recovery link, to confirm you\'re still the owner of the linked email account. Please use the email recovery method if you\'ve lost access to the linked email inbox.'
 ERR_AUTHORIZATION = 'Unauthorized'
+ERR_MFA_REMOVE_LAST_KEY = 'You are not able to remove the last remaining registered U2F device'
+OK_MFA_REMOVED = 'MFA Removed'
