@@ -3,24 +3,51 @@ import hmac
 from datetime import timedelta
 from random import random
 from base64 import b64encode
+from gunicorn.glogging import logging
 from .config import config
 from . import oneway_hash
+
+
+__module__ = 'trivialsec.helpers.authz'
+logger = logging.getLogger(__name__)
 
 def get_transaction_id(secret_key :str, target :str) -> str:
     return b64encode(hmac.new(bytes(secret_key, "ascii"), bytes(target, "ascii"), hashlib.sha1).digest()).decode()
 
-def start_transaction(key :str, target :str) -> str:
-    transaction_id = get_transaction_id(key, target)
-    config._redis.set(f'{config.app_version}{transaction_id}', oneway_hash(str(random())), ex=timedelta(seconds=config.session_expiry_minutes*60))
+def start_transaction(target :str) -> str:
+    secret_key = oneway_hash(str(random()))
+    transaction_id = get_transaction_id(secret_key, target)
+    cache_key = f'{config.app_version}{transaction_id}'
+    token_expiry_seconds = config.session_expiry_minutes*60
+    logger.info(f'cache_key {cache_key} target {target} transaction_id {transaction_id} token_expiry_seconds {token_expiry_seconds}')
+    config._redis.set(cache_key, secret_key, ex=timedelta(seconds=token_expiry_seconds))
     return transaction_id
 
-def get_authorization_token(factor_key :str, transaction_id :str) -> str:
-    stored_nonce = config._redis.get(transaction_id)
-    if stored_nonce is None:
+def get_authorization_token(mfa_key :str, transaction_id :str) -> str:
+    cache_key = f'{config.app_version}{transaction_id}'
+    secret_key = config._redis.get(cache_key)
+    if secret_key is None:
         raise ValueError('authorization_token must have a valid transaction_id')
-    return b64encode(hmac.new(bytes(factor_key, "ascii"), bytes(stored_nonce, "ascii"), hashlib.sha1).digest()).decode()
+    authorization_token = oneway_hash(f'{cache_key}:{mfa_key}:{secret_key}')
+    cache_key = f'{config.app_version}{authorization_token}'
+    token_expiry_seconds = config.session_expiry_minutes*60
+    config._redis.set(cache_key, transaction_id, ex=timedelta(seconds=token_expiry_seconds))
+    return authorization_token
 
-def verify_transaction(secret_key :str, factor_key : str, target :str, authorization_token :str) -> bool:
-    transaction_id = get_transaction_id(secret_key, target)
-    stored_authorization_token = get_authorization_token(factor_key, transaction_id)
+def verify_transaction(mfa_key : str, target :str, authorization_token :str) -> bool:
+    cache_key_tid = f'{config.app_version}{authorization_token}'
+    transaction_id = config._redis.get(cache_key_tid)
+    if transaction_id is None:
+        raise ValueError('authorization_token has no valid transaction_id available')
+
+    cache_key_kid = f'{config.app_version}{transaction_id}'
+    secret_key = config._redis.get(cache_key_kid)
+    if secret_key is None:
+        raise ValueError(f'transaction_id {transaction_id} has no valid secret_key available')
+
+    gen_transaction_id = get_transaction_id(secret_key, target)
+    if gen_transaction_id != transaction_id:
+        raise ValueError(f'transaction_id {transaction_id} is invalid for this request: {target}')
+
+    stored_authorization_token = get_authorization_token(mfa_key, transaction_id)
     return authorization_token == stored_authorization_token

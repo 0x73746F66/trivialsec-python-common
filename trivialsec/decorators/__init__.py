@@ -1,8 +1,5 @@
 import json
-import hashlib
-import hmac
 from time import time, sleep
-from base64 import b64encode
 from functools import wraps
 from urllib.parse import urlencode
 from urllib import request as urlrequest
@@ -16,9 +13,8 @@ from trivialsec.models.member_mfa import MemberMfa
 from trivialsec.services.roles import is_internal_member, is_support_member, is_billing_member, is_audit_member, is_owner_member
 
 
-logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.decorators'
-
+logger = logging.getLogger(__name__)
 
 def require_authz(func):
     @wraps(func)
@@ -31,8 +27,7 @@ def require_authz(func):
             authorized = False
             for u2f_key in current_user.u2f_keys:
                 if verify_transaction(
-                        secret_key=current_user.apikey.api_key_secret,
-                        factor_key=u2f_key.get('webauthn_id'),
+                        mfa_key=u2f_key.get('webauthn_id'),
                         target=request_path,
                         authorization_token=authorization_token,
                     ):
