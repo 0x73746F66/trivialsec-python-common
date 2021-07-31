@@ -37,8 +37,7 @@ def require_authz(func):
             if hasattr(current_user, 'totp_mfa_id'):
                 mfa = MemberMfa(mfa_id=current_user.totp_mfa_id)
                 if mfa.hydrate() and verify_transaction(
-                        secret_key=current_user.apikey.api_key_secret,
-                        factor_key=mfa.totp_code,
+                        mfa_key=mfa.totp_code,
                         target=request_path,
                         authorization_token=authorization_token,
                     ):
@@ -49,7 +48,10 @@ def require_authz(func):
             return func(*args, **kwargs)
         except Exception as err:
             logger.exception(err)
-            return Response('{"status": 401, "message": "Unauthorized"}', 401, {'Content-Type': 'application/json'})
+            params = {"status": 'error', "message": "Unauthorized"}
+            if app.debug:
+                params['error'] = str(err)
+            return jsonify(params), 401
 
     return deco_require_authz
 
