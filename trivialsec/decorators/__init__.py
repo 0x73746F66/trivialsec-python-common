@@ -11,12 +11,52 @@ from flask import Response, abort, request, url_for, redirect, jsonify, current_
 from gunicorn.glogging import logging
 from trivialsec.helpers import messages
 from trivialsec.helpers.config import config
+from trivialsec.helpers.authz import verify_transaction
 from trivialsec.models.member_mfa import MemberMfa
 from trivialsec.services.roles import is_internal_member, is_support_member, is_billing_member, is_audit_member, is_owner_member
 
 
 logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.decorators'
+
+
+def require_authz(func):
+    @wraps(func)
+    def deco_require_authz(*args, **kwargs):
+        try:
+            authorization_token = request.headers.get('X-Authorization-Token')
+            if authorization_token is None:
+                raise ValueError('X-Authorization-Token header is required')
+            request_path = request.path[3:]
+            authorized = False
+            for u2f_key in current_user.u2f_keys:
+                if verify_transaction(
+                        secret_key=current_user.apikey.api_key_secret,
+                        factor_key=u2f_key.get('webauthn_id'),
+                        target=request_path,
+                        authorization_token=authorization_token,
+                    ):
+                    authorized = True
+                    break
+
+            if hasattr(current_user, 'totp_mfa_id'):
+                mfa = MemberMfa(mfa_id=current_user.totp_mfa_id)
+                if mfa.hydrate() and verify_transaction(
+                        secret_key=current_user.apikey.api_key_secret,
+                        factor_key=mfa.totp_code,
+                        target=request_path,
+                        authorization_token=authorization_token,
+                    ):
+                    authorized = True
+
+            if authorized is False:
+                raise ValueError('authorized is False')
+            return func(*args, **kwargs)
+        except Exception as err:
+            logger.exception(err)
+            return Response('{"status": 401, "message": "Unauthorized"}', 401, {'Content-Type': 'application/json'})
+
+    return deco_require_authz
 
 def control_timing_attacks(seconds: float):
     def deco_control_timing_attacks(func):
@@ -179,34 +219,3 @@ def prepared_json(func):
             del params['recaptcha_token']
         return func(params, *args, **kwargs)
     return deco_prepared_json
-
-def require_authz(func):
-    @wraps(func)
-    def deco_require_authz(*args, **kwargs):
-        try:
-            authorization_token = request.headers.get('X-Authorization-Token')
-            if authorization_token is None:
-                raise ValueError('X-Authorization-Token header is required')
-            request_path = request.path[3:]
-            authorized = False
-            transaction_id = b64encode(hmac.new(bytes(current_user.apikey.api_key_secret, "ascii"), bytes(request_path, "ascii"), hashlib.sha1).digest()).decode()
-            for u2f_key in current_user.u2f_keys:
-                check_token = b64encode(hmac.new(bytes(transaction_id, "ascii"), bytes(u2f_key.get('webauthn_id'), "ascii"), hashlib.sha1).digest()).decode()
-                if check_token == authorization_token:
-                    authorized = True
-
-            if hasattr(current_user, 'totp_mfa_id'):
-                mfa = MemberMfa(mfa_id=current_user.totp_mfa_id)
-                if mfa.hydrate():
-                    check_token = b64encode(hmac.new(bytes(transaction_id, "ascii"), bytes(mfa.totp_code, "ascii"), hashlib.sha1).digest()).decode()
-                    if check_token == authorization_token:
-                        authorized = True
-
-            if authorized is False:
-                raise ValueError('authorized is False')
-            return func(*args, **kwargs)
-        except Exception as err:
-            logger.exception(err)
-            return Response('{"status": 401, "message": "Unauthorized"}', 401, {'Content-Type': 'application/json'})
-
-    return deco_require_authz
