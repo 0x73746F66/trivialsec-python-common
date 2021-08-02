@@ -18,8 +18,7 @@ def start_transaction(target :str) -> str:
     secret_key = oneway_hash(str(random()))
     transaction_id = get_transaction_id(secret_key, target)
     cache_key = f'{config.app_version}{transaction_id}'
-    token_expiry_seconds = config.session_expiry_minutes*60
-    config._redis.set(cache_key, secret_key, ex=timedelta(seconds=token_expiry_seconds))
+    config._redis.set(cache_key, secret_key, ex=timedelta(seconds=int(config.authz_expiry_seconds)))
     return transaction_id
 
 def get_authorization_token(mfa_key :str, transaction_id :str) -> str:
@@ -31,8 +30,7 @@ def get_authorization_token(mfa_key :str, transaction_id :str) -> str:
     secret_key = stored_value.decode()
     authorization_token = oneway_hash(f'{cache_key}:{mfa_key}:{secret_key}')
     cache_key = f'{config.app_version}{authorization_token}'
-    token_expiry_seconds = config.session_expiry_minutes*60
-    config._redis.set(cache_key, transaction_id, ex=timedelta(seconds=token_expiry_seconds))
+    config._redis.set(cache_key, transaction_id, ex=timedelta(seconds=int(config.authz_expiry_seconds)))
     return authorization_token
 
 def is_active_transaction(transaction_id :str, target :str) -> bool:

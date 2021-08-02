@@ -50,6 +50,7 @@ class Config:
         self.app_name = app_conf.get('app_name', self.app_name)
         self.http_proxy = app_conf.get('http_proxy')
         self.https_proxy = app_conf.get('https_proxy')
+        self.authz_expiry_seconds = app_conf.get('authz_expiry_seconds', 3600)
         self.session_expiry_minutes = app_conf.get('session_expiry_minutes', 1440)
         self.session_cookie_name = app_conf.get('session_cookie_name', 'trivialsec')
         self.mysql :dict = conf.get('mysql', dict())
