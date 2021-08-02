@@ -10,7 +10,7 @@ from trivialsec.helpers import messages
 from trivialsec.helpers.config import config
 from trivialsec.helpers.authz import verify_transaction
 from trivialsec.models.member_mfa import MemberMfa
-from trivialsec.services.roles import is_internal_member, is_support_member, is_billing_member, is_audit_member, is_owner_member
+from trivialsec.services.roles import is_internal_member, is_readonly_member, is_support_member, is_billing_member, is_audit_member, is_owner_member
 
 
 __module__ = 'trivialsec.decorators'
@@ -134,7 +134,7 @@ def require_recaptcha(action :str):
         return f_require_recaptcha
     return deco_require_recaptcha
 
-def internal_users(func):
+def internal_users_only(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
         authorised = is_internal_member(current_user)
@@ -148,7 +148,7 @@ def internal_users(func):
         return func(*args, **kwargs)
     return decorated_view
 
-def requires_support(func):
+def requires_support_role(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
         authorised = is_support_member(current_user)
@@ -162,7 +162,7 @@ def requires_support(func):
         return func(*args, **kwargs)
     return decorated_view
 
-def requires_billing(func):
+def requires_billing_role(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
         authorised = is_billing_member(current_user)
@@ -176,7 +176,7 @@ def requires_billing(func):
         return func(*args, **kwargs)
     return decorated_view
 
-def requires_audit(func):
+def requires_audit_role(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
         authorised = is_audit_member(current_user)
@@ -190,10 +190,24 @@ def requires_audit(func):
         return func(*args, **kwargs)
     return decorated_view
 
-def requires_owner(func):
+def requires_owner_role(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
         authorised = is_owner_member(current_user)
+
+        if not current_user.is_authenticated:
+            return redirect(url_for('root.login', next=request.url))
+
+        if not authorised:
+            return abort(403)
+
+        return func(*args, **kwargs)
+    return decorated_view
+
+def user_can_edit(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        authorised = not is_readonly_member(current_user)
 
         if not current_user.is_authenticated:
             return redirect(url_for('root.login', next=request.url))
