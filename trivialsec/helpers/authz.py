@@ -24,9 +24,11 @@ def start_transaction(target :str) -> str:
 
 def get_authorization_token(mfa_key :str, transaction_id :str) -> str:
     cache_key = f'{config.app_version}{transaction_id}'
-    secret_key = config._redis.get(cache_key).decode()
-    if secret_key is None:
+    stored_value = config._redis.get(cache_key)
+    if stored_value is None:
         raise ValueError('authorization_token must have a valid transaction_id')
+
+    secret_key = stored_value.decode()
     authorization_token = oneway_hash(f'{cache_key}:{mfa_key}:{secret_key}')
     cache_key = f'{config.app_version}{authorization_token}'
     token_expiry_seconds = config.session_expiry_minutes*60
@@ -35,15 +37,17 @@ def get_authorization_token(mfa_key :str, transaction_id :str) -> str:
 
 def verify_transaction(mfa_key : str, target :str, authorization_token :str) -> bool:
     cache_key_tid = f'{config.app_version}{authorization_token}'
-    transaction_id = config._redis.get(cache_key_tid).decode()
-    if transaction_id is None:
+    stored_value = config._redis.get(cache_key_tid)
+    if stored_value is None:
         raise ValueError('authorization_token has no valid transaction_id available')
 
+    transaction_id = stored_value.decode()
     cache_key_kid = f'{config.app_version}{transaction_id}'
-    secret_key = config._redis.get(cache_key_kid).decode()
-    if secret_key is None:
+    stored_value = config._redis.get(cache_key_kid)
+    if stored_value is None:
         raise ValueError(f'transaction_id {transaction_id} has no valid secret_key available')
 
+    secret_key = stored_value.decode()
     gen_transaction_id = get_transaction_id(secret_key, target)
     if gen_transaction_id != transaction_id:
         raise ValueError(f'transaction_id {transaction_id} is invalid for this request: {target}')
