@@ -56,3 +56,4 @@ OK_RECOVERY_EMAIL = 'Please check your email inbox for the account recovery link
 ERR_AUTHORIZATION = 'Unauthorized'
 ERR_MFA_REMOVE_LAST_KEY = 'You are not able to remove the last remaining registered U2F device'
 OK_MFA_REMOVED = 'MFA Removed'
+INFO_AUTHORISATION_REQUIRED = 'Authorisation Required'
