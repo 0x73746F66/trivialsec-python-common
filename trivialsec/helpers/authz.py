@@ -35,6 +35,19 @@ def get_authorization_token(mfa_key :str, transaction_id :str) -> str:
     config._redis.set(cache_key, transaction_id, ex=timedelta(seconds=token_expiry_seconds))
     return authorization_token
 
+def is_active_transaction(transaction_id :str, target :str) -> bool:
+    cache_key_kid = f'{config.app_version}{transaction_id}'
+    stored_value = config._redis.get(cache_key_kid)
+    if stored_value is None:
+        return False
+
+    secret_key = stored_value.decode()
+    gen_transaction_id = get_transaction_id(secret_key, target)
+    if gen_transaction_id == transaction_id:
+        return True
+
+    return False
+
 def verify_transaction(mfa_key : str, target :str, authorization_token :str) -> bool:
     cache_key_tid = f'{config.app_version}{authorization_token}'
     stored_value = config._redis.get(cache_key_tid)
