@@ -13,7 +13,7 @@ from retry.api import retry
 __module__ = 'trivialsec.helpers.config'
 
 class Config:
-    .redis_client = None
+    redis_client = None
     user_agent :str = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0 Safari/605.1.15'
     config_file :str = getenv('CONFIG_FILE', 'config.yaml')
     app_env :str = getenv('APP_ENV', 'Dev')
