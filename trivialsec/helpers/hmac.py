@@ -99,12 +99,12 @@ class HMAC:
 
     def is_valid_nonce(self) -> bool:
         key = f'{self.id}:{self.nonce}:{self.ts}'
-        if config._redis.get(key): # pylint: disable=protected-access
+        if config.redis_client.get(key):
             # We have already processed this nonce + timestamp.
             return False
         else:
             # Save this nonce + timestamp for later.
-            config._redis.set(key, '1') # pylint: disable=protected-access
+            config.redis_client.set(key, '1')
             return True
 
     def is_valid_scheme(self) -> bool:

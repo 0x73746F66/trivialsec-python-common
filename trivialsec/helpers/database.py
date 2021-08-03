@@ -86,7 +86,7 @@ class MySQLDatabase:
 
     def invalidate_cache(self, invalidations :list):
         for invalidation_key in invalidations:
-            config._redis.delete(f'{config.app_version}{invalidation_key}') # pylint: disable=protected-access
+            config.redis_client.delete(f'{config.app_version}{invalidation_key}')
 
     def query_one(self, sql, params=None, cache_key :str = None, invalidations :list = None, cache_ttl: timedelta = timedelta(seconds=int(config.redis.get('ttl', 300)))):
         if cache_key:
@@ -176,7 +176,7 @@ class MySQLDatabase:
         redis_value = None
         try:
             if isinstance(cache_key, str):
-                redis_value = config._redis.get(f'{config.app_version}{cache_key}')
+                redis_value = config.redis_client.get(f'{config.app_version}{cache_key}')
                 logger.debug(f'{cache_key} {redis_value}')
         except Exception as ex:
             logger.error(ex)
@@ -195,7 +195,7 @@ class MySQLDatabase:
             redis_data = list(results)
         logger.debug(f'CACHE STORE {cache_key}')
         str_value = json.dumps(redis_data, default=str)
-        return config._redis.set(f'{config.app_version}{cache_key}', str_value, ex=cache_ttl) # pylint: disable=protected-access
+        return config.redis_client.set(f'{config.app_version}{cache_key}', str_value, ex=cache_ttl)
 
 mysql_adapter = MySQLDatabase(**config.mysql)
 

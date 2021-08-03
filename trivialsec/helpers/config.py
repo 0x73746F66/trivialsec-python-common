@@ -13,7 +13,7 @@ from retry.api import retry
 __module__ = 'trivialsec.helpers.config'
 
 class Config:
-    _redis = None
+    .redis_client = None
     user_agent :str = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0 Safari/605.1.15'
     config_file :str = getenv('CONFIG_FILE', 'config.yaml')
     app_env :str = getenv('APP_ENV', 'Dev')
@@ -30,7 +30,7 @@ class Config:
             with open(self.config_path) as stream:
                 conf :dict = yaml.safe_load(stream)
             self.redis :dict = conf.get('redis', dict())
-            self._redis = redis.Redis(host=self.redis.get('host'), ssl=bool(self.redis.get('ssl')))
+            self.redis_client = redis.Redis(host=self.redis.get('host'), ssl=bool(self.redis.get('ssl')))
             app_conf :dict = conf.get('app', dict())
             app_log_level :str = app_conf.get('log_level', getenv('LOG_LEVEL', default='WARNING'))
             self.log_level: int = app_log_level if isinstance(app_log_level, int) else logging._nameToLevel.get(app_log_level) # pylint: disable=protected-access
@@ -176,7 +176,7 @@ class Config:
     def _get_from_redis(self, cache_key :str):
         redis_value = None
         if isinstance(cache_key, str):
-            redis_value = self._redis.get(f'{self.app_version}{cache_key}')
+            redis_value = self.redis_client.get(f'{self.app_version}{cache_key}')
 
         if redis_value is not None:
             return redis_value.decode()
@@ -185,6 +185,6 @@ class Config:
 
     def _save_to_redis(self, cache_key :str, result :str):
         cache_ttl = timedelta(seconds=int(self.redis.get('ttl', 300)))
-        return self._redis.set(f'{self.app_version}{cache_key}', result, ex=cache_ttl)
+        return self.redis_client.set(f'{self.app_version}{cache_key}', result, ex=cache_ttl)
 
 config = Config()
