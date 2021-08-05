@@ -139,6 +139,19 @@ class Findings(DatabaseIterators):
         self.set_items(items)
         return self
 
+    def get_watched_findings(self, member_id, limit :int = 1000):
+        items = []
+        sql = f"SELECT finding_id FROM finding_watchers WHERE member_id = %(member_id)s LIMIT {limit}"
+        with mysql_adapter as database:
+            results = database.query(sql, {'member_id': member_id})
+            for val in results:
+                if not any(isinstance(x, Finding) and x.finding_id == val['finding_id'] for x in items):
+                    finding = Finding(finding_id=val['finding_id'])
+                    if finding.hydrate():
+                        items.append(finding)
+        self.set_items(items)
+        return self
+
     def count_informational(self, search_filter :list, conditional :str = 'AND') -> int:
         num_results = 0
         data = {}
