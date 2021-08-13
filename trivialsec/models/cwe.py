@@ -20,7 +20,6 @@ class CWE(DatabaseHelpers):
         self.detection = kwargs.get('detection')
         self.mitigation = kwargs.get('mitigation')
         self.platform = kwargs.get('platform')
-        self.platform_os = kwargs.get('platform_os')
         self.platform_windows = bool(kwargs.get('platform_windows'))
         self.platform_macos = bool(kwargs.get('platform_macos'))
         self.platform_unix = bool(kwargs.get('platform_unix'))
