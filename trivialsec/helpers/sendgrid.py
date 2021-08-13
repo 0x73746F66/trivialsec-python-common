@@ -32,8 +32,8 @@ def send_email(subject :str, template :str, data :dict, recipient :str, group :s
     proxies = None
     if config.http_proxy or config.https_proxy:
         proxies = {
-            'http': config.http_proxy,
-            'https': config.https_proxy
+            'http': f'http://{config.http_proxy}',
+            'https': f'https://{config.https_proxy}'
         }
 
     res = requests.post(url=tmp_url,
@@ -51,8 +51,8 @@ def upsert_contact(recipient_email :str, list_name :str = 'subscribers'):
     proxies = None
     if config.http_proxy or config.https_proxy:
         proxies = {
-            'http': config.http_proxy,
-            'https': config.https_proxy
+            'http': f'http://{config.http_proxy}',
+            'https': f'https://{config.https_proxy}'
         }
 
     res = requests.put(url='https://api.sendgrid.com/v3/marketing/contacts',

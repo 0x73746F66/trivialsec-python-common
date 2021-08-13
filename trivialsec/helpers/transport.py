@@ -97,8 +97,8 @@ class SafeBrowsing:
         proxies = None
         if config.http_proxy or config.https_proxy:
             proxies = {
-                'http': config.http_proxy,
-                'https': config.https_proxy
+                'http': f'http://{config.http_proxy}',
+                'https': f'https://{config.https_proxy}'
             }
         data = {
             "client": {
@@ -294,8 +294,8 @@ class Metadata:
         proxies = None
         if config.http_proxy or config.https_proxy:
             proxies = {
-                'http': config.http_proxy,
-                'https': config.https_proxy
+                'http': f'http://{config.http_proxy}',
+                'https': f'https://{config.https_proxy}'
             }
         try:
             session = requests.Session()
@@ -371,8 +371,8 @@ class Metadata:
         proxies = None
         if config.http_proxy or config.https_proxy:
             proxies = {
-                'http': config.http_proxy,
-                'https': config.https_proxy
+                'http': f'http://{config.http_proxy}',
+                'https': f'https://{config.https_proxy}'
             }
         try:
             self._content = requests.get(f'http://{self.host}',
@@ -406,8 +406,8 @@ class Metadata:
         proxies = None
         if config.http_proxy or config.https_proxy:
             proxies = {
-                'http': config.http_proxy,
-                'https': config.https_proxy
+                'http': f'http://{config.http_proxy}',
+                'https': f'https://{config.https_proxy}'
             }
         try:
             resp = requests.get(f'https://api.shodan.io/labs/honeyscore/{gethostbyname(self.host)}?key={config.honeyscore_key}',
@@ -449,8 +449,8 @@ class Metadata:
         proxies = None
         if config.http_proxy or config.https_proxy:
             proxies = {
-                'http': config.http_proxy,
-                'https': config.https_proxy
+                'http': f'http://{config.http_proxy}',
+                'https': f'https://{config.https_proxy}'
             }
         try:
             resp = requests.post(
