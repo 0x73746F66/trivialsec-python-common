@@ -44,6 +44,118 @@ class CVE(DatabaseHelpers):
                 return 'High'
         return None
 
+    @staticmethod
+    def vector_to_dict(vector :str, version :int = 3) -> dict:
+        vector_data = {
+            'v2': {
+                'CVSS': '2.0',
+                'AV': None,
+                'AC': None,
+                'Au': None,
+                'C': None,
+                'I': None,
+                'A': None,
+                'E': 'ND',
+                'RL': 'ND',
+                'RC': 'ND',
+                'CDP': 'ND',
+                'TD': 'ND',
+                'CR': 'ND',
+                'IR': 'ND',
+                'AR': 'ND',
+            },
+            'v3': {
+                'CVSS': '3.1',
+                'AV': None,
+                'AC': None,
+                'PR': None,
+                'UI': None,
+                'S': None,
+                'C': None,
+                'I': None,
+                'A': None,
+                'E': 'X',
+                'RL': 'X',
+                'RC': 'X',
+                'MAV': 'X',
+                'MAC': 'X',
+                'MPR': 'X',
+                'MUI': 'X',
+                'MS': 'X',
+                'MC': 'X',
+                'MI': 'X',
+                'MA': 'X',
+                'CR': 'X',
+                'IR': 'X',
+                'AR': 'X',
+            }
+        }
+        for vec in vector.split('/'):
+            key, setting = vec.split(':')
+            vector_data[f'v{version}'][key] = setting
+        return vector_data[f'v{version}']
+
+    @staticmethod
+    def dict_to_vector(vector_data :dict, version :int = 3) -> str:
+        required = {
+            'v2': ['AV', 'AC', 'Au', 'C', 'I', 'A'],
+            'v3': ['AV', 'AC', 'PR', 'UI', 'S', 'C', 'I', 'A']
+        }
+        vector_values = {
+            'v2': {
+                'CVSS': ['2.0'],
+                'AV': ['L', 'A', 'N'],
+                'AC': ['H', 'M', 'L'],
+                'Au': ['M', 'S', 'N'],
+                'C': ['N', 'P', 'C'],
+                'I': ['N', 'P', 'C'],
+                'A': ['N', 'P', 'C'],
+                'E': ['ND', 'U', 'POC', 'F', 'H'],
+                'RL': ['ND', 'OF', 'TF', 'W', 'U'],
+                'RC': ['ND', 'UC', 'UR', 'C'],
+                'CDP': ['ND', 'N', 'L', 'LM', 'MH', 'H'],
+                'TD': ['ND', 'N', 'L', 'M', 'H'],
+                'CR': ['ND', 'L', 'M', 'H'],
+                'IR': ['ND', 'L', 'M', 'H'],
+                'AR': ['ND', 'L', 'M', 'H'],
+            },
+            'v3': {
+                'CVSS': ['3.0', '3.1'],
+                'AV': ['N', 'A', 'L', 'P'],
+                'AC': ['L', 'H'],
+                'PR': ['N', 'L', 'H'],
+                'UI': ['N', 'R'],
+                'S': ['U', 'C'],
+                'C': ['N', 'L', 'H'],
+                'I': ['N', 'L', 'H'],
+                'A': ['N', 'L', 'H'],
+                'E': ['X', 'U', 'P', 'F', 'H'],
+                'RL': ['X', 'O', 'T', 'W', 'U'],
+                'RC': ['X', 'U', 'R', 'C'],
+                'MAV': ['X', 'N', 'A'],
+                'MAC': ['X', 'L', 'H'],
+                'MPR': ['X', 'N', 'L', 'H'],
+                'MUI': ['X', 'N', 'R'],
+                'MS': ['X', 'U', 'C'],
+                'MC': ['X', 'N', 'L', 'H'],
+                'MI': ['X', 'N', 'L', 'H'],
+                'MA': ['X', 'N', 'L', 'H'],
+                'CR': ['X', 'L', 'M', 'H'],
+                'IR': ['X', 'L', 'M', 'H'],
+                'AR': ['X', 'L', 'M', 'H'],
+            }
+        }
+        for req in required[f'v{version}']:
+            if req not in vector_data or vector_data[req] not in vector_values[f'v{version}'][req]:
+                raise ValueError(f'dict_to_vector expected "{req}" vector v{version}')
+        vector = []
+        for req in vector_values[f'v{version}'].keys():
+            if req in vector_data:
+                if vector_data[req] not in vector_values[f'v{version}'][req]:
+                    raise ValueError(f'Incorrect value "{vector_data[req]}" for {req} vector v{version}')
+                vector.append(f'{req}:{vector_data[req]}')
+        return '/'.join(vector)
+
 class CVEs(DatabaseIterators):
     def __init__(self):
         super().__init__('CVE', __table__, __pk__)
