@@ -21,8 +21,15 @@ class CWE(DatabaseHelpers):
         self.mitigation = kwargs.get('mitigation')
         self.platform = kwargs.get('platform')
         self.platform_os = kwargs.get('platform_os')
-        self.platform_architecture = kwargs.get('platform_architecture')
+        self.platform_windows = bool(kwargs.get('platform_windows'))
+        self.platform_macos = bool(kwargs.get('platform_macos'))
+        self.platform_unix = bool(kwargs.get('platform_unix'))
         self.platform_language = kwargs.get('platform_language')
+
+    def __setattr__(self, name, value):
+        if name in ['platform_windows', 'platform_macos', 'platform_unix']:
+            value = bool(value)
+        super().__setattr__(name, value)
 
     def get_cves(self):
         sql = "SELECT cve_id FROM cwe_cve WHERE cwe_id = %(cwe_id)s"
