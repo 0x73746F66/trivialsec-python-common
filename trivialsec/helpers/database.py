@@ -1,5 +1,4 @@
 import importlib
-import re
 import time
 import json
 import mysql.connector

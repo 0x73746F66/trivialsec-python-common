@@ -151,7 +151,9 @@ class Config:
         if response and 'Parameter' in response:
             value = response['Parameter'].get('Value')
 
-        self._save_to_redis(parameter, value)
+        if value is not None:
+            self._save_to_redis(parameter, value)
+
         return value
 
     def get_app(self)->dict:
