@@ -90,7 +90,7 @@ release:tag:
   stage: release
   script:
     - mkdir -p ~/.ssh
-    - aws s3 cp --only-show-errors s3://tfplans-trivialsec/deploy-keys/gitlab_ci ~/.ssh/gitlab_ci
+    - aws s3 cp --only-show-errors s3://stateful-trivialsec/deploy-keys/gitlab_ci ~/.ssh/gitlab_ci
     - chmod 400 ~/.ssh/gitlab_ci
     - eval $(ssh-agent)>/dev/null
     - ssh-add ~/.ssh/gitlab_ci >/dev/null 2>&1
