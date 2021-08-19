@@ -69,8 +69,12 @@ class Config:
         self.require_authz :list = list(app_conf.get('require_authz', list()))
 
     @property
-    def mysql_password(self):
-        return self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/mysql_password', WithDecryption=True)
+    def mysql_main_password(self):
+        return self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/mysql_main_password', WithDecryption=True)
+
+    @property
+    def mysql_replica_password(self):
+        return self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/mysql_replica_password', WithDecryption=True)
 
     @property
     def session_secret_key(self):
