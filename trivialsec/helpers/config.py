@@ -9,9 +9,11 @@ import boto3
 import redis
 from botocore.exceptions import ClientError, ConnectionClosedError, ReadTimeoutError, ConnectTimeoutError, CapacityNotAvailableError
 from retry.api import retry
+from gunicorn.glogging import logging
 
 
 __module__ = 'trivialsec.helpers.config'
+logger = logging.getLogger(__name__)
 
 class Config:
     redis_client = None
@@ -62,7 +64,7 @@ class Config:
             self.amass :dict = amass_conf.get('amass', dict())
 
         except Exception as ex:
-            print(ex)
+            logger.exception(ex)
             sys.exit(1)
 
     @property
