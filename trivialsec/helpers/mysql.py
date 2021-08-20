@@ -82,7 +82,7 @@ class MySQL:
         if self.pool_size > 0:
             params['pool_size'] = self.pool_size
 
-        if not self.con or not self.con.is_connected():
+        if self.con is None or not self.con.is_connected():
             try:
                 self.con = mysql.connector.connect(**params)
                 self.retry_count = 0
