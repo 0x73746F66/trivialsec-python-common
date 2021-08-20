@@ -1,13 +1,12 @@
 from random import shuffle
 from datetime import datetime, timedelta
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
-from trivialsec.helpers.database import mysql_adapter
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter, replica_adapter
 
 __module__ = 'trivialsec.models.feed'
 __table__ = 'feeds'
 __pk__ = 'feed_id'
 
-class Feed(DatabaseHelpers):
+class Feed(MySQL_Row_Adapter):
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
         self.feed_id = kwargs.get('feed_id')
@@ -34,13 +33,13 @@ class Feed(DatabaseHelpers):
             value = bool(value)
         super().__setattr__(name, value)
 
-class Feeds(DatabaseIterators):
+class Feeds(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('Feed', __table__, __pk__)
 
     def num_running(self, category :str) -> int:
-        with mysql_adapter as database:
-            results = database.query_one("""SELECT count(*) as num FROM feeds WHERE
+        with replica_adapter as sql:
+            results = sql.query_one("""SELECT count(*) as num FROM feeds WHERE
                 category = %(category)s AND
                 start_check IS NOT NULL AND
                 last_checked IS NOT NULL AND
@@ -49,8 +48,8 @@ class Feeds(DatabaseIterators):
             return int(results['num'])
 
     def num_errored(self, category :str) -> int:
-        with mysql_adapter as database:
-            results = database.query_one("""SELECT count(*) as num FROM feeds WHERE
+        with replica_adapter as sql:
+            results = sql.query_one("""SELECT count(*) as num FROM feeds WHERE
                 category = %(category)s AND
                 http_code = 200
                 """, {'category': category})
@@ -67,8 +66,8 @@ class Feeds(DatabaseIterators):
             'daily': datetime.utcnow() - timedelta(days=1),
             'monthly': datetime.utcnow() - timedelta(weeks=4),
         }
-        with mysql_adapter as database:
-            results = database.query(f"""SELECT * FROM feeds WHERE
+        with replica_adapter as sql:
+            results = sql.query(f"""SELECT * FROM feeds WHERE
                 category = %(category)s AND
                 start_check IS NULL OR
                 last_checked IS NULL OR

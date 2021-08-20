@@ -1,10 +1,10 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 __module__ = 'trivialsec.models.activity_log'
 __table__ = 'activity_logs'
 __pk__ = 'activity_log_id'
 
-class ActivityLog(DatabaseHelpers):
+class ActivityLog(MySQL_Row_Adapter):
     ACTION_USER_LOGIN = 'user_login'
     ACTION_USER_KEY_ROTATE = 'user_key_rotation'
     ACTION_USER_LOGOUT = 'user_logout'
@@ -43,6 +43,6 @@ class ActivityLog(DatabaseHelpers):
         self.description = kwargs.get('description')
         self.occurred = kwargs.get('occurred')
 
-class ActivityLogs(DatabaseIterators):
+class ActivityLogs(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('ActivityLog', __table__, __pk__)

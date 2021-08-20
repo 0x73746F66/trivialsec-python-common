@@ -1,10 +1,10 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 __module__ = 'trivialsec.models.invitation'
 __table__ = 'invitations'
 __pk__ = 'invitation_id'
 
-class Invitation(DatabaseHelpers):
+class Invitation(MySQL_Row_Adapter):
     INVITATION_MESSAGE = "Please click the Activation link below, or copy and paste it into a browser if you prefer."
 
     def __init__(self, **kwargs):
@@ -26,6 +26,6 @@ class Invitation(DatabaseHelpers):
             value = bool(value)
         super().__setattr__(name, value)
 
-class Invitations(DatabaseIterators):
+class Invitations(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('Invitation', __table__, __pk__)

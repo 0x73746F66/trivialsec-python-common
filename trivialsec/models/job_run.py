@@ -1,13 +1,13 @@
 from random import choice
 from string import ascii_lowercase
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
-from trivialsec.helpers.database import mysql_adapter
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter, replica_adapter
+
 
 __module__ = 'trivialsec.models.job_run'
 __table__ = 'job_runs'
 __pk__ = 'job_run_id'
 
-class JobRun(DatabaseHelpers):
+class JobRun(MySQL_Row_Adapter):
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
         self.job_run_id = kwargs.get('job_run_id')
@@ -26,7 +26,7 @@ class JobRun(DatabaseHelpers):
         self.updated_at = kwargs.get('updated_at')
         self.completed_at = kwargs.get('completed_at')
 
-class JobRuns(DatabaseIterators):
+class JobRuns(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('JobRun', __table__, __pk__)
 
@@ -56,9 +56,9 @@ class JobRuns(DatabaseIterators):
                 data[placeholder] = val
                 conditionals.append(f" JSON_EXTRACT(queue_data, '{key}') = %({placeholder})s ")
         where = conditional.join(conditionals)
-        sql = f"SELECT * FROM job_runs WHERE {where} LIMIT {offset},{limit}"
-        with mysql_adapter as database:
-            results = database.query(sql, data)
+        stmt = f"SELECT * FROM job_runs WHERE {where} LIMIT {offset},{limit}"
+        with replica_adapter as sql:
+            results = sql.query(stmt, data)
             self._load_items(results)
 
         return self

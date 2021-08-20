@@ -1,10 +1,10 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 __module__ = 'trivialsec.models.plan_invoice'
 __table__ = 'plan_invoices'
 __pk__ = 'plan_id'
 
-class PlanInvoice(DatabaseHelpers):
+class PlanInvoice(MySQL_Row_Adapter):
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
         self.plan_id = kwargs.get('plan_id')
@@ -20,6 +20,6 @@ class PlanInvoice(DatabaseHelpers):
         self.due_date = kwargs.get('due_date')
         self.created_at = kwargs.get('created_at')
 
-class PlanInvoices(DatabaseIterators):
+class PlanInvoices(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('PlanInvoice', __table__, __pk__)

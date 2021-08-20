@@ -1,11 +1,12 @@
-from os import getenv, path, getcwd
+from os import getenv
 import sys
 import logging
 import subprocess
+from io import StringIO
+from datetime import timedelta
 import yaml
 import boto3
 import redis
-from datetime import timedelta
 from botocore.exceptions import ClientError, ConnectionClosedError, ReadTimeoutError, ConnectTimeoutError, CapacityNotAvailableError
 from retry.api import retry
 
@@ -15,22 +16,18 @@ __module__ = 'trivialsec.helpers.config'
 class Config:
     redis_client = None
     user_agent :str = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0 Safari/605.1.15'
-    config_file :str = getenv('CONFIG_FILE', 'config.yaml')
     app_env :str = getenv('APP_ENV', 'Dev')
     app_name :str = getenv('APP_NAME', 'trivialsec')
 
-    def __init__(self, custom_config :str = None):
-        if custom_config is not None:
-            self.config_file = custom_config
+    def __init__(self):
         self.configure()
 
     def configure(self):
-        self.config_path = self.config_file if self.config_file.startswith('/') else path.realpath(path.join(getcwd(), self.config_file))
         try:
-            with open(self.config_path) as stream:
-                conf :dict = yaml.safe_load(stream)
+            raw_yaml :str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/app_config')
+            conf :dict = yaml.safe_load(StringIO(raw_yaml))
             self.redis :dict = conf.get('redis', dict())
-            self.redis_client = redis.Redis(host=self.redis.get('host'), ssl=bool(self.redis.get('ssl')))
+            self.redis_client :redis.Redis = redis.Redis(host=self.redis.get('host'), ssl=bool(self.redis.get('ssl')))
             app_conf :dict = conf.get('app', dict())
             app_log_level :str = app_conf.get('log_level', getenv('LOG_LEVEL', default='WARNING'))
             self.log_level: int = app_log_level if isinstance(app_log_level, int) else logging._nameToLevel.get(app_log_level) # pylint: disable=protected-access
@@ -56,7 +53,6 @@ class Config:
         self.mysql :dict = conf.get('mysql', dict())
         self.aws :dict = conf.get('aws', dict())
         self.frontend :dict = app_conf.get('frontend', dict())
-        self.backend :dict = app_conf.get('backend', dict())
         self.cve :dict = app_conf.get('cve', dict())
         self.amass :dict = conf.get('amass', dict())
         self.sendgrid :dict = conf.get('sendgrid', dict())

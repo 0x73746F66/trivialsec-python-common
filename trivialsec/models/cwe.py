@@ -1,5 +1,4 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
-from trivialsec.helpers.database import mysql_adapter
+from trivialsec.helpers.replica_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter, replica_adapter
 from .cve import CVE
 
 
@@ -7,7 +6,7 @@ __module__ = 'trivialsec.models.cwe'
 __table__ = 'cwes'
 __pk__ = 'cwe_id'
 
-class CWE(DatabaseHelpers):
+class CWE(MySQL_Row_Adapter):
     cves = []
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
@@ -31,9 +30,9 @@ class CWE(DatabaseHelpers):
         super().__setattr__(name, value)
 
     def get_cves(self):
-        sql = "SELECT cve_id FROM cwe_cve WHERE cwe_id = %(cwe_id)s"
-        with mysql_adapter as database:
-            results = database.query(sql, {'cwe_id': self.cwe_id})
+        stmt = "SELECT cve_id FROM cwe_cve WHERE cwe_id = %(cwe_id)s"
+        with replica_adapter as sql:
+            results = sql.query(stmt, {'cwe_id': self.cwe_id})
             for val in results:
                 if not any(isinstance(x, CVE) and x.cve_id == val['cve_id'] for x in self.cves):
                     member = CVE(cve_id=val['cve_id'])
@@ -44,12 +43,12 @@ class CWE(DatabaseHelpers):
 
     def add_cve(self, cve: CVE) -> bool:
         insert_stmt = "INSERT INTO cwe_cve (cwe_id, cve_id) VALUES (%(cwe_id)s, %(cve_id)s) ON DUPLICATE KEY UPDATE cve_id=cve_id;"
-        with mysql_adapter as database:
-            new_id = database.query(insert_stmt, {'cve_id': cve.cve_id, 'cwe_id': self.cwe_id})
+        with replica_adapter as sql:
+            new_id = sql.query(insert_stmt, {'cve_id': cve.cve_id, 'cwe_id': self.cwe_id})
             if new_id:
                 self.cves.append(cve)
                 return True
 
-class CWEs(DatabaseIterators):
+class CWEs(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('CVE', __table__, __pk__)

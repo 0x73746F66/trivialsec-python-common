@@ -1,11 +1,11 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 
 __module__ = 'trivialsec.models.account_config'
 __table__ = 'account_config'
 __pk__ = 'account_id'
 
-class AccountConfig(DatabaseHelpers):
+class AccountConfig(MySQL_Row_Adapter):
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
         self.account_id = kwargs.get('account_id')
@@ -46,6 +46,6 @@ class AccountConfig(DatabaseHelpers):
         self.zetalytics = kwargs.get('zetalytics')
         self.zoomeye = kwargs.get('zoomeye')
 
-class AccountConfigs(DatabaseIterators):
+class AccountConfigs(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('AccountConfig', __table__, __pk__)

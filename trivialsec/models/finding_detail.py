@@ -1,10 +1,10 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 __module__ = 'trivialsec.models.finding_detail'
 __table__ = 'finding_details'
 __pk__ = 'finding_detail_id'
 
-class FindingDetail(DatabaseHelpers):
+class FindingDetail(MySQL_Row_Adapter):
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
         self.finding_detail_id = kwargs.get('finding_detail_id')
@@ -23,6 +23,6 @@ class FindingDetail(DatabaseHelpers):
         self.updated_at = kwargs.get('updated_at')
         self.modified_by_id = kwargs.get('modified_by_id')
 
-class FindingDetails(DatabaseIterators):
+class FindingDetails(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('FindingDetail', __table__, __pk__)

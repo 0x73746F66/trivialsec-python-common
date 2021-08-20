@@ -1,11 +1,11 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 from decimal import Decimal, ROUND_DOWN
 
 __module__ = 'trivialsec.models.plan'
 __table__ = 'plans'
 __pk__ = 'plan_id'
 
-class Plan(DatabaseHelpers):
+class Plan(MySQL_Row_Adapter):
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
         self.plan_id = kwargs.get('plan_id')
@@ -42,6 +42,6 @@ class Plan(DatabaseHelpers):
             value = Decimal(value or 0).quantize(Decimal('.01'), rounding=ROUND_DOWN)
         super().__setattr__(name, value)
 
-class Plans(DatabaseIterators):
+class Plans(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('Plan', __table__, __pk__)

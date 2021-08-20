@@ -1,11 +1,11 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 
 __module__ = 'trivialsec.models.service_type'
 __table__ = 'service_types'
 __pk__ = 'service_type_id'
 
-class ServiceType(DatabaseHelpers):
+class ServiceType(MySQL_Row_Adapter):
     STATE_QUEUED = 'queued'
     STATE_STARTING = 'starting'
     STATE_PROCESSING = 'processing'
@@ -20,6 +20,6 @@ class ServiceType(DatabaseHelpers):
         self.name = kwargs.get('name')
         self.category = kwargs.get('category')
 
-class ServiceTypes(DatabaseIterators):
+class ServiceTypes(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('ServiceType', __table__, __pk__)

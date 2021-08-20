@@ -1,5 +1,4 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
-from trivialsec.helpers.database import mysql_adapter
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter, replica_adapter
 from .role import Role
 
 
@@ -18,7 +17,7 @@ except Exception:
             # placeholder
             pass
 
-class Member(UserMixin, DatabaseHelpers):
+class Member(UserMixin, MySQL_Row_Adapter):
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
         self.member_id = kwargs.get('member_id')
@@ -40,9 +39,9 @@ class Member(UserMixin, DatabaseHelpers):
         return self.member_id
 
     def get_roles(self):
-        sql = "SELECT role_id FROM members_roles WHERE member_id = %(member_id)s"
-        with mysql_adapter as database:
-            results = database.query(sql, {'member_id': self.member_id})
+        stmt = "SELECT role_id FROM members_roles WHERE member_id = %(member_id)s"
+        with replica_adapter as sql:
+            results = sql.query(stmt, {'member_id': self.member_id})
             for val in results:
                 if not any(isinstance(x, Role) and x.role_id == val['role_id'] for x in self.roles):
                     role = Role(role_id=val['role_id'])
@@ -53,8 +52,8 @@ class Member(UserMixin, DatabaseHelpers):
 
     def add_role(self, role: Role)->bool:
         insert_stmt = "INSERT INTO members_roles (member_id, role_id) VALUES (%(member_id)s, %(role_id)s) ON DUPLICATE KEY UPDATE member_id=member_id;"
-        with mysql_adapter as database:
-            new_id = database.query(insert_stmt, {'member_id': self.member_id, 'role_id': role.role_id})
+        with replica_adapter as sql:
+            new_id = sql.query(insert_stmt, {'member_id': self.member_id, 'role_id': role.role_id})
             if new_id:
                 self.roles.append(role)
                 return True
@@ -63,23 +62,23 @@ class Member(UserMixin, DatabaseHelpers):
 
     def remove_role(self, role: Role)->bool:
         delete_stmt = "DELETE FROM members_roles WHERE member_id=%(member_id)s AND role_id=%(role_id)s;"
-        with mysql_adapter as database:
-            new_id = database.query(delete_stmt, {'member_id': self.member_id, 'role_id': role.role_id})
+        with replica_adapter as sql:
+            new_id = sql.query(delete_stmt, {'member_id': self.member_id, 'role_id': role.role_id})
             if new_id:
                 self.roles.append(role)
                 return True
 
         return False
 
-class Members(DatabaseIterators):
+class Members(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('Member', __table__, __pk__)
 
     def find_by_role_id(self, role_id :int, account_id :int):
-        sql = 'SELECT r.member_id FROM members_roles r LEFT JOIN members m ON r.member_id = m.member_id WHERE r.role_id = %(role_id)s and m.account_id = %(account_id)s'
+        stmt = 'SELECT r.member_id FROM members_roles r LEFT JOIN members m ON r.member_id = m.member_id WHERE r.role_id = %(role_id)s and m.account_id = %(account_id)s'
         items = []
-        with mysql_adapter as database:
-            results = database.query(sql, {'role_id': role_id, 'account_id': account_id})
+        with replica_adapter as sql:
+            results = sql.query(stmt, {'role_id': role_id, 'account_id': account_id})
             for val in results:
                 if not any(isinstance(x, Member) and x.member_id == val['member_id'] for x in items):
                     member = Member(member_id=val['member_id'])

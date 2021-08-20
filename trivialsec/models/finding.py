@@ -1,5 +1,4 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
-from trivialsec.helpers.database import mysql_adapter
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter, replica_adapter
 from .member import Member
 from .finding_note import FindingNote
 from .finding_detail import FindingDetail
@@ -8,7 +7,7 @@ __module__ = 'trivialsec.models.finding'
 __table__ = 'findings'
 __pk__ = 'finding_id'
 
-class Finding(DatabaseHelpers):
+class Finding(MySQL_Row_Adapter):
     CONFIDENCE_HIGH_RGB = [7, 189, 152]
     CONFIDENCE_MEDIUM_RGB = [15, 145, 119]
     CONFIDENCE_LOW_RGB = [0, 90, 72]
@@ -91,9 +90,9 @@ class Finding(DatabaseHelpers):
         super().__setattr__(name, value)
 
     def get_watchers(self):
-        sql = "SELECT member_id FROM finding_watchers WHERE finding_id = %(finding_id)s"
-        with mysql_adapter as database:
-            results = database.query(sql, {'finding_id': self.finding_id})
+        stmt = "SELECT member_id FROM finding_watchers WHERE finding_id = %(finding_id)s"
+        with replica_adapter as sql:
+            results = sql.query(stmt, {'finding_id': self.finding_id})
             for val in results:
                 if not any(isinstance(x, Member) and x.member_id == val['member_id'] for x in self.watchers):
                     member = Member(member_id=val['member_id'])
@@ -104,8 +103,8 @@ class Finding(DatabaseHelpers):
 
     def add_watcher(self, member: Member) -> bool:
         insert_stmt = "INSERT INTO finding_watchers (member_id, finding_id) VALUES (%(member_id)s, %(finding_id)s) ON DUPLICATE KEY UPDATE finding_id=finding_id;"
-        with mysql_adapter as database:
-            new_id = database.query(insert_stmt, {'member_id': member.member_id, 'finding_id': self.finding_id})
+        with replica_adapter as sql:
+            new_id = sql.query(insert_stmt, {'member_id': member.member_id, 'finding_id': self.finding_id})
             if new_id:
                 self.watchers.append(member)
                 return True
@@ -113,9 +112,9 @@ class Finding(DatabaseHelpers):
         return False
 
     def get_notes(self):
-        sql = "SELECT finding_note_id FROM finding_notes WHERE finding_id = %(finding_id)s"
-        with mysql_adapter as database:
-            results = database.query(sql, {'finding_id': self.finding_id})
+        stmt = "SELECT finding_note_id FROM finding_notes WHERE finding_id = %(finding_id)s"
+        with replica_adapter as sql:
+            results = sql.query(stmt, {'finding_id': self.finding_id})
             for val in results:
                 if not any(isinstance(x, FindingNote) and x.finding_note_id == val['finding_note_id'] for x in self.notes):
                     note = FindingNote(finding_note_id=val['finding_note_id'])
@@ -124,7 +123,7 @@ class Finding(DatabaseHelpers):
 
         return self
 
-class Findings(DatabaseIterators):
+class Findings(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('Finding', __table__, __pk__)
 
@@ -141,9 +140,9 @@ class Findings(DatabaseIterators):
 
     def get_watched_findings(self, member_id, limit :int = 1000):
         items = []
-        sql = f"SELECT finding_id FROM finding_watchers WHERE member_id = %(member_id)s LIMIT {limit}"
-        with mysql_adapter as database:
-            results = database.query(sql, {'member_id': member_id})
+        stmt = f"SELECT finding_id FROM finding_watchers WHERE member_id = %(member_id)s LIMIT {limit}"
+        with replica_adapter as sql:
+            results = sql.query(stmt, {'member_id': member_id})
             for val in results:
                 if not any(isinstance(x, Finding) and x.finding_id == val['finding_id'] for x in items):
                     finding = Finding(finding_id=val['finding_id'])
@@ -156,7 +155,7 @@ class Findings(DatabaseIterators):
         num_results = 0
         data = {}
         _cols = Finding().cols()
-        sql = 'SELECT COUNT(finding_id) as count FROM findings WHERE severity_normalized = 0'
+        stmt = 'SELECT COUNT(finding_id) as count FROM findings WHERE severity_normalized = 0'
         conditions = []
         for key, val in search_filter:
             if key not in _cols:
@@ -176,10 +175,10 @@ class Findings(DatabaseIterators):
             else:
                 data[key] = val
                 conditions.append(f' `{key}` = %({key})s ')
-        sql += f" {conditional} {conditional.join(conditions)}"
+        stmt += f" {conditional} {conditional.join(conditions)}"
 
-        with mysql_adapter as database:
-            result = database.query_one(sql, data)
+        with replica_adapter as sql:
+            result = sql.query_one(stmt, data)
             if result:
                 num_results = int(result['count'])
 
@@ -189,7 +188,7 @@ class Findings(DatabaseIterators):
         num_results = 0
         data = {}
         _cols = Finding().cols()
-        sql = 'SELECT COUNT(finding_id) as count FROM findings WHERE severity_normalized > 0 AND severity_normalized < 40'
+        stmt = 'SELECT COUNT(finding_id) as count FROM findings WHERE severity_normalized > 0 AND severity_normalized < 40'
         conditions = []
         for key, val in search_filter:
             if key not in _cols:
@@ -209,10 +208,10 @@ class Findings(DatabaseIterators):
             else:
                 data[key] = val
                 conditions.append(f' `{key}` = %({key})s ')
-        sql += f" {conditional} {conditional.join(conditions)}"
+        stmt += f" {conditional} {conditional.join(conditions)}"
 
-        with mysql_adapter as database:
-            result = database.query_one(sql, data)
+        with replica_adapter as sql:
+            result = sql.query_one(stmt, data)
             if result:
                 num_results = int(result['count'])
 
@@ -222,7 +221,7 @@ class Findings(DatabaseIterators):
         num_results = 0
         data = {}
         _cols = Finding().cols()
-        sql = 'SELECT COUNT(finding_id) as count FROM findings WHERE severity_normalized >= 40 AND severity_normalized < 70'
+        stmt = 'SELECT COUNT(finding_id) as count FROM findings WHERE severity_normalized >= 40 AND severity_normalized < 70'
         conditions = []
         for key, val in search_filter:
             if key not in _cols:
@@ -242,10 +241,10 @@ class Findings(DatabaseIterators):
             else:
                 data[key] = val
                 conditions.append(f' `{key}` = %({key})s ')
-        sql += f" {conditional} {conditional.join(conditions)}"
+        stmt += f" {conditional} {conditional.join(conditions)}"
 
-        with mysql_adapter as database:
-            result = database.query_one(sql, data)
+        with replica_adapter as sql:
+            result = sql.query_one(stmt, data)
             if result:
                 num_results = int(result['count'])
 
@@ -255,7 +254,7 @@ class Findings(DatabaseIterators):
         num_results = 0
         data = {}
         _cols = Finding().cols()
-        sql = 'SELECT COUNT(finding_id) as count FROM findings WHERE severity_normalized >= 70'
+        stmt = 'SELECT COUNT(finding_id) as count FROM findings WHERE severity_normalized >= 70'
         conditions = []
         for key, val in search_filter:
             if key not in _cols:
@@ -275,10 +274,10 @@ class Findings(DatabaseIterators):
             else:
                 data[key] = val
                 conditions.append(f' `{key}` = %({key})s ')
-        sql += f" {conditional} {conditional.join(conditions)}"
+        stmt += f" {conditional} {conditional.join(conditions)}"
 
-        with mysql_adapter as database:
-            result = database.query_one(sql, data)
+        with replica_adapter as sql:
+            result = sql.query_one(stmt, data)
             if result:
                 num_results = int(result['count'])
 

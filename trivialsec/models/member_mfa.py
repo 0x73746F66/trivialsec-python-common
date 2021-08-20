@@ -1,10 +1,10 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 __module__ = 'trivialsec.models.member_mfa'
 __table__ = 'member_mfa'
 __pk__ = 'mfa_id'
 
-class MemberMfa(DatabaseHelpers):
+class MemberMfa(MySQL_Row_Adapter):
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
         self.mfa_id = kwargs.get('mfa_id')
@@ -23,6 +23,6 @@ class MemberMfa(DatabaseHelpers):
             value = bool(value)
         super().__setattr__(name, value)
 
-class MemberMfas(DatabaseIterators):
+class MemberMfas(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('MemberMfa', __table__, __pk__)

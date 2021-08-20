@@ -1,10 +1,10 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 __module__ = 'trivialsec.models.inventory'
 __table__ = 'inventory_items'
 __pk__ = 'inventory_item_id'
 
-class InventoryItem(DatabaseHelpers):
+class InventoryItem(MySQL_Row_Adapter):
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
         self.inventory_item_id = kwargs.get('inventory_item_id')
@@ -16,6 +16,6 @@ class InventoryItem(DatabaseHelpers):
         self.created_at = kwargs.get('created_at')
         self.last_checked = kwargs.get('last_checked')
 
-class InventoryItems(DatabaseIterators):
+class InventoryItems(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('InventoryItem', __table__, __pk__)

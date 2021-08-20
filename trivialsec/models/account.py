@@ -1,10 +1,10 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 __module__ = 'trivialsec.models.account'
 __table__ = 'accounts'
 __pk__ = 'account_id'
 
-class Account(DatabaseHelpers):
+class Account(MySQL_Row_Adapter):
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
         self.account_id = kwargs.get('account_id')
@@ -20,6 +20,6 @@ class Account(DatabaseHelpers):
             value = bool(value)
         super().__setattr__(name, value)
 
-class Accounts(DatabaseIterators):
+class Accounts(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('Account', __table__, __pk__)

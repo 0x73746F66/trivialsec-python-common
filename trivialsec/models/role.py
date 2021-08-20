@@ -1,11 +1,11 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 
 __module__ = 'trivialsec.models.role'
 __table__ = 'roles'
 __pk__ = 'role_id'
 
-class Role(DatabaseHelpers):
+class Role(MySQL_Row_Adapter):
     ROLE_SUPPORT = 'Support'
     ROLE_SUPPORT_ID = 5
     ROLE_AUDIT = 'Audit'
@@ -28,6 +28,6 @@ class Role(DatabaseHelpers):
             value = bool(value)
         super().__setattr__(name, value)
 
-class Roles(DatabaseIterators):
+class Roles(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('Role', __table__, __pk__)

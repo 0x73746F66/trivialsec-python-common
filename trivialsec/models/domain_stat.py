@@ -1,10 +1,10 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 __module__ = 'trivialsec.models.domain_stat'
 __table__ = 'domain_stats'
 __pk__ = 'domain_stats_id'
 
-class DomainStat(DatabaseHelpers):
+class DomainStat(MySQL_Row_Adapter):
     APP_VERIFIED = 'app_verified'
     APPLICATION_BANNER = 'application_banner'
     APPLICATION_PROXY = 'application_proxy'
@@ -52,6 +52,6 @@ class DomainStat(DatabaseHelpers):
         self.domain_data = kwargs.get('domain_data')
         self.created_at = kwargs.get('created_at')
 
-class DomainStats(DatabaseIterators):
+class DomainStats(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('DomainStat', __table__, __pk__)

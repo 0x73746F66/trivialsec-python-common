@@ -1,11 +1,11 @@
 from decimal import Decimal, ROUND_DOWN
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 __module__ = 'trivialsec.models.cve'
 __table__ = 'cves'
 __pk__ = 'cve_id'
 
-class CVE(DatabaseHelpers):
+class CVE(MySQL_Row_Adapter):
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
         self.cve_id = kwargs.get('cve_id')
@@ -159,6 +159,6 @@ class CVE(DatabaseHelpers):
                 vector.append(f'{req}:{vector_data[req]}')
         return '/'.join(vector)
 
-class CVEs(DatabaseIterators):
+class CVEs(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('CVE', __table__, __pk__)

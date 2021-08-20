@@ -4,18 +4,18 @@ from ssl import create_default_context, _create_unverified_context, SSLCertVerif
 from datetime import datetime
 from OpenSSL.crypto import X509, X509Name
 from gunicorn.glogging import logging
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
-from trivialsec.helpers.database import mysql_adapter
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter, replica_adapter
 from trivialsec.helpers.transport import Metadata
 from .account import Account
 from .domain_stat import DomainStat
+
 
 logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.models.domain'
 __table__ = 'domains'
 __pk__ = 'domain_id'
 
-class Domain(DatabaseHelpers):
+class Domain(MySQL_Row_Adapter):
     _http_metadata = None
     stats = []
     orphans = []
@@ -42,12 +42,12 @@ class Domain(DatabaseHelpers):
     def get_stats(self, latest_only=True):
         self.stats = []
         if latest_only:
-            sql = "SELECT domain_stats_id FROM domain_stats WHERE domain_id = %(domain_id)s AND (created_at = (SELECT domain_value FROM domain_stats WHERE domain_stat = 'http_last_checked' AND domain_id = %(domain_id)s ORDER BY domain_value DESC LIMIT 1) OR domain_stat = 'http_last_checked')"
+            stmt = "SELECT domain_stats_id FROM domain_stats WHERE domain_id = %(domain_id)s AND (created_at = (SELECT domain_value FROM domain_stats WHERE domain_stat = 'http_last_checked' AND domain_id = %(domain_id)s ORDER BY domain_value DESC LIMIT 1) OR domain_stat = 'http_last_checked')"
         else:
-            sql = "SELECT domain_stats_id FROM domain_stats WHERE domain_id = %(domain_id)s ORDER BY created_at DESC"
+            stmt = "SELECT domain_stats_id FROM domain_stats WHERE domain_id = %(domain_id)s ORDER BY created_at DESC"
         http_last_checked = None
-        with mysql_adapter as database:
-            results = database.query(sql, {'domain_id': self.domain_id}, cache_key=f'domain_stats/domain_id/{self.domain_id}')
+        with replica_adapter as sql:
+            results = sql.query(stmt, {'domain_id': self.domain_id}, cache_key=f'domain_stats/domain_id/{self.domain_id}')
             for val in results:
                 domain_stat = DomainStat(domain_stats_id=val['domain_stats_id'])
                 if domain_stat.hydrate():
@@ -64,15 +64,15 @@ class Domain(DatabaseHelpers):
 
     def get_orphan_subdomains(self):
         self.orphans = []
-        sql = f"""
+        stmt = f"""
             SELECT domain_id FROM domains
             WHERE name LIKE '%{self.name}'
             AND account_id = %(account_id)s
             AND parent_domain_id != %(domain_id)s
             ORDER BY created_at DESC
         """
-        with mysql_adapter as database:
-            results = database.query(sql, {
+        with replica_adapter as sql:
+            results = sql.query(stmt, {
                 'account_id': self.account_id,
                 'domain_id': self.domain_id,
             }, cache_key=False)
@@ -405,6 +405,6 @@ class Domain(DatabaseHelpers):
 
         return domain_stats
 
-class Domains(DatabaseIterators):
+class Domains(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('Domain', __table__, __pk__)

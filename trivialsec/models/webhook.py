@@ -1,10 +1,10 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 __module__ = 'trivialsec.models.webhook'
 __table__ = 'webhooks'
 __pk__ = 'webhook_id'
 
-class Webhook(DatabaseHelpers):
+class Webhook(MySQL_Row_Adapter):
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
         self.webhook_id = kwargs.get('webhook_id')
@@ -20,6 +20,6 @@ class Webhook(DatabaseHelpers):
             value = bool(value)
         super().__setattr__(name, value)
 
-class Webhooks(DatabaseIterators):
+class Webhooks(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('Webhook', __table__, __pk__)

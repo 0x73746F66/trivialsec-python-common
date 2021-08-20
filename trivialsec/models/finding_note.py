@@ -1,10 +1,10 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 __module__ = 'trivialsec.models.finding_note'
 __table__ = 'finding_notes'
 __pk__ = 'finding_note_id'
 
-class FindingNote(DatabaseHelpers):
+class FindingNote(MySQL_Row_Adapter):
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
         self.finding_note_id = kwargs.get('finding_note_id')
@@ -19,6 +19,6 @@ class FindingNote(DatabaseHelpers):
             value = bool(value)
         super().__setattr__(name, value)
 
-class FindingNotes(DatabaseIterators):
+class FindingNotes(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('FindingNote', __table__, __pk__)

@@ -1,10 +1,10 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 __module__ = 'trivialsec.models.known_ip'
 __table__ = 'known_ips'
 __pk__ = 'known_ip_id'
 
-class KnownIp(DatabaseHelpers):
+class KnownIp(MySQL_Row_Adapter):
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
         self.known_ip_id = kwargs.get('known_ip_id')
@@ -18,6 +18,6 @@ class KnownIp(DatabaseHelpers):
         self.asn_name = kwargs.get('asn_name')
         self.updated_at = kwargs.get('updated_at')
 
-class KnownIps(DatabaseIterators):
+class KnownIps(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('KnownIp', __table__, __pk__)

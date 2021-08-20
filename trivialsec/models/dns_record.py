@@ -1,10 +1,10 @@
-from trivialsec.helpers.database import DatabaseHelpers, DatabaseIterators
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 __module__ = 'trivialsec.models.dns_record'
 __table__ = 'dns_records'
 __pk__ = 'dns_record_id'
 
-class DnsRecord(DatabaseHelpers):
+class DnsRecord(MySQL_Row_Adapter):
     RECORDS = {
         'A': 'a host address  [RFC1035]',
         'NS': 'an authoritative name server  [RFC1035]',
@@ -105,6 +105,6 @@ class DnsRecord(DatabaseHelpers):
         self.raw = kwargs.get('raw')
         self.last_checked = kwargs.get('last_checked')
 
-class DnsRecords(DatabaseIterators):
+class DnsRecords(MySQL_Table_Adapter):
     def __init__(self):
         super().__init__('DnsRecord', __table__, __pk__)
