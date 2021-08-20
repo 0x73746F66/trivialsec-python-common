@@ -20,6 +20,7 @@ class Config:
     user_agent :str = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0 Safari/605.1.15'
     app_env :str = getenv('APP_ENV', 'Dev')
     app_name :str = getenv('APP_NAME', 'trivialsec')
+    aws_default_region :str = getenv('AWS_REGION', 'ap-southeast-2')
 
     def __init__(self):
         self.configure()
@@ -136,7 +137,7 @@ class Config:
         session = boto3.session.Session()
         client = session.client(
             service_name='ssm',
-            region_name=self.aws.get('region_name', 'ap-southeast-2'),
+            region_name=self.aws_default_region,
         )
         response = None
         value = default
