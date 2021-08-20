@@ -129,8 +129,8 @@ class Config:
         return self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/recaptcha_site_key')
 
     @retry((ConnectionClosedError, ReadTimeoutError, ConnectTimeoutError, CapacityNotAvailableError), tries=5, delay=1.5, backoff=3)
-    def ssm_secret(self, parameter :str, default=None, **kwargs) -> str:
-        if kwargs.get('skip_cache') is not True:
+    def ssm_secret(self, parameter :str, default=None, skip_cache :bool = False, **kwargs) -> str:
+        if skip_cache is not True:
             redis_value = self._get_from_redis(parameter)
             if redis_value is not None:
                 return redis_value
@@ -156,7 +156,7 @@ class Config:
         if response and 'Parameter' in response:
             value = response['Parameter'].get('Value')
 
-        if kwargs.get('skip_cache') is not True and value is not None:
+        if skip_cache is not True and value is not None:
             self._save_to_redis(parameter, value)
 
         return value
