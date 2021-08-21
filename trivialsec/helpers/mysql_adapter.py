@@ -33,7 +33,7 @@ class MySQL_Table_Adapter:
         cls = class_()
         _cols = cls.cols()
         data = {}
-        sql = f"SELECT * FROM `{self.__table}`"
+        stmt = f"SELECT * FROM `{self.__table}`"
         conditions = []
         for key, val in search_filter:
             if key not in _cols:
@@ -53,18 +53,18 @@ class MySQL_Table_Adapter:
             else:
                 data[key] = val
                 conditions.append(f' `{key}` = %({key})s ')
-        sql += f" WHERE {conditional.join(conditions)}"
+        stmt += f" WHERE {conditional.join(conditions)}"
 
         if order_by and isinstance(order_by, list):
             for _order in order_by:
                 if _order.lower() in ['DESC', 'ASC'] or _order.lower() not in cls.cols():
                     continue
-            sql += f" ORDER BY {' '.join(order_by)}"
+            stmt += f" ORDER BY {' '.join(order_by)}"
         if limit:
-            sql += f' LIMIT {offset},{limit}'
+            stmt += f' LIMIT {offset},{limit}'
 
         with replica_adapter as sql:
-            results = sql.query(sql, data, cache_key=cache_key, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
+            results = sql.query(stmt, data, cache_key=cache_key, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
             self._load_items(results)
 
         return self
@@ -72,17 +72,17 @@ class MySQL_Table_Adapter:
     def load(self, order_by :list = None, limit: int = 1000, offset: int = 0, cache_key :str = None, ttl_seconds: int = 30):
         class_ = getattr(__models_module__, self.__class_name)
         cls = class_()
-        sql = f"SELECT * FROM `{self.__table}`"
+        stmt = f"SELECT * FROM `{self.__table}`"
         if order_by and isinstance(order_by, list):
             for _order in order_by:
                 if _order.lower() in ['DESC', 'ASC'] or _order.lower() not in cls.cols():
                     continue
-            sql += f" ORDER BY {' '.join(order_by)}"
+            stmt += f" ORDER BY {' '.join(order_by)}"
         if limit:
-            sql += f' LIMIT {offset},{limit}'
+            stmt += f' LIMIT {offset},{limit}'
 
         with replica_adapter as sql:
-            results = sql.query(sql, cache_key=cache_key, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
+            results = sql.query(stmt, cache_key=cache_key, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
             self._load_items(results)
 
         return self
@@ -93,15 +93,15 @@ class MySQL_Table_Adapter:
         if column not in cls.cols():
             return []
 
-        sql = f"SELECT DISTINCT(`{column}`) FROM `{self.__table}`"
+        stmt = f"SELECT DISTINCT(`{column}`) FROM `{self.__table}`"
         if limit:
-            sql += f' LIMIT {limit}'
+            stmt += f' LIMIT {limit}'
 
         values = set()
         if cache_key is None:
             cache_key = f'{self.__table}/distinct_{column}'
         with replica_adapter as sql:
-            results = sql.query(sql, cache_key=cache_key, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
+            results = sql.query(stmt, cache_key=cache_key, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
             for result in results:
                 if isinstance(result, dict):
                     for _, val in result.items():
@@ -114,7 +114,7 @@ class MySQL_Table_Adapter:
         cls = class_()
         _cols = cls.cols()
         data = {}
-        sql = f"SELECT COUNT({self.__pk}) as count FROM `{self.__table}`"
+        stmt = f"SELECT COUNT({self.__pk}) as count FROM `{self.__table}`"
         if isinstance(query_filter, list):
             conditions = []
             for key, val in query_filter:
@@ -135,10 +135,10 @@ class MySQL_Table_Adapter:
                 else:
                     data[key] = val
                     conditions.append(f' `{key}` = %({key})s ')
-            sql += f" WHERE {conditional.join(conditions)}"
+            stmt += f" WHERE {conditional.join(conditions)}"
 
         with replica_adapter as sql:
-            res = sql.query_one(sql, data, cache_key=cache_key, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
+            res = sql.query_one(stmt, data, cache_key=cache_key, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
             return res.get('count', 0)
 
     def pagination(self, search_filter :list = None, page_size: int = 10, page_num: int = 0, show_pages: int = 10, conditional :str = 'AND', ttl_seconds: int = 5)->dict:
@@ -146,7 +146,7 @@ class MySQL_Table_Adapter:
         cls = class_()
         _cols = cls.cols()
         data = {}
-        sql = f"SELECT count({self.__pk}) as records FROM {self.__table}"
+        stmt = f"SELECT count({self.__pk}) as records FROM {self.__table}"
         if isinstance(search_filter, list):
             conditions = []
             for col in search_filter:
@@ -168,11 +168,11 @@ class MySQL_Table_Adapter:
                 else:
                     data[key] = val
                     conditions.append(f' `{key}` = %({key})s ')
-            sql += f' WHERE {conditional.join(conditions)} '
+            stmt += f' WHERE {conditional.join(conditions)} '
 
         result = None
         with replica_adapter as sql:
-            result = sql.query_one(sql, data, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
+            result = sql.query_one(stmt, data, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
             last_page = int(result['records'] / page_size) + 1
             first = min(max(1, page_num-1), max(1, last_page-show_pages))
             last = min(page_num+show_pages-1, last_page+1)
@@ -255,9 +255,9 @@ class MySQL_Row_Adapter:
                     cache_parts.sort()
                     cache_key = '/'.join(cache_parts)
 
-            sql = f"SELECT * FROM `{self.__table}` WHERE {conditionals} LIMIT 1"
+            stmt = f"SELECT * FROM `{self.__table}` WHERE {conditionals} LIMIT 1"
             with replica_adapter as sql:
-                result = sql.query_one(sql, values, cache_key=None if no_cache is True else cache_key, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
+                result = sql.query_one(stmt, values, cache_key=None if no_cache is True else cache_key, cache_ttl=None if ttl_seconds is None else timedelta(seconds=ttl_seconds))
                 if isinstance(result, dict):
                     for col, val in result.items():
                         setattr(self, col, val)
@@ -276,9 +276,9 @@ class MySQL_Row_Adapter:
                     logger.debug(f'Not exists {repr(self.__dict__)}')
                     return False
                 pk_column = self.__pk
-                sql = f"SELECT `{self.__pk}` FROM `{self.__table}` WHERE `{pk_column}` = %({pk_column})s LIMIT 1"
+                stmt = f"SELECT `{self.__pk}` FROM `{self.__table}` WHERE `{pk_column}` = %({pk_column})s LIMIT 1"
                 value = value if value is not None else self.__getattribute__(pk_column)
-                result = sql.query_one(sql, {pk_column: value})
+                result = sql.query_one(stmt, {pk_column: value})
                 if result is not None:
                     setattr(self, self.__pk, result[self.__pk])
                     return True
@@ -294,8 +294,8 @@ class MySQL_Row_Adapter:
                     value = value if value is not None else self.__getattribute__(pk_column)
                     values[pk_column] = value
                 conditionals = f' {conditional} '.join(where)
-                sql = f"SELECT `{self.__pk}` FROM `{self.__table}` WHERE {conditionals} LIMIT 1"
-                result = sql.query_one(sql, values)
+                stmt = f"SELECT `{self.__pk}` FROM `{self.__table}` WHERE {conditionals} LIMIT 1"
+                result = sql.query_one(stmt, values)
                 if result is not None:
                     setattr(self, self.__pk, result[self.__pk])
                     return True
