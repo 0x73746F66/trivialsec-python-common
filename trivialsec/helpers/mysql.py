@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.helpers.mysql'
 
 class MySQL:
+    pool = None
     con = None
     cur = None
     retry_count = 0
@@ -81,8 +82,29 @@ class MySQL:
 
         if self.pool_size > 0:
             params['pool_size'] = self.pool_size
-
-        if self.con is None or not self.con.is_connected():
+            if self.con is None or not isinstance(self.pool, mysql.connector.pooling.PooledMySQLConnection):
+                try:
+                    self.pool = mysql.connector.connect(**params)
+                except mysql.connector.Error as err:
+                    if err.errno == 1045: # Access denied for user
+                        logger.warning(f'Access denied for user {params}')
+                    raise err
+            if isinstance(self.pool, mysql.connector.pooling.PooledMySQLConnection):
+                try:
+                    self.con = self.pool.get_connection()
+                    self.retry_count = 0
+                except mysql.connector.Error as err:
+                    if err.errno == 1045: # Access denied for user
+                        logger.warning(f'Access denied for user {params}')
+                    elif err.errno == 1040: # ER_CON_COUNT_ERROR
+                        self.retry_count += 1
+                        if self.retry_count >= 10:
+                            raise err
+                        time.sleep(1)
+                        return self.connect()
+                    raise err
+        elif self.con is None or \
+                (isinstance(self.con, mysql.connector.MySQLConnection) and not self.con.is_connected()):
             try:
                 self.con = mysql.connector.connect(**params)
                 self.retry_count = 0
