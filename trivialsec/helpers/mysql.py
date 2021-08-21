@@ -11,11 +11,9 @@ logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.helpers.mysql'
 
 class MySQL:
-    pool = None
     con = None
     cur = None
     retry_count = 0
-    pool_size = None
     raise_on_warnings = True
     _write_only :bool
     _read_only :bool
@@ -30,12 +28,11 @@ class MySQL:
     def __del__(self):
         self.close()
 
-    def __init__(self, database :str = None, read_replica :bool = True, pool_size :int = None, raise_on_warnings :bool = True):
+    def __init__(self, database :str = None, read_replica :bool = True, raise_on_warnings :bool = True):
         """Connect to a MySQL Server
         Keyword arguments:
         database     :str
         read_replica :bool   optional    connects to a read only MySQL server and cannot write new data (default=True)
-        pool_size    :int    optional    A pool opens a number of connections and handles thread safety when providing connections to requesters
         raise_on_warnings :bool optional (default=True)
         """
         self.database = config.mysql.get('internal_database') if database is None else database
@@ -46,8 +43,6 @@ class MySQL:
             self._write_only = True
 
         self.raise_on_warnings = raise_on_warnings is True
-        if pool_size is not None:
-            self.pool_size = pool_size
 
     def close(self):
         try:
@@ -80,31 +75,9 @@ class MySQL:
         if params is None:
             raise ValueError('Unable to determine a correct database connection. Avoid directly modifying _write_only and _read_only class attributes')
 
-        if self.pool_size > 0:
-            params['pool_size'] = self.pool_size
-            if self.con is None or not isinstance(self.pool, mysql.connector.pooling.PooledMySQLConnection):
-                try:
-                    self.pool = mysql.connector.connect(**params)
-                except mysql.connector.Error as err:
-                    if err.errno == 1045: # Access denied for user
-                        logger.warning(f'Access denied for user {params}')
-                    raise err
-            if isinstance(self.pool, mysql.connector.pooling.PooledMySQLConnection):
-                try:
-                    self.con = self.pool.get_connection()
-                    self.retry_count = 0
-                except mysql.connector.Error as err:
-                    if err.errno == 1045: # Access denied for user
-                        logger.warning(f'Access denied for user {params}')
-                    elif err.errno == 1040: # ER_CON_COUNT_ERROR
-                        self.retry_count += 1
-                        if self.retry_count >= 10:
-                            raise err
-                        time.sleep(1)
-                        return self.connect()
-                    raise err
-        elif self.con is None or \
-                (isinstance(self.con, mysql.connector.MySQLConnection) and not self.con.is_connected()):
+        if self.con is None \
+            or not isinstance(self.con, mysql.connector.MySQLConnection) \
+            or (isinstance(self.con, mysql.connector.MySQLConnection) and not self.con.is_connected()):
             try:
                 self.con = mysql.connector.connect(**params)
                 self.retry_count = 0

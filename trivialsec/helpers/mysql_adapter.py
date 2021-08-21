@@ -8,8 +8,8 @@ logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.helpers.mysql_adapter'
 __models_module__ = importlib.import_module('trivialsec.models')
 
-main_adapter = MySQL(read_replica=False, pool_size=5)
-replica_adapter = MySQL(pool_size=5)
+main_adapter = MySQL(read_replica=False)
+replica_adapter = MySQL()
 
 class MySQL_Table_Adapter:
     def __init__(self, class_name, table, primary_key):
