@@ -10,9 +10,17 @@ class Project(MySQL_Row_Adapter):
         super().__init__(__table__, __pk__)
         self.project_id = kwargs.get('project_id')
         self.account_id = kwargs.get('account_id')
+        self.canonical_id = kwargs.get('canonical_id')
         self.name = kwargs.get('name')
         self.created_at = kwargs.get('created_at')
         self.deleted = bool(kwargs.get('deleted'))
+
+    def gen_canonical_id(self) -> str:
+        if not self.name:
+            raise ValueError('set a project name before generating the canonical_id')
+        value = "".join([ c if c.isalnum() else "-" for c in self.name ]).lower()
+        super().__setattr__('canonical_id', value)
+        return value
 
     def __setattr__(self, name, value):
         if name in ['deleted']:

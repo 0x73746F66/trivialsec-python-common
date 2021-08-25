@@ -26,8 +26,9 @@ class Config:
         self.configure()
 
     def configure(self):
+        config_key = f'/{self.app_env}/Deploy/{self.app_name}/app_config'
         try:
-            main_raw :str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/app_config', skip_cache=True)
+            main_raw :str = self.ssm_secret(config_key, skip_cache=True)
             main_conf :dict = yaml.safe_load(StringIO(main_raw))
             amass_raw :str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/amass_config', skip_cache=True)
             amass_conf :dict = yaml.safe_load(StringIO(amass_raw))
@@ -65,6 +66,7 @@ class Config:
             self.amass :dict = amass_conf.get('amass', dict())
 
         except Exception as ex:
+            logger.info(config_key)
             logger.exception(ex)
             sys.exit(1)
 
