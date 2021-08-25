@@ -54,11 +54,12 @@ class Domain(MySQL_Row_Adapter):
                     self.stats.append(domain_stat)
                     if domain_stat.domain_stat == DomainStat.HTTP_LAST_CHECKED:
                         http_last_checked = domain_stat.domain_value
-                        setattr(self, DomainStat.HTTP_LAST_CHECKED, http_last_checked)
+                        super().__setattr__(DomainStat.HTTP_LAST_CHECKED, http_last_checked)
+
         if http_last_checked:
             for domain_stat in self.stats:
                 if domain_stat.created_at == http_last_checked:
-                    setattr(self, domain_stat.domain_stat, domain_stat)
+                    super().__setattr__(domain_stat.domain_stat, domain_stat)
 
         return self
 
