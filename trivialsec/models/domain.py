@@ -125,7 +125,7 @@ class Domain(MySQL_Row_Adapter):
 
     def gather_stats(self):
         domain_stats = []
-        now = datetime.utcnow().replace(microsecond=0).isoformat()
+        now = datetime.utcnow().replace(microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
         if self._http_metadata.signature_algorithm:
             domain_stats.append(DomainStat(
                 domain_id=self.domain_id,
