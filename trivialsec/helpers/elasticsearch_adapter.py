@@ -101,7 +101,7 @@ class Elasticsearch_Document_Adapter:
         if isinstance(extra, dict):
             doc = {**doc, **extra}
         res = self.es.index(index=self.__index, id=doc[self.__pk], body=doc)
-        if res.status == 200:
+        if res['_shards']['successful'] >= 1:
             return True
         return False
 
