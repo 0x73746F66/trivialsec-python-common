@@ -97,6 +97,7 @@ class Elasticsearch_Document_Adapter:
 
     def persist(self, extra :dict = None) -> bool:
         doc = vars(self)
+        del doc['_Elasticsearch_Document_Adapter__cols']
         if isinstance(extra, dict):
             doc = {**doc, **extra}
         res = self.es.index(index=self.__index, id=doc[self.__pk], body=doc)
