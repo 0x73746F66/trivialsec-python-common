@@ -32,10 +32,13 @@ class Config:
             main_conf :dict = yaml.safe_load(StringIO(main_raw))
             amass_raw :str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/amass_config', skip_cache=True)
             amass_conf :dict = yaml.safe_load(StringIO(amass_raw))
+            routes_raw :str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/routes_config', skip_cache=True)
+            routes_conf :dict = yaml.safe_load(StringIO(routes_raw))
+
             self.redis :dict = main_conf.get('redis', dict())
             self.redis_client :redis.Redis = redis.Redis(host=self.redis.get('host'), ssl=bool(self.redis.get('ssl')))
-            app_conf :dict = main_conf.get('app', dict())
-            app_log_level :str = app_conf.get('log_level', getenv('LOG_LEVEL', default='WARNING'))
+
+            app_log_level = getenv('LOG_LEVEL', default='WARNING')
             self.log_level: int = app_log_level if isinstance(app_log_level, int) else logging._nameToLevel.get(app_log_level) # pylint: disable=protected-access
             proc = subprocess.run('cat /etc/hostname', shell=True, capture_output=True, check=True)
             node_id :str = proc.stdout.decode('utf-8').strip()
@@ -43,27 +46,29 @@ class Config:
             if err or not node_id:
                 raise OSError(f'/etc/hostname could not be used\ngot node_id {node_id}\n{err}')
             self.node_id :str = node_id
-            self.app_version = app_conf.get('version')
-            self.app_env = app_conf.get('env', self.app_env)
-            self.app_name = app_conf.get('app_name', self.app_name)
-            self.http_proxy = app_conf.get('http_proxy')
-            self.https_proxy = app_conf.get('https_proxy')
-            self.authz_expiry_seconds = app_conf.get('authz_expiry_seconds', 3600)
-            self.session_expiry_minutes = app_conf.get('session_expiry_minutes', 1440)
-            self.session_cookie_name = app_conf.get('session_cookie_name', 'trivialsec')
+            self.app_version = main_conf.get('version')
+            self.http_proxy = main_conf.get('http_proxy')
+            self.https_proxy = main_conf.get('https_proxy')
+            self.authz_expiry_seconds = main_conf.get('authz_expiry_seconds', 3600)
+            self.session_expiry_minutes = main_conf.get('session_expiry_minutes', 1440)
+            self.session_cookie_name = main_conf.get('session_cookie_name', 'trivialsec')
             self.mysql :dict = main_conf.get('mysql', dict())
+            self.elasticsearch :dict = main_conf.get('elasticsearch', dict())
             self.aws :dict = main_conf.get('aws', dict())
-            self.frontend :dict = app_conf.get('frontend', dict())
-            self.cve :dict = app_conf.get('cve', dict())
+            self.assets :dict = main_conf.get('assets', dict())
+            self.website :dict = main_conf.get('website', dict())
+            self.appserver :dict = main_conf.get('appserver', dict())
+            self.public_api :dict = main_conf.get('public-api', dict())
+            self.push :dict = main_conf.get('push', dict())
             self.sendgrid :dict = main_conf.get('sendgrid', dict())
             self.stripe :dict = main_conf.get('stripe', dict())
-            self.nameservers :list = list(set(app_conf.get('nameservers', list())))
+            self.nameservers :list = list(set(main_conf.get('nameservers', list())))
             self.external_dsn_provider :str = self.nameservers[0]
-            self.queue_wait_timeout: int = app_conf.get('queue_wait_timeout', 5)
-            self.public_endpoints :list = list(app_conf.get('public_endpoints', list()))
-            self.require_authz :list = list(app_conf.get('require_authz', list()))
-            self.nmap :dict = app_conf.get('nmap', dict())
+            self.queue_wait_timeout: int = main_conf.get('queue_wait_timeout', 5)
+            self.nmap :dict = main_conf.get('nmap', dict())
             self.amass :dict = amass_conf.get('amass', dict())
+            self.public_endpoints :list = list(routes_conf.get('public_endpoints', list()))
+            self.require_authz :list = list(routes_conf.get('require_authz', list()))
 
         except Exception as ex:
             logger.info(config_key)
@@ -164,23 +169,26 @@ class Config:
         return value
 
     def get_app(self)->dict:
-        return {
-            'asset_scheme': self.frontend.get('asset_scheme'),
-            'asset_domain': self.frontend.get('asset_domain'),
-            'asset_url': f"{self.frontend.get('asset_scheme')}{self.frontend.get('asset_domain')}",
-            'site_scheme': self.frontend.get('site_scheme'),
-            'site_domain': self.frontend.get('site_domain'),
-            'site_url': f"{self.frontend.get('site_scheme')}{self.frontend.get('site_domain')}",
-            'app_scheme': self.frontend.get('app_scheme'),
-            'app_domain': self.frontend.get('app_domain'),
-            'app_url': f"{self.frontend.get('app_scheme')}{self.frontend.get('app_domain')}",
-            'api_scheme': self.frontend.get('api_scheme'),
-            'api_domain': self.frontend.get('api_domain'),
-            'api_url': f"{self.frontend.get('api_scheme')}{self.frontend.get('api_domain')}",
-            'socket_scheme': self.frontend.get('socket_scheme'),
-            'socket_domain': self.frontend.get('socket_domain'),
-            'socket_url': f"{self.frontend.get('socket_scheme')}{self.frontend.get('socket_domain')}",
+        default_scheme = 'https://'
+        default_host = 'https://'
+        ret = {
+            'asset_scheme': self.assets.get('scheme', default_scheme),
+            'asset_domain': self.assets.get('host', default_host),
+            'site_scheme': self.website.get('scheme',default_scheme),
+            'site_domain': self.website.get('host', default_host),
+            'app_scheme': self.appserver.get('scheme', default_scheme),
+            'app_domain': self.appserver.get('host', default_host),
+            'api_scheme': self.public_api.get('scheme', default_scheme),
+            'api_domain': self.public_api.get('host', default_host),
+            'socket_scheme': self.push.get('scheme', 'wss://'),
+            'socket_domain': self.push.get('host', default_host),
         }
+        ret['asset_url'] = ret['asset_scheme'] + ret['asset_domain']
+        ret['site_url'] = ret['site_scheme'] + ret['site_domain']
+        ret['app_url'] = ret['site_scheme'] + ret['site_domain']
+        ret['api_url'] = ret['site_scheme'] + ret['site_domain']
+        ret['socket_url'] = ret['site_scheme'] + ret['site_domain']
+        return ret
 
     def _get_from_redis(self, cache_key :str):
         redis_value = None
