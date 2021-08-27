@@ -1,13 +1,14 @@
 from decimal import Decimal, ROUND_DOWN
-from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
+from trivialsec.helpers.elasticsearch_adapter import Elasticsearch_Collection_Adapter, Elasticsearch_Document_Adapter
+
 
 __module__ = 'trivialsec.models.cve'
-__table__ = 'cves'
+__index__ = 'cves'
 __pk__ = 'cve_id'
 
-class CVE(MySQL_Row_Adapter):
+class CVE(Elasticsearch_Document_Adapter):
     def __init__(self, **kwargs):
-        super().__init__(__table__, __pk__)
+        super().__init__(__index__, __pk__)
         self.cve_id = kwargs.get('cve_id')
         self.assigner = kwargs.get('assigner')
         self.title = kwargs.get('title')
@@ -159,6 +160,6 @@ class CVE(MySQL_Row_Adapter):
                 vector.append(f'{req}:{vector_data[req]}')
         return '/'.join(vector)
 
-class CVEs(MySQL_Table_Adapter):
+class CVEs(Elasticsearch_Collection_Adapter):
     def __init__(self):
-        super().__init__('CVE', __table__, __pk__)
+        super().__init__('CVE', __index__, __pk__)
