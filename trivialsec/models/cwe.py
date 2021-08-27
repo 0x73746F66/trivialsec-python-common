@@ -1,4 +1,4 @@
-from trivialsec.helpers.replica_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter, replica_adapter
+from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter, replica_adapter
 from .cve import CVE
 
 

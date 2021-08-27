@@ -19,7 +19,5 @@ stripe>=2.51<2.52
 pysafebrowsing>=0.1.1<1.0
 pyOpenSSL>=19.1.0<20.0
 beautifulsoup4>=4.9.3<5.0
-stackprinter>=0.2.5
 gunicorn>=20.1.0
 setproctitle>=1.2.2
-mohawk>=1.1.0
