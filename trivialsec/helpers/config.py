@@ -63,7 +63,6 @@ class Config:
             self.sendgrid :dict = main_conf.get('sendgrid', dict())
             self.stripe :dict = main_conf.get('stripe', dict())
             self.nameservers :list = list(set(main_conf.get('nameservers', list())))
-            self.external_dsn_provider :str = self.nameservers[0]
             self.queue_wait_timeout: int = main_conf.get('queue_wait_timeout', 5)
             self.nmap :dict = main_conf.get('nmap', dict())
             self.amass :dict = amass_conf.get('amass', dict())
