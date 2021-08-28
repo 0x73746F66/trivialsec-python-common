@@ -73,18 +73,22 @@ class Elasticsearch_Document_Adapter:
         self.__index = index
         self.__pk = pk
         self.__cols = set()
+        self._doc = None
+
+    def get_doc(self) -> bool:
+        return self._doc
 
     def hydrate(self) -> bool:
         primary_key = getattr(self, self.__pk)
         if primary_key is None:
             return False
-        res = self.es.get(index=self.__index, id=primary_key, ignore=404)
-        if res.get('_source', {}).get(self.__pk) != primary_key:
+        self._doc = self.es.get(index=self.__index, id=primary_key, ignore=404)
+        if self._doc.get('_source', {}).get(self.__pk) != primary_key:
             return False
         for col in self.cols():
             if col.startswith('_'):
                 continue
-            setattr(self, col, res['_source'].get(col))
+            setattr(self, col, self._doc['_source'].get(col))
 
         return True
 

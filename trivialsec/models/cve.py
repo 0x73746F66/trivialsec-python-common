@@ -25,7 +25,6 @@ class CVE(Elasticsearch_Document_Adapter):
         self.cwe = kwargs.get('cwe', [])
         self.cpe = kwargs.get('cpe', [])
         self.references = kwargs.get('references', [])
-        self._nvd = kwargs.get('_nvd', {})
 
     def __setattr__(self, name, value):
         if name in ['base_score', 'exploitability_score', 'impact_score']:
