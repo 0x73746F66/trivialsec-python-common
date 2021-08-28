@@ -78,7 +78,7 @@ class Elasticsearch_Document_Adapter:
         primary_key = getattr(self, self.__pk)
         if primary_key is None:
             return False
-        res = self.es.get(index=self.__index, id=primary_key)
+        res = self.es.get(index=self.__index, id=primary_key, ignore=404)
         if res['_source'].get(self.__pk) != primary_key:
             return False
         for col in self.cols():
