@@ -1,4 +1,4 @@
-from trivialsec.helpers.elasticsearch_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
+from trivialsec.helpers.elasticsearch_adapter import Elasticsearch_Document_Adapter, Elasticsearch_Collection_Adapter
 
 
 __module__ = 'trivialsec.models.cwe'
