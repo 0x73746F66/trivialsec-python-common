@@ -3,9 +3,7 @@ from .account_config import *
 from .account import *
 from .activity_log import *
 from .apikey import *
-from .cve_cpe import *
 from .cve_exploit import *
-from .cve_reference import *
 from .cve_remediation import *
 from .cve import *
 from .cwe import *
