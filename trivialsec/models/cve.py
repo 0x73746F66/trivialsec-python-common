@@ -7,9 +7,9 @@ __index__ = 'cves'
 __pk__ = 'cve_id'
 
 class CVE(Elasticsearch_Document_Adapter):
-    cwe :list
-    cpe :list
-    references :list
+    cwe = list()
+    cpe = list()
+    references = list()
 
     def __init__(self, **kwargs):
         super().__init__(__index__, __pk__)
