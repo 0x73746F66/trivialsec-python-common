@@ -1,15 +1,14 @@
-from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter, replica_adapter
-from .cve import CVE
+from trivialsec.helpers.elasticsearch_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 
 __module__ = 'trivialsec.models.cwe'
-__table__ = 'cwes'
+__index__ = 'cwes'
 __pk__ = 'cwe_id'
 
-class CWE(MySQL_Row_Adapter):
+class CWE(Elasticsearch_Document_Adapter):
     cves = []
     def __init__(self, **kwargs):
-        super().__init__(__table__, __pk__)
+        super().__init__(__index__, __pk__)
         self.cwe_id = kwargs.get('cwe_id')
         self.name = kwargs.get('name')
         self.description = kwargs.get('description')
@@ -29,26 +28,6 @@ class CWE(MySQL_Row_Adapter):
             value = bool(value)
         super().__setattr__(name, value)
 
-    def get_cves(self):
-        stmt = "SELECT cve_id FROM cwe_cve WHERE cwe_id = %(cwe_id)s"
-        with replica_adapter as sql:
-            results = sql.query(stmt, {'cwe_id': self.cwe_id})
-            for val in results:
-                if not any(isinstance(x, CVE) and x.cve_id == val['cve_id'] for x in self.cves):
-                    member = CVE(cve_id=val['cve_id'])
-                    if member.hydrate():
-                        self.cves.append(member)
-
-        return self
-
-    def add_cve(self, cve: CVE) -> bool:
-        insert_stmt = "INSERT INTO cwe_cve (cwe_id, cve_id) VALUES (%(cwe_id)s, %(cve_id)s) ON DUPLICATE KEY UPDATE cve_id=cve_id;"
-        with replica_adapter as sql:
-            new_id = sql.query(insert_stmt, {'cve_id': cve.cve_id, 'cwe_id': self.cwe_id})
-            if new_id:
-                self.cves.append(cve)
-                return True
-
-class CWEs(MySQL_Table_Adapter):
+class CWEs(Elasticsearch_Collection_Adapter):
     def __init__(self):
-        super().__init__('CVE', __table__, __pk__)
+        super().__init__('CWE', __index__, __pk__)
