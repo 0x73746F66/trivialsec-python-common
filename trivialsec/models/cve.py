@@ -7,10 +7,6 @@ __index__ = 'cves'
 __pk__ = 'cve_id'
 
 class CVE(Elasticsearch_Document_Adapter):
-    cwe = list()
-    cpe = list()
-    references = list()
-
     def __init__(self, **kwargs):
         super().__init__(__index__, __pk__)
         self.cve_id = kwargs.get('cve_id')
@@ -26,6 +22,9 @@ class CVE(Elasticsearch_Document_Adapter):
         self.reported_at = kwargs.get('reported_at')
         self.published_at = kwargs.get('published_at')
         self.last_modified = kwargs.get('created_at')
+        self.cwe = kwargs.get('cwe', [])
+        self.cpe = kwargs.get('cpe', [])
+        self.references = kwargs.get('references', [])
 
     def __setattr__(self, name, value):
         if name in ['base_score', 'exploitability_score', 'impact_score']:
