@@ -79,7 +79,7 @@ class Elasticsearch_Document_Adapter:
         if primary_key is None:
             return False
         res = self.es.get(index=self.__index, id=primary_key, ignore=404)
-        if res['_source'].get(self.__pk) != primary_key:
+        if res.get('_source', {}).get(self.__pk) != primary_key:
             return False
         for col in self.cols():
             if col.startswith('_'):
