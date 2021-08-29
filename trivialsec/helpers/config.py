@@ -2,6 +2,7 @@ from os import getenv
 import sys
 import logging
 import subprocess
+from pprint import pprint
 from io import StringIO
 from datetime import timedelta
 import yaml
@@ -10,11 +11,9 @@ import redis
 from dotenv import dotenv_values
 from botocore.exceptions import ClientError, ConnectionClosedError, ReadTimeoutError, ConnectTimeoutError, CapacityNotAvailableError
 from retry.api import retry
-from gunicorn.glogging import logging
 
 
 __module__ = 'trivialsec.helpers.config'
-logger = logging.getLogger(__name__)
 dotenv = dotenv_values(".env")
 
 class Config:
@@ -38,7 +37,7 @@ class Config:
 
     def configure(self):
         config_key = f'/{self.app_env}/Deploy/{self.app_name}/app_config'
-        logger.info(config_key)
+        print(config_key)
         try:
             main_raw :str = self.ssm_secret(config_key, skip_cache=True)
             main_conf :dict = yaml.safe_load(StringIO(main_raw))
@@ -81,8 +80,7 @@ class Config:
             self.require_authz :list = list(routes_conf.get('require_authz', list()))
 
         except Exception as ex:
-            logger.info(config_key)
-            logger.exception(ex)
+            pprint(ex)
             sys.exit(1)
 
     @property
