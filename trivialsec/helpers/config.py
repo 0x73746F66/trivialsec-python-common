@@ -38,6 +38,7 @@ class Config:
 
     def configure(self):
         config_key = f'/{self.app_env}/Deploy/{self.app_name}/app_config'
+        logger.info(config_key)
         try:
             main_raw :str = self.ssm_secret(config_key, skip_cache=True)
             main_conf :dict = yaml.safe_load(StringIO(main_raw))
