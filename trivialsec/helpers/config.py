@@ -2,7 +2,7 @@ from os import getenv
 import sys
 import logging
 import subprocess
-from pprint import pprint
+from pprint import pprint # logger is not configured yet, just print
 from io import StringIO
 from datetime import timedelta
 import yaml
@@ -19,6 +19,7 @@ dotenv = dotenv_values(".env")
 class Config:
     redis_client = None
     user_agent :str = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0 Safari/605.1.15'
+    boto3_session = boto3.session.Session()
 
     def __init__(self):
         self.app_env = dotenv.get('APP_ENV')
@@ -33,6 +34,22 @@ class Config:
         self._log_level = dotenv.get('LOG_LEVEL')
         if self._log_level is None:
             self._log_level = getenv('LOG_LEVEL', 'WARNING')
+        aws_access_key_id = dotenv.get('AWS_ACCESS_KEY_ID')
+        if aws_access_key_id is None:
+            aws_access_key_id = getenv('AWS_ACCESS_KEY_ID')
+        aws_secret_access_key = dotenv.get('AWS_SECRET_ACCESS_KEY')
+        if aws_secret_access_key is None:
+            aws_secret_access_key = getenv('AWS_SECRET_ACCESS_KEY')
+        aws_session_token = dotenv.get('AWS_SESSION_TOKEN')
+        if aws_session_token is None:
+            aws_session_token = getenv('AWS_SESSION_TOKEN')
+        self.ssm_client = self.boto3_session.client(
+            service_name='ssm',
+            region_name=self.aws_default_region,
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            aws_session_token=aws_session_token,
+        )
         self.configure()
 
     def configure(self):
@@ -149,11 +166,6 @@ class Config:
             redis_value = self._get_from_redis(parameter)
             if redis_value is not None:
                 return redis_value
-        session = boto3.session.Session()
-        client = session.client(
-            service_name='ssm',
-            region_name=self.aws_default_region,
-        )
         response = None
         value = default
         try:
