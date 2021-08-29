@@ -7,6 +7,7 @@ from datetime import timedelta
 import yaml
 import boto3
 import redis
+from dotenv import load_dotenv
 from botocore.exceptions import ClientError, ConnectionClosedError, ReadTimeoutError, ConnectTimeoutError, CapacityNotAvailableError
 from retry.api import retry
 from gunicorn.glogging import logging
@@ -14,6 +15,7 @@ from gunicorn.glogging import logging
 
 __module__ = 'trivialsec.helpers.config'
 logger = logging.getLogger(__name__)
+load_dotenv()
 
 class Config:
     redis_client = None
