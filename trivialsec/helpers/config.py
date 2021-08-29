@@ -7,7 +7,7 @@ from datetime import timedelta
 import yaml
 import boto3
 import redis
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 from botocore.exceptions import ClientError, ConnectionClosedError, ReadTimeoutError, ConnectTimeoutError, CapacityNotAvailableError
 from retry.api import retry
 from gunicorn.glogging import logging
@@ -15,16 +15,25 @@ from gunicorn.glogging import logging
 
 __module__ = 'trivialsec.helpers.config'
 logger = logging.getLogger(__name__)
-load_dotenv()
+dotenv = dotenv_values(".env")
 
 class Config:
     redis_client = None
     user_agent :str = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0 Safari/605.1.15'
-    app_env :str = getenv('APP_ENV', 'Dev')
-    app_name :str = getenv('APP_NAME', 'trivialsec')
-    aws_default_region :str = getenv('AWS_REGION', 'ap-southeast-2')
 
     def __init__(self):
+        self.app_env = dotenv.get('APP_ENV')
+        if self.app_env is None:
+            self.app_env = getenv('APP_ENV', 'Dev')
+        self.app_name = dotenv.get('APP_NAME')
+        if self.app_name is None:
+            self.app_name = getenv('APP_NAME', 'trivialsec')
+        self.aws_default_region = dotenv.get('AWS_REGION')
+        if self.aws_default_region is None:
+            self.aws_default_region = getenv('AWS_REGION', 'ap-southeast-2')
+        self._log_level = dotenv.get('LOG_LEVEL')
+        if self._log_level is None:
+            self._log_level = getenv('LOG_LEVEL', 'WARNING')
         self.configure()
 
     def configure(self):
@@ -40,8 +49,7 @@ class Config:
             self.redis :dict = main_conf.get('redis', dict())
             self.redis_client :redis.Redis = redis.Redis(host=self.redis.get('host'), ssl=bool(self.redis.get('ssl')))
 
-            app_log_level = getenv('LOG_LEVEL', default='WARNING')
-            self.log_level: int = app_log_level if isinstance(app_log_level, int) else logging._nameToLevel.get(app_log_level) # pylint: disable=protected-access
+            self.log_level: int = self._log_level if isinstance(self._log_level, int) else logging._nameToLevel.get(self._log_level) # pylint: disable=protected-access
             proc = subprocess.run('cat /etc/hostname', shell=True, capture_output=True, check=True)
             node_id :str = proc.stdout.decode('utf-8').strip()
             err = proc.stderr.decode('utf-8')
