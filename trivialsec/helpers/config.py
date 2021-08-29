@@ -169,7 +169,7 @@ class Config:
         response = None
         value = default
         try:
-            response = client.get_parameter(
+            response = self.ssm_client.get_parameter(
                 Name=parameter, **kwargs
             )
         except ClientError as err:
