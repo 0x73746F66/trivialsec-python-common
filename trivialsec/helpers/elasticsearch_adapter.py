@@ -12,7 +12,6 @@ class Elasticsearch_Collection_Adapter:
     es = Elasticsearch(f"{config.elasticsearch.get('scheme')}{config.elasticsearch.get('host')}:{config.elasticsearch.get('port')}")
 
     def __init__(self, class_name, index, primary_key):
-        self.es.indices.create(index=index, ignore=400)
         self.__class_name = class_name
         self.__index = index
         self.__pk = primary_key
@@ -69,7 +68,6 @@ class Elasticsearch_Document_Adapter:
     es = Elasticsearch(f"{config.elasticsearch.get('scheme')}{config.elasticsearch.get('host')}:{config.elasticsearch.get('port')}")
 
     def __init__(self, index, pk):
-        self.es.indices.create(index=index, ignore=400)
         self.__index = index
         self.__pk = pk
         self.__cols = set()
