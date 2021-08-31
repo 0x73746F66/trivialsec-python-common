@@ -9,7 +9,12 @@ __module__ = 'trivialsec.helpers.elasticsearch_adapter'
 __models_module__ = importlib.import_module('trivialsec.models')
 
 class Elasticsearch_Collection_Adapter:
-    es = Elasticsearch(f"{config.elasticsearch.get('scheme')}{config.elasticsearch.get('host')}:{config.elasticsearch.get('port')}")
+    es = Elasticsearch(
+        config.elasticsearch.get('hosts'),
+        http_auth=(config.elasticsearch.get('user'), config.elasticsearch_password),
+        scheme=config.elasticsearch.get('scheme'),
+        port=config.elasticsearch.get('port'),
+    )
 
     def __init__(self, class_name, index, primary_key):
         self.__class_name = class_name
@@ -65,7 +70,12 @@ class Elasticsearch_Collection_Adapter:
 
 class Elasticsearch_Document_Adapter:
     __hash__ = object.__hash__
-    es = Elasticsearch(f"{config.elasticsearch.get('scheme')}{config.elasticsearch.get('host')}:{config.elasticsearch.get('port')}")
+    es = Elasticsearch(
+        config.elasticsearch.get('hosts'),
+        http_auth=(config.elasticsearch.get('user'), config.elasticsearch_password),
+        scheme=config.elasticsearch.get('scheme'),
+        port=config.elasticsearch.get('port'),
+    )
 
     def __init__(self, index, pk):
         self.__index = index
