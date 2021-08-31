@@ -100,6 +100,10 @@ class Config:
             sys.exit(1)
 
     @property
+    def elasticsearch_password(self):
+        return self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/elasticsearch_password', WithDecryption=True)
+
+    @property
     def mysql_main_password(self):
         return self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/mysql_main_password', WithDecryption=True)
 
