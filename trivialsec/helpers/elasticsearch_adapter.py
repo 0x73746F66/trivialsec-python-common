@@ -96,7 +96,7 @@ class Elasticsearch_Document_Adapter:
         for col in self.cols():
             if col.startswith('_'):
                 continue
-            setattr(self, col, self._doc['_source'].get(col))
+            self.__setattr__(col, self._doc['_source'].get(col))
 
         return True
 
