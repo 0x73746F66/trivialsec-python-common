@@ -207,9 +207,9 @@ class Config:
         }
         ret['asset_url'] = ret['asset_scheme'] + ret['asset_domain']
         ret['site_url'] = ret['site_scheme'] + ret['site_domain']
-        ret['app_url'] = ret['site_scheme'] + ret['site_domain']
-        ret['api_url'] = ret['site_scheme'] + ret['site_domain']
-        ret['socket_url'] = ret['site_scheme'] + ret['site_domain']
+        ret['app_url'] = ret['app_scheme'] + ret['app_domain']
+        ret['api_url'] = ret['api_scheme'] + ret['api_domain']
+        ret['socket_url'] = ret['socket_scheme'] + ret['socket_domain']
         return ret
 
     def _get_from_redis(self, cache_key :str):
