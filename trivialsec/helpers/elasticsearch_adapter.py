@@ -152,7 +152,8 @@ class Elasticsearch_Document_Adapter:
             del doc['_Elasticsearch_Document_Adapter__pk']
         if isinstance(extra, dict):
             doc = {**doc, **extra}
-        res = self.es.index(index=self.__index, id=doc[self.__pk], body=doc)
+        doc_id = None if self.__pk is None else self.__pk
+        res = self.es.index(index=self.__index, id=doc_id, body=doc)
         if res['_shards']['successful'] >= 1:
             return True
         return False
@@ -161,9 +162,9 @@ class Elasticsearch_Document_Adapter:
         self.__cols = list(vars(self).keys())
         return self.__cols
 
-    def delete(self) -> bool:
-        primary_key = getattr(self, self.__pk)
-        if primary_key is None:
+    def delete(self, doc_id = None) -> bool:
+        doc_id = doc_id if self.__pk is None else getattr(self, self.__pk)
+        if doc_id is None:
             return False
-        res = self.es.delete(index=self.__index, id=primary_key, refresh=True) # pylint: disable=unexpected-keyword-arg
+        res = self.es.delete(index=self.__index, id=doc_id, refresh=True) # pylint: disable=unexpected-keyword-arg
         return res.get('result') == "deleted"
