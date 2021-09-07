@@ -2,7 +2,7 @@ import importlib
 from gunicorn.glogging import logging
 from elasticsearch import Elasticsearch
 from .config import config
-
+from pprint import pprint
 
 logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.helpers.elasticsearch_adapter'
@@ -33,7 +33,7 @@ class Elasticsearch_Collection_Adapter:
         self.__index = 0
 
     def search(self, query_string :str):
-        res = self.es.search(index=self.__index, query={"query_string": {"query": query_string}})
+        res = self.es.search(index=self.__index, query={"query_string": {"query": query_string}}) # pylint: disable=unexpected-keyword-arg
         logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
         class_ = getattr(__models_module__, self.__class_name)
         for hit in res['hits']['hits']:
@@ -47,7 +47,7 @@ class Elasticsearch_Collection_Adapter:
 
     def count(self, query_string :str) -> int:
         # query_string 'assigner:"Unknown" AND cve_id:"CVE-2021-39279"'
-        res = self.es.search(index=self.__index, query={"query_string": {"query": query_string}})
+        res = self.es.search(index=self.__index, query={"query_string": {"query": query_string}}) # pylint: disable=unexpected-keyword-arg
         logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
         return len(res['hits']['hits'])
 
@@ -79,6 +79,8 @@ class Elasticsearch_Collection_Adapter:
 
 class Elasticsearch_Document_Adapter:
     __hash__ = object.__hash__
+    _id :str
+    _doc = None
     es = Elasticsearch(
         config.elasticsearch.get('hosts'),
         http_auth=(config.elasticsearch.get('user'), config.elasticsearch_password),
@@ -90,10 +92,9 @@ class Elasticsearch_Document_Adapter:
         self.__index = index
         self.__pk = primary_key
         self.__cols = set()
-        self._doc = None
 
     def get_doc(self) -> bool:
-        return self._doc
+        return self._doc.get('_source') if isinstance(self._doc, dict) else None
 
     def hydrate(self, query_string :str = None) -> bool:
         self._doc = None
@@ -101,23 +102,24 @@ class Elasticsearch_Document_Adapter:
             primary_key = getattr(self, self.__pk)
             if primary_key is None:
                 return False
-            self._doc = self.es.get(index=self.__index, id=primary_key, ignore=404)
+            self._doc = self.es.get(index=self.__index, id=primary_key, ignore=404) # pylint: disable=unexpected-keyword-arg
             if self._doc['found'] is False:
                 return False
 
         if query_string is not None:
-            res = self.es.search(index=self.__index, query={"query_string": {"query": query_string}})
+            res = self.es.search(index=self.__index, query={"query_string": {"query": query_string}}) # pylint: disable=unexpected-keyword-arg
             logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
             if len(res['hits']['hits']) == 1:
                 self._doc = res['hits']['hits'][0]
 
-        if self._doc is None:
+        if not isinstance(self._doc, dict):
             return False
 
+        self._id = self._doc.get('_id')
         for col in self.cols():
             if col.startswith('_'):
                 continue
-            setattr(self, col, self._doc['_source'].get(col))
+            setattr(self, col, self._doc.get('_source', {}).get(col))
 
         return True
 
@@ -127,16 +129,25 @@ class Elasticsearch_Document_Adapter:
             primary_key = getattr(self, self.__pk)
             if primary_key is None:
                 return False
-            res = self.es.exists(index=self.__index, id=primary_key)
-            return res.get('found', False)
-        res = self.es.search(index=self.__index, query={"query_string": {"query": query_string}})
+            res = self.es.exists(index=self.__index, id=primary_key, _source=True) # pylint: disable=unexpected-keyword-arg
+            if res['found'] is True:
+                self._doc = res
+                self._id = res.get('_id')
+                return True
+        res = self.es.search(index=self.__index, query={"query_string": {"query": query_string}}) # pylint: disable=unexpected-keyword-arg
         logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
-        return len(res['hits']['hits']) >= 1
+        if len(res['hits']['hits']) == 1:
+            self._doc = res['hits']['hits'][0]
+            self._id = self._doc['_id']
+            return True
+        return False
 
     def persist(self, extra :dict = None) -> bool:
         doc = vars(self)
         del doc['_Elasticsearch_Document_Adapter__cols']
-        del doc['_doc']
+        pprint(doc)
+        exit(0)
+
         if isinstance(extra, dict):
             doc = {**doc, **extra}
         res = self.es.index(index=self.__index, id=doc[self.__pk], body=doc)
@@ -152,5 +163,5 @@ class Elasticsearch_Document_Adapter:
         primary_key = getattr(self, self.__pk)
         if primary_key is None:
             return False
-        res = self.es.delete(index=self.__index, id=primary_key, refresh=True)
+        res = self.es.delete(index=self.__index, id=primary_key, refresh=True) # pylint: disable=unexpected-keyword-arg
         return res.get('result') == "deleted"

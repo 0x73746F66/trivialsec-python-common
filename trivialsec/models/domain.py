@@ -1,8 +1,4 @@
-import json
-import socket
-from ssl import create_default_context, _create_unverified_context, SSLCertVerificationError, Purpose
 from datetime import datetime
-from OpenSSL.crypto import X509, X509Name
 from gunicorn.glogging import logging
 from trivialsec.helpers.elasticsearch_adapter import Elasticsearch_Document_Adapter, Elasticsearch_Collection_Adapter
 from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
@@ -20,6 +16,7 @@ class Domain(Elasticsearch_Document_Adapter):
         self.domain_name = kwargs.get('domain_name')
         self.apex = kwargs.get('apex')
         self.tld = kwargs.get('tld')
+        self.source = kwargs.get('source')
         self.asn = kwargs.get('asn')
         self.dns_registered = bool(kwargs.get('dns_registered'))
         self.screenshot = bool(kwargs.get('screenshot'))

@@ -1,14 +1,15 @@
-from os import path
-from socket import socket, gethostbyname, error as SocketError, getaddrinfo, AF_INET6, AF_INET, SOCK_STREAM
-from base64 import urlsafe_b64encode
-from urllib.parse import urlparse, urlencode, parse_qs
-from ssl import CertificateError
 import ipaddress
 import re
 import errno
 import json
+from os import path
+from socket import socket, gethostbyname, error as SocketError, getaddrinfo, AF_INET6, AF_INET, SOCK_STREAM
+from base64 import urlsafe_b64encode
+from urllib.parse import urlparse, urlencode, parse_qs
+from OpenSSL.crypto import load_certificate, X509, X509Name, TYPE_RSA, FILETYPE_ASN1
+from ssl import create_default_context, _create_unverified_context, SSLCertVerificationError, Purpose, CertificateError
+from datetime import datetime
 import requests
-import OpenSSL
 from bs4 import BeautifulSoup as bs
 from dns import resolver, rdtypes
 from dns.exception import DNSException
@@ -183,24 +184,43 @@ class Metadata:
     server_key_size = None
     sha1_fingerprint = None
     pubkey_type = None
-    headers = []
+    certificate_is_self_signed = None
+    certificate_verify_message = None
+    certificate_serial_number = None
+    certificate_issuer = None
+    certificate_issuer_country = None
+    certificate_not_before = None
+    certificate_not_after = None
+    certificate_issued_desc = None
+    certificate_expiry_desc = None
+    headers = {}
+    application_banner = None
+    server_banner = None
+    application_proxy = None
     cookies = None
     elapsed_duration = 0
     code = None
     reason = None
-    redirect = None
+    redirect_location = None
     host = None
     port = None
     url = None
     method = None
-    registered = None
+    dns_registered = None
     verification_hash = None
     dns_answer = None
     safe_browsing = {}
+    safe_browsing_status = None
     phishtank = {}
+    phishtank_status = None
     honey_score = None
     threat_score = None
     threat_type = None
+    html_last_checked = None
+    html_size = None
+    javascript = []
+    html_title = None
+    programs = []
 
     def __init__(self, url :str, method :str = 'head'):
         target_url = url.replace(":80/", "/").replace(":443/", "/")
@@ -209,7 +229,7 @@ class Metadata:
         parsed_uri = urlparse(self.url)
         self.host = parsed_uri.netloc
 
-    @retry((ValueError), tries=5, delay=1.5, backoff=3)
+    @retry(ValueError, tries=5, delay=1.5, backoff=3)
     def _connection_inspector(self, host, port, conn):
         self.host = host
         self.port = port
@@ -218,11 +238,11 @@ class Metadata:
             self._json_certificate = json.dumps(conn.sock.getpeercert(), default=str)
             self.negotiated_cipher, protocol, _ = conn.sock.cipher()
             self.protocol_version = conn.sock.version() or protocol
-            self.server_certificate = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_ASN1, der)
+            self.server_certificate = load_certificate(FILETYPE_ASN1, der)
             self.signature_algorithm = self.server_certificate.get_signature_algorithm().decode('ascii')
             self.sha1_fingerprint = self.server_certificate.digest('sha1').decode('ascii')
             public_key = self.server_certificate.get_pubkey()
-            self.pubkey_type = 'RSA' if public_key.type() == OpenSSL.crypto.TYPE_RSA else 'DSA'
+            self.pubkey_type = 'RSA' if public_key.type() == TYPE_RSA else 'DSA'
             self.server_key_size = public_key.bits()
 
         except CertificateError:
@@ -284,7 +304,30 @@ class Metadata:
             self.reason = resp.reason or status
 
             for header, directive in resp.headers.items():
-                self.headers[header.lower()] = directive
+                header_name = header.lower()
+                self.headers[header_name] = directive
+                program_name, program_version = extract_server_version(directive)
+                if header_name == 'x-powered-by':
+                    self.application_banner = directive
+                    self.programs.append({
+                        'name': program_name,
+                        'version': program_version,
+                        'category': 'application-server',
+                    })
+                if header_name == 'server':
+                    self.server_banner = directive
+                    self.programs.append({
+                        'name': program_name,
+                        'version': program_version,
+                        'category': 'web-server',
+                    })
+                if header_name == 'via':
+                    self.application_proxy = directive
+                    self.programs.append({
+                        'name': program_name,
+                        'version': program_version,
+                        'category': 'proxy-cache',
+                    })
 
             if not str(self.code).startswith('2'):
                 if self.code == 403:
@@ -292,7 +335,7 @@ class Metadata:
                     self.code = 403
                     self.reason = 'Forbidden'
                 elif self.code in [301, 302]:
-                    self.redirect = self.headers.get('location')
+                    self.redirect_location = self.headers.get('location')
                 elif self.code == 404:
                     logger.warning(f"Not Found {self.url}")
                     self.code = 404
@@ -330,9 +373,42 @@ class Metadata:
             self.code = 503
             self.reason = HTTP_503
 
+        if isinstance(self.server_certificate, X509) and self._json_certificate == '{}':
+            self._json_certificate = ''
+            try:
+                ctx0 = _create_unverified_context(check_hostname=False, purpose=Purpose.CLIENT_AUTH) # nosemgrep NOSONAR get the cert regardless of validation
+                with ctx0.wrap_socket(socket(), server_hostname=self.host) as sock:
+                    sock.connect((self.host, 443))
+                    cert = sock.getpeercert()
+                    self._json_certificate = json.dumps(cert, default=str)
+            except SSLCertVerificationError as err:
+                logger.warning(err)
+
+        try:
+            ctx1 = create_default_context(purpose=Purpose.CLIENT_AUTH)
+            with ctx1.wrap_socket(socket(), server_hostname=self.host) as sock:
+                sock.connect((self.host, 443))
+
+        except SSLCertVerificationError as err:
+            if 'self signed certificate' in err.verify_message:
+                self.certificate_is_self_signed = True
+            self.certificate_verify_message = str(err)
+
+        if isinstance(self.server_certificate, X509):
+            self.certificate_serial_number = self.server_certificate.get_serial_number()
+            issuer: X509Name = self.server_certificate.get_issuer()
+            self.certificate_issuer = issuer.commonName
+            self.certificate_issuer_country = issuer.countryName
+            not_before = datetime.strptime(self.server_certificate.get_notBefore().decode('ascii'), X509_DATE_FMT)
+            not_after = datetime.strptime(self.server_certificate.get_notAfter().decode('ascii'), X509_DATE_FMT)
+            self.certificate_not_before = not_before.isoformat()
+            self.certificate_not_after = not_after.isoformat()
+            self.certificate_issued_desc = f'{(datetime.utcnow() - not_before).days} days ago'
+            self.certificate_expiry_desc = f'Expired {(datetime.utcnow() - not_after).days} days ago' if not_after < datetime.utcnow() else f'Valid for {(not_after - datetime.utcnow()).days} days'
+
         return self
 
-    def get_site_content(self):
+    def website_content(self):
         if self._content:
             return self._content
 
@@ -352,23 +428,28 @@ class Metadata:
         except Exception as ex:
             logger.warning(ex)
 
-        return self._content
+        if self._content:
+            self.html_size = len(self._content)
+            self.get_site_title()
+            self.get_scripts()
+        self.html_last_checked = datetime.utcnow().replace(microsecond=0).isoformat()
 
     def get_scripts(self) -> list:
         if self._content is None:
-            return []
+            return self.javascript
         soup = bs(self._content, 'html.parser')
-        return [item['src'] for item in soup.select('script[src]')]
+        self.javascript = [item['src'] for item in soup.select('script[src]')]
+        return self.javascript
 
-    def get_site_title(self) -> str:
+    def get_site_title(self):
         if self._content is None:
-            return ''
+            return self.html_title
         soup = bs(self._content, 'html.parser')
         title = soup.find('title')
         if title and isinstance(title.string, str):
-            return title.string.strip()
+            self.html_title = title.string.strip()
 
-        return None
+        return self.html_title
 
     def honeyscore_check(self):
         proxies = None
@@ -411,6 +492,10 @@ class Metadata:
         except Exception as err:
             logger.error(err)
 
+        self.safe_browsing_status = 'Safe'
+        if self.safe_browsing:
+            self.safe_browsing_status = f'{self.safe_browsing.get("platform_type")} {self.safe_browsing.get("threat_type")}'.lower()
+
         return self
 
     def phishtank_check(self):
@@ -439,6 +524,13 @@ class Metadata:
 
         except Exception as err:
             logger.error(err)
+
+        self.phishtank_status = 'Unclassified'
+        if self.phishtank:
+            if self.phishtank.get('in_database'):
+                self.phishtank_status = 'Reported Phish'
+            elif self.phishtank.get('verified'):
+                self.phishtank_status = 'Verified Phish'
 
         return self
 
@@ -505,9 +597,7 @@ class Metadata:
         if self.verification_hash is False:
             registered = False
             self.verification_hash = None
-
-        self.registered = registered
-
+        self.dns_registered = registered
         return self
 
     @staticmethod
