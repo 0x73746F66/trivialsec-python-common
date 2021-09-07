@@ -4,6 +4,7 @@ from base64 import urlsafe_b64encode
 from urllib.parse import urlparse, urlencode, parse_qs
 from ssl import CertificateError
 import ipaddress
+import re
 import errno
 import json
 import requests
@@ -27,6 +28,13 @@ from . import is_valid_ipv4_address
 
 logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.helpers.transport'
+HTTP_503 = 'Service Unavailable'
+HTTP_504 = 'Gateway Timeout'
+HTTP_598 = 'Network read timeout error'
+HTTP_599 = 'Network connect timeout error'
+TLS_ERROR = 'TLS handshake failure'
+SSL_DATE_FMT = r'%b %d %H:%M:%S %Y %Z'
+X509_DATE_FMT = r'%Y%m%d%H%M%SZ'
 
 class InspectedHTTPSConnectionPool(HTTPSConnectionPool):
     @property
@@ -77,7 +85,6 @@ class TLSInspectorAdapter(HTTPAdapter):
 class SafeBrowsingInvalidApiKey(Exception):
     def __init__(self):
         Exception.__init__(self, "Invalid API key for Google Safe Browsing")
-
 
 class SafeBrowsingWeirdError(Exception):
     def __init__(self, code, status, message, details):
@@ -169,14 +176,6 @@ class SafeBrowsing:
 class Metadata:
     _json_certificate = None
     _content = None
-
-    HTTP_503 = 'Service Unavailable'
-    HTTP_504 = 'Gateway Timeout'
-    HTTP_598 = 'Network read timeout error'
-    HTTP_599 = 'Network connect timeout error'
-    TLS_ERROR = 'TLS handshake failure'
-    SSL_DATE_FMT = r'%b %d %H:%M:%S %Y %Z'
-    X509_DATE_FMT = r'%Y%m%d%H%M%SZ'
     signature_algorithm = None
     negotiated_cipher = None
     protocol_version = None
@@ -184,7 +183,7 @@ class Metadata:
     server_key_size = None
     sha1_fingerprint = None
     pubkey_type = None
-    headers = {}
+    headers = []
     cookies = None
     elapsed_duration = 0
     code = None
@@ -202,40 +201,6 @@ class Metadata:
     honey_score = None
     threat_score = None
     threat_type = None
-
-    @property
-    def metadata(self):
-        return {
-            'signature_algorithm': self.signature_algorithm,
-            'negotiated_cipher': self.negotiated_cipher,
-            'protocol_version': self.protocol_version,
-            'server_certificate': json.loads(self._json_certificate),
-            'server_key_size': self.server_key_size,
-            'sha1_fingerprint': self.sha1_fingerprint,
-            'pubkey_type': self.pubkey_type,
-            'headers': self.headers,
-            'cookies': self.cookies,
-            'elapsed_duration': str(self.elapsed_duration),
-            'code': self.code,
-            'reason': self.reason,
-            'redirect': self.redirect,
-            'host': self.host,
-            'port': self.port,
-            'url': self.url,
-            'method': self.method,
-            'registered': self.registered,
-            'verification_hash': self.verification_hash,
-            'dns_answer': self.dns_answer,
-            'safe_browsing': self.safe_browsing,
-            'phishtank': self.phishtank,
-            'honey_score': self.honey_score,
-        }
-
-    def __str__(self):
-        return str(self.metadata)
-
-    def __repr__(self):
-        return str(self.metadata)
 
     def __init__(self, url :str, method :str = 'head'):
         target_url = url.replace(":80/", "/").replace(":443/", "/")
@@ -262,28 +227,28 @@ class Metadata:
 
         except CertificateError:
             self.code = 500
-            self.reason = self.TLS_ERROR
+            self.reason = TLS_ERROR
         except MaxRetryError:
             self.code = 503
-            self.reason = self.HTTP_503
+            self.reason = HTTP_503
         except SSLError:
             self.code = 500
-            self.reason = self.TLS_ERROR
+            self.reason = TLS_ERROR
         except ConnectionResetError:
             self.code = 503
-            self.reason = self.HTTP_503
+            self.reason = HTTP_503
         except NewConnectionError:
             self.code = 503
-            self.reason = self.HTTP_503
+            self.reason = HTTP_503
         except ConnectionError:
             self.code = 503
-            self.reason = self.HTTP_503
+            self.reason = HTTP_503
         except ConnectTimeoutError:
             self.code = 598
-            self.reason = self.HTTP_598
+            self.reason = HTTP_598
         except SocketError:
             self.code = 503
-            self.reason = self.HTTP_503
+            self.reason = HTTP_503
 
     def head(self, verify_tls :bool = False, allow_redirects :bool = False):
         self.method = 'head'
@@ -339,31 +304,31 @@ class Metadata:
 
         except ReadTimeout:
             self.code = 504
-            self.reason = self.HTTP_504
+            self.reason = HTTP_504
         except MaxRetryError:
             self.code = 503
-            self.reason = self.HTTP_503
+            self.reason = HTTP_503
         except SSLError:
             self.code = 500
-            self.reason = self.TLS_ERROR
+            self.reason = TLS_ERROR
         except ConnectTimeout:
             self.code = 599
-            self.reason = self.HTTP_599
+            self.reason = HTTP_599
         except ConnectionResetError:
             self.code = 503
-            self.reason = self.HTTP_503
+            self.reason = HTTP_503
         except NewConnectionError:
             self.code = 503
-            self.reason = self.HTTP_503
+            self.reason = HTTP_503
         except ConnectionError:
             self.code = 503
-            self.reason = self.HTTP_503
+            self.reason = HTTP_503
         except ConnectTimeoutError:
             self.code = 598
-            self.reason = self.HTTP_598
+            self.reason = HTTP_598
         except SocketError:
             self.code = 503
-            self.reason = self.HTTP_503
+            self.reason = HTTP_503
 
         return self
 
@@ -642,7 +607,7 @@ def http_status(url :str):
         titles = _codes[code]
         status, *_ = titles
     except ReadTimeout:
-        return 504, Metadata.HTTP_504
+        return 504, HTTP_504
 
     return code, status
 
