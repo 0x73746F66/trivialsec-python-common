@@ -143,16 +143,11 @@ class Elasticsearch_Document_Adapter:
         return False
 
     def persist(self, extra :dict = None) -> bool:
+        doc_id = None if self.__pk is None else self.__pk
         doc = vars(self)
-        if '_Elasticsearch_Document_Adapter__cols' in doc:
-            del doc['_Elasticsearch_Document_Adapter__cols']
-        if '_Elasticsearch_Document_Adapter__index' in doc:
-            del doc['_Elasticsearch_Document_Adapter__index']
-        if '_Elasticsearch_Document_Adapter__pk' in doc:
-            del doc['_Elasticsearch_Document_Adapter__pk']
+        del doc['_Elasticsearch_Document_Adapter__cols']
         if isinstance(extra, dict):
             doc = {**doc, **extra}
-        doc_id = None if self.__pk is None else self.__pk
         res = self.es.index(index=self.__index, id=doc_id, body=doc)
         if res['_shards']['successful'] >= 1:
             self._doc = {'_source': doc}
