@@ -16,7 +16,7 @@ class Elasticsearch_Collection_Adapter:
         port=config.elasticsearch.get('port'),
     )
 
-    def __init__(self, class_name, index, primary_key):
+    def __init__(self, class_name, index, primary_key = None):
         self.__class_name = class_name
         self.__index = index
         self.__pk = primary_key
@@ -32,15 +32,24 @@ class Elasticsearch_Collection_Adapter:
             self.__items.append(model)
         self.__index = 0
 
-    def search(self, search_filter):
-        # res = es.search(index="test-index", query={"match_all": {}})
-        # print("Got %d Hits:" % res['hits']['total']['value'])
-        # for hit in res['hits']['hits']:
-        #     print("%(timestamp)s %(author)s: %(text)s" % hit["_source"])
+    def search(self, query_string :str):
+        res = self.es.search(index=self.__index, query={"query_string": {"query": query_string}})
+        logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
+        class_ = getattr(__models_module__, self.__class_name)
+        for hit in res['hits']['hits']:
+            model = class_()
+            for col, val in hit['_source'].items():
+                setattr(model, col, val)
+            self.__items.append(model)
+
+        self.__index = 0
         return self
 
-    def count(self, search_filter) -> int:
-        return 0
+    def count(self, query_string :str) -> int:
+        # query_string 'assigner:"Unknown" AND cve_id:"CVE-2021-39279"'
+        res = self.es.search(index=self.__index, query={"query_string": {"query": query_string}})
+        logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
+        return len(res['hits']['hits'])
 
     def set_items(self, items :list):
         self.__items = items
@@ -77,22 +86,34 @@ class Elasticsearch_Document_Adapter:
         port=config.elasticsearch.get('port'),
     )
 
-    def __init__(self, index, pk):
+    def __init__(self, index, primary_key = None):
         self.__index = index
-        self.__pk = pk
+        self.__pk = primary_key
         self.__cols = set()
         self._doc = None
 
     def get_doc(self) -> bool:
         return self._doc
 
-    def hydrate(self) -> bool:
-        primary_key = getattr(self, self.__pk)
-        if primary_key is None:
+    def hydrate(self, query_string :str = None) -> bool:
+        self._doc = None
+        if self.__pk is not None and query_string is None:
+            primary_key = getattr(self, self.__pk)
+            if primary_key is None:
+                return False
+            self._doc = self.es.get(index=self.__index, id=primary_key, ignore=404)
+            if self._doc['found'] is False:
+                return False
+
+        if query_string is not None:
+            res = self.es.search(index=self.__index, query={"query_string": {"query": query_string}})
+            logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
+            if len(res['hits']['hits']) == 1:
+                self._doc = res['hits']['hits'][0]
+
+        if self._doc is None:
             return False
-        self._doc = self.es.get(index=self.__index, id=primary_key, ignore=404)
-        if self._doc.get('_source', {}).get(self.__pk) != primary_key:
-            return False
+
         for col in self.cols():
             if col.startswith('_'):
                 continue
@@ -100,12 +121,17 @@ class Elasticsearch_Document_Adapter:
 
         return True
 
-    def exists(self) -> bool:
-        primary_key = getattr(self, self.__pk)
-        if primary_key is None:
-            return False
-        res = self.es.exists(index=self.__index, id=primary_key)
-        return res.get('found', False)
+    def exists(self, query_string :str = None) -> bool:
+        # query_string 'assigner:"Unknown" AND cve_id:"CVE-2021-39279"'
+        if self.__pk is not None:
+            primary_key = getattr(self, self.__pk)
+            if primary_key is None:
+                return False
+            res = self.es.exists(index=self.__index, id=primary_key)
+            return res.get('found', False)
+        res = self.es.search(index=self.__index, query={"query_string": {"query": query_string}})
+        logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
+        return len(res['hits']['hits']) >= 1
 
     def persist(self, extra :dict = None) -> bool:
         doc = vars(self)
