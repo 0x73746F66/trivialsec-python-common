@@ -1,19 +1,12 @@
-from os import getenv
-from datetime import datetime
 import re
 import socket
-import ipaddress
-import boto3
-import botocore
 import hashlib
-from dateutil.tz import tzlocal
 from passlib.hash import pbkdf2_sha256
 from gunicorn.glogging import logging
-from datetime import datetime
 
 
-logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.helpers'
+logger = logging.getLogger(__name__)
 
 def check_domain_rules(domain_name :str):
     # TODO implement
@@ -50,17 +43,6 @@ def is_valid_ipv6_address(address):
         return False
     return True
 
-def cidr_address_list(cidr :str)->list:
-    ret = []
-    if '/' not in cidr:
-        ret.append(cidr)
-        return ret
-    for ip_addr in ipaddress.IPv4Network(cidr, strict=False):
-        if ip_addr.is_global:
-            ret.append(str(ip_addr))
-
-    return ret
-
 def oneway_hash(input_string :str)->str:
     return hashlib.sha224(bytes(input_string, 'ascii')).hexdigest()
 
@@ -69,51 +51,6 @@ def hash_passphrase(passphrase, rounds: int = 8000, salt_size: int = 10):
 
 def check_encrypted_passphrase(passphrase, hashed):
     return pbkdf2_sha256.verify(passphrase, hashed)
-
-def get_boto3_client(service :str, region_name :str, aws_profile :str = None, role_arn :str = None):
-    boto_params = {
-        'service_name': service,
-        'region_name': region_name
-    }
-    session_params = {'region_name': region_name}
-    if aws_profile:
-        session_params['profile_name'] = aws_profile
-    else:
-        session_params['aws_access_key_id'] = getenv('AWS_ACCESS_KEY_ID', default=getenv('TF_VAR_aws_access_key_id'))
-        session_params['aws_secret_access_key'] = getenv('AWS_SECRET_ACCESS_KEY', default=getenv('TF_VAR_aws_secret_access_key'))
-
-    base_session = boto3.session.Session(**session_params)
-
-    if role_arn:
-        base_session = assumed_role_session(role_arn, base_session)
-    else:
-        boto_params['aws_access_key_id'] = getenv('AWS_ACCESS_KEY_ID')
-        boto_params['aws_secret_access_key'] = getenv('AWS_SECRET_ACCESS_KEY')
-
-    return base_session.client(**boto_params)
-
-def assumed_role_session(role_arn :str, base_session: botocore.session.Session, session_name :str = None, external_id :str = None):
-    if isinstance(base_session, boto3.session.Session):
-        base_session = base_session._session # pylint: disable=protected-access
-
-    fetcher = botocore.credentials.AssumeRoleCredentialFetcher(
-        client_creator=base_session.create_client,
-        source_credentials=base_session.get_credentials(),
-        role_arn=role_arn,
-        extra_args={
-            'RoleSessionName': session_name,
-            'ExternalId': external_id
-        }
-    )
-    credentials = botocore.credentials.DeferredRefreshableCredentials(
-        method='assume-role',
-        refresh_using=fetcher.fetch_credentials,
-        time_fetcher=lambda: datetime.now(tzlocal())
-    )
-    botocore_session = botocore.session.Session()
-    botocore_session._credentials = credentials # pylint: disable=protected-access
-
-    return boto3.Session(botocore_session=botocore_session)
 
 def default(func, ex: Exception, value):
     try:
@@ -144,60 +81,3 @@ def check_email_rules(email_addr :str) -> bool:
         return False
 
     return True
-
-def extract_server_version(str_value :str) -> tuple:
-    trim_values = [
-        'via:',
-        'x-cache: miss',
-        'x-cache: miss from',
-    ]
-    clean_names = [
-        'cloudfront',
-        'varnish',
-        'wp engine',
-        'microsoft-httpapi',
-        'amazons3'
-    ]
-    ignore_list = [
-        'no "server" line in header',
-        'server-processing-duration-in-ticks:',
-        'iterable-links',
-        'x-cacheable: non',
-        'x-cacheable: short',
-        'nib.com.au',
-    ]
-    server_name = str_value.lower()
-    for ignore_str in ignore_list:
-        if ignore_str in server_name:
-            return None, None
-
-    for drop_str in trim_values:
-        server_name = server_name.replace(drop_str, '').strip()
-
-    server_version = None
-    if '/' in server_name and len(server_name.split('/')) == 2:
-        server_name, server_version = server_name.split('/')
-        matches = re.search(r'\d+(=?\.(\d+(=?\.(\d+)*)*)*)*', server_version)
-        if matches:
-            server_version = matches.group()
-
-    if server_version is None:
-        matches = re.search(r'\d+(=?\.(\d+(=?\.(\d+)*)*)*)*', server_name)
-        if matches:
-            server_version = matches.group()
-
-    if server_version is not None and server_version in server_name:
-        server_name = server_name.replace(server_version, '')
-
-    for name in clean_names:
-        if name in str_value.lower():
-            server_name = name
-
-    if server_name == '':
-        server_name = None
-    if server_version is not None:
-        server_version = server_version.strip()
-    if server_name is not None:
-        server_name = server_name.strip()
-
-    return server_name, server_version

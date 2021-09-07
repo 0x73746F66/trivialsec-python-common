@@ -11,6 +11,8 @@ import OpenSSL
 from bs4 import BeautifulSoup as bs
 from dns import resolver, rdtypes
 from dns.exception import DNSException
+from aslookup import get_as_data
+from aslookup.exceptions import NoASDataError, NonroutableAddressError, AddressFormatError
 from retry.api import retry
 from requests.status_codes import _codes
 from requests.adapters import HTTPAdapter
@@ -20,6 +22,7 @@ from urllib3.connectionpool import HTTPSConnectionPool
 from urllib3.poolmanager import PoolManager, SSL_KEYWORDS
 from gunicorn.glogging import logging
 from .config import config
+from . import is_valid_ipv4_address
 
 
 logger = logging.getLogger(__name__)
@@ -514,23 +517,7 @@ class Metadata:
             6: 'Harvester & Comment Spammer',
             7: 'Suspicious & Harvester & Comment Spammer',
         }
-        ip_list = set()
-        try:
-            for family, _, _, _, sock_addr in getaddrinfo(self.host, 443):
-                if family == AF_INET6:
-                    ip_list.add(sock_addr[0])
-                if family == AF_INET:
-                    ip_list.add(sock_addr[0])
-            for family, _, _, _, sock_addr in getaddrinfo(self.host, 80):
-                if family == AF_INET6:
-                    ip_list.add(sock_addr[0])
-                if family == AF_INET:
-                    ip_list.add(sock_addr[0])
-
-        except IOError as ex:
-            logger.warning(ex)
-
-        for addr in ip_list:
+        for addr in ip_for_host(self.host):
             reverse_octet = ipaddress.ip_address(addr).reverse_pointer.replace('.in-addr.arpa', '').replace('.ip6.arpa', '')
             query = f'{config.projecthoneypot_key}.{reverse_octet}.dnsbl.httpbl.org'
             logger.info(query)
@@ -659,6 +646,29 @@ def http_status(url :str):
 
     return code, status
 
+def ip_for_host(host :str, ports :list = [80, 443]) -> list:
+    ip_list = set()
+    for port in ports:
+        try:
+            for family, _, _, _, sock_addr in getaddrinfo(host, port):
+                if family == AF_INET6:
+                    ip_list.add(sock_addr[0])
+                if family == AF_INET:
+                    ip_list.add(sock_addr[0])
+        except IOError as ex:
+            logger.warning(ex)
+    return list(ip_list)
+
+def asn_data(host :str, port :int = 80) -> list:
+    as_data = []
+    for addr in ip_for_host(host, [port]):
+        if is_valid_ipv4_address(addr):
+            try:
+                as_data.append(get_as_data(addr))
+            except (NoASDataError, NonroutableAddressError, AddressFormatError) as ex:
+                logger.exception(ex)
+    return as_data
+
 def request_from_raw(raw :str, encoding :str = 'unicode-escape') -> dict:
     body = parse_qs(raw.decode(encoding))
     data = {}
@@ -689,6 +699,74 @@ def request_from_raw(raw :str, encoding :str = 'unicode-escape') -> dict:
             data[key] = val
 
     return data
+
+def cidr_address_list(cidr :str)->list:
+    ret = []
+    if '/' not in cidr:
+        ret.append(cidr)
+        return ret
+    for ip_addr in ipaddress.IPv4Network(cidr, strict=False):
+        if ip_addr.is_global:
+            ret.append(str(ip_addr))
+
+    return ret
+
+def extract_server_version(str_value :str) -> tuple:
+    trim_values = [
+        'via:',
+        'x-cache: miss',
+        'x-cache: miss from',
+    ]
+    clean_names = [
+        'cloudfront',
+        'varnish',
+        'wp engine',
+        'microsoft-httpapi',
+        'amazons3'
+    ]
+    ignore_list = [
+        'no "server" line in header',
+        'server-processing-duration-in-ticks:',
+        'iterable-links',
+        'x-cacheable: non',
+        'x-cacheable: short',
+        'nib.com.au',
+    ]
+    server_name = str_value.lower()
+    for ignore_str in ignore_list:
+        if ignore_str in server_name:
+            return None, None
+
+    for drop_str in trim_values:
+        server_name = server_name.replace(drop_str, '').strip()
+
+    server_version = None
+    if '/' in server_name and len(server_name.split('/')) == 2:
+        server_name, server_version = server_name.split('/')
+        matches = re.search(r'\d+(=?\.(\d+(=?\.(\d+)*)*)*)*', server_version)
+        if matches:
+            server_version = matches.group()
+
+    if server_version is None:
+        matches = re.search(r'\d+(=?\.(\d+(=?\.(\d+)*)*)*)*', server_name)
+        if matches:
+            server_version = matches.group()
+
+    if server_version is not None and server_version in server_name:
+        server_name = server_name.replace(server_version, '')
+
+    for name in clean_names:
+        if name in str_value.lower():
+            server_name = name
+
+    if server_name == '':
+        server_name = None
+    if server_version is not None:
+        server_version = server_version.strip()
+    if server_name is not None:
+        server_name = server_name.strip()
+
+    return server_name, server_version
 
 KNOWN_PORTS = {
     1: ('TCPMUX'),

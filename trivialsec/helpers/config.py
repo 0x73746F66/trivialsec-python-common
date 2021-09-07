@@ -4,11 +4,13 @@ import logging
 import subprocess
 from pprint import pprint # logger is not configured yet, just print
 from io import StringIO
-from datetime import timedelta
+from datetime import timedelta, datetime
+from dateutil.tz import tzlocal
 import yaml
 import boto3
 import redis
 from dotenv import dotenv_values
+from botocore.credentials import AssumeRoleCredentialFetcher, DeferredRefreshableCredentials
 from botocore.exceptions import ClientError, ConnectionClosedError, ReadTimeoutError, ConnectTimeoutError, CapacityNotAvailableError
 from retry.api import retry
 
@@ -48,6 +50,28 @@ class Config:
             aws_secret_access_key=aws_secret_access_key,
             aws_session_token=aws_session_token,
         )
+        aws_role_arn = dotenv.get('AWS_ROLE_ARN')
+        if aws_role_arn is None:
+            aws_role_arn = getenv('AWS_ROLE_ARN')
+        if aws_role_arn is not None:
+            session_name = 'trivialsec'
+            aws_role_external_id = dotenv.get('AWS_ROLE_EXTERNAL_ID')
+            if aws_role_external_id is None:
+                aws_role_external_id = getenv('AWS_ROLE_EXTERNAL_ID')
+            credentials = DeferredRefreshableCredentials(
+                method='assume-role',
+                refresh_using=AssumeRoleCredentialFetcher(
+                    client_creator=self.boto3_session._session.create_client, # pylint: disable=protected-access
+                    source_credentials=self.boto3_session._session.get_credentials(), # pylint: disable=protected-access
+                    role_arn=aws_role_arn,
+                    extra_args={
+                        'RoleSessionName': session_name,
+                        'ExternalId': aws_role_external_id
+                    }
+                ).fetch_credentials,
+                time_fetcher=lambda: datetime.now(tzlocal())
+            )
+            self.boto3_session._session._credentials = credentials # pylint: disable=protected-access
         self.configure()
 
     def configure(self):

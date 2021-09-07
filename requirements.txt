@@ -22,3 +22,5 @@ beautifulsoup4>=4.9.3<5.0
 gunicorn>=20.1.0
 setproctitle>=1.2.2
 elasticsearch>=7.14.0
+tldextract==3.1.0
+aslookup==1.2.0
