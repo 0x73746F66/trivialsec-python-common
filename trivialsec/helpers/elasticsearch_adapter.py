@@ -155,6 +155,8 @@ class Elasticsearch_Document_Adapter:
         doc_id = None if self.__pk is None else self.__pk
         res = self.es.index(index=self.__index, id=doc_id, body=doc)
         if res['_shards']['successful'] >= 1:
+            self._doc = {'_source': doc}
+            self._id = res['_id']
             return True
         return False
 
