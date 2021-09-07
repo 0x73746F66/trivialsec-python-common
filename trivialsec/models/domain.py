@@ -1,4 +1,3 @@
-from datetime import datetime
 from gunicorn.glogging import logging
 from trivialsec.helpers.elasticsearch_adapter import Elasticsearch_Document_Adapter, Elasticsearch_Collection_Adapter
 from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
