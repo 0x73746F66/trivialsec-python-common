@@ -6,7 +6,7 @@ from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adap
 __module__ = 'trivialsec.models.domain'
 __index__ = 'domains'
 __table__ = 'domain_monitoring'
-__pk__ = 'domain_name'
+__pk__ = 'domain_monitoring_id'
 logger = logging.getLogger(__name__)
 
 class Domain(Elasticsearch_Document_Adapter):
@@ -274,10 +274,13 @@ class Domains(Elasticsearch_Collection_Adapter):
 class DomainMonitor(MySQL_Row_Adapter):
     def __init__(self, **kwargs):
         super().__init__(__table__, __pk__)
-        self.domain_name = kwargs.get(__pk__)
+        self.domain_monitoring_id = kwargs.get(__pk__)
+        self.domain_name = kwargs.get('domain_name')
         self.account_id = kwargs.get('account_id')
+        self.project_id = kwargs.get('project_id')
         self.schedule = kwargs.get('schedule')
         self.enabled = bool(kwargs.get('enabled'))
+        self.created_at = kwargs.get('created_at')
 
     def __setattr__(self, name, value):
         if name in ['enabled']:
