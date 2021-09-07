@@ -2,7 +2,7 @@ import importlib
 from gunicorn.glogging import logging
 from elasticsearch import Elasticsearch
 from .config import config
-from pprint import pprint
+
 
 logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.helpers.elasticsearch_adapter'
@@ -145,9 +145,8 @@ class Elasticsearch_Document_Adapter:
     def persist(self, extra :dict = None) -> bool:
         doc = vars(self)
         del doc['_Elasticsearch_Document_Adapter__cols']
-        pprint(doc)
-        exit(0)
-
+        del doc['_Elasticsearch_Document_Adapter__index']
+        del doc['_Elasticsearch_Document_Adapter__pk']
         if isinstance(extra, dict):
             doc = {**doc, **extra}
         res = self.es.index(index=self.__index, id=doc[self.__pk], body=doc)
