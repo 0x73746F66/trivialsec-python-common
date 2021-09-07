@@ -33,7 +33,7 @@ class Elasticsearch_Collection_Adapter:
         self.__index = 0
 
     def search(self, query_string :str):
-        res = self.es.search(index=self.__index, query={"query_string": {"query": query_string}}) # pylint: disable=unexpected-keyword-arg
+        res = self.es.search(index=self.__index, body={"query_string": {"query": query_string}}) # pylint: disable=unexpected-keyword-arg
         logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
         class_ = getattr(__models_module__, self.__class_name)
         for hit in res['hits']['hits']:
@@ -47,7 +47,7 @@ class Elasticsearch_Collection_Adapter:
 
     def count(self, query_string :str) -> int:
         # query_string 'assigner:"Unknown" AND cve_id:"CVE-2021-39279"'
-        res = self.es.search(index=self.__index, query={"query_string": {"query": query_string}}) # pylint: disable=unexpected-keyword-arg
+        res = self.es.search(index=self.__index, body={"query_string": {"query": query_string}}) # pylint: disable=unexpected-keyword-arg
         logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
         return len(res['hits']['hits'])
 
@@ -107,7 +107,7 @@ class Elasticsearch_Document_Adapter:
                 return False
 
         if query_string is not None:
-            res = self.es.search(index=self.__index, query={"query_string": {"query": query_string}}) # pylint: disable=unexpected-keyword-arg
+            res = self.es.search(index=self.__index, body={"query_string": {"query": query_string}}) # pylint: disable=unexpected-keyword-arg
             logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
             if len(res['hits']['hits']) == 1:
                 self._doc = res['hits']['hits'][0]
@@ -134,7 +134,7 @@ class Elasticsearch_Document_Adapter:
                 self._doc = res
                 self._id = res.get('_id')
                 return True
-        res = self.es.search(index=self.__index, query={"query_string": {"query": query_string}}) # pylint: disable=unexpected-keyword-arg
+        res = self.es.search(index=self.__index, body={"query_string": {"query": query_string}}) # pylint: disable=unexpected-keyword-arg
         logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
         if len(res['hits']['hits']) == 1:
             self._doc = res['hits']['hits'][0]
