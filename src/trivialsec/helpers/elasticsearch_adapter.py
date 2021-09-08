@@ -168,8 +168,6 @@ class Elasticsearch_Document_Adapter:
 
     def persist(self, extra :dict = None) -> bool:
         doc_id = self.get_id()
-        if doc_id is None:
-            return False
         doc = vars(self)
         del doc['_Elasticsearch_Document_Adapter__cols']
         if isinstance(extra, dict):

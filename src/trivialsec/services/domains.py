@@ -13,7 +13,6 @@ def upsert_domain(domain :Domain) -> bool:
             domain.set_id(check_domain.get_id())
     except Exception as ex:
         logger.exception(ex)
-        logger.info(f'query_string {query_string}')
     return domain.persist()
 
 def fetch_metadata(domain_name :str, port :int = None):
