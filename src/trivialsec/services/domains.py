@@ -8,9 +8,12 @@ logger = logging.getLogger(__name__)
 def upsert_domain(domain :Domain) -> bool:
     query_string = f'domain_name:"{domain.domain_name}"'
     check_domain = Domain()
-    if check_domain.exists(query_string=query_string):
-        domain.set_id(check_domain.get_id())
-    return domain.persist(query_string)
+    try:
+        if check_domain.exists(query_string=query_string):
+            domain.set_id(check_domain.get_id())
+    except Exception as ex:
+        logger.exception(ex)
+    return domain.persist()
 
 def fetch_metadata(domain_name :str, port :int = None):
     if port is not None and isinstance(port, int):
