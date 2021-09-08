@@ -162,7 +162,7 @@ class Elasticsearch_Document_Adapter:
             logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
             if len(res['hits']['hits']) != 1:
                 return False
-            self._id = res['_id']
+            self._id = res['hits']['hits'][0]['_id']
             found = True
 
         return found
