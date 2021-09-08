@@ -167,9 +167,7 @@ class Elasticsearch_Document_Adapter:
         return found
 
     def persist(self, extra :dict = None) -> bool:
-        doc_id = self._id
-        if doc_id is None:
-            doc_id = getattr(self, self.__pk)
+        doc_id = self.get_id()
         if doc_id is None:
             return False
         doc = vars(self)
@@ -188,9 +186,7 @@ class Elasticsearch_Document_Adapter:
         return self.__cols
 
     def delete(self) -> bool:
-        doc_id = self._id
-        if doc_id is None:
-            doc_id = getattr(self, self.__pk)
+        doc_id = self.get_id()
         if doc_id is None:
             return False
         res = self.es.delete(index=self.__index, id=doc_id, refresh=True) # pylint: disable=unexpected-keyword-arg
