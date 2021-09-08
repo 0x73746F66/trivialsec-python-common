@@ -157,6 +157,7 @@ class Elasticsearch_Document_Adapter:
                 self._id = res['_id']
 
         if query_string is not None and found is False:
+            logger.info(f"index {self.__index} query_string {query_string}")
             res = self.es.search(index=self.__index, body={"query_string": {"query": query_string}})
             logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
             if len(res['hits']['hits']) != 1:
