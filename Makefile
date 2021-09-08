@@ -37,17 +37,17 @@ archive: wheel ## packages as a tar.gz for distribution
 	ls -l --block-size=M $(APP_NAME).tar.gz
 
 test-local: ## Prettier test outputs
-	pylint --exit-zero -f colorized --persistent=y -r y --jobs=0 trivialsec/**/*.py
-	semgrep -q --strict --timeout=0 --config=p/r2c-ci --lang=py trivialsec/**/*.py
-	semgrep -q --strict --config p/minusworld.flask-xss --lang=py trivialsec/**/*.py
+	pylint --exit-zero -f colorized --persistent=y -r y --jobs=0 src/**/*.py
+	semgrep -q --strict --timeout=0 --config=p/r2c-ci --lang=py src/**/*.py
+	semgrep -q --strict --config p/minusworld.flask-xss --lang=py src/**/*.py
 
 pylint-ci: ## run pylint for CI
-	pylint --exit-zero --persistent=n -f json -r n --jobs=0 --errors-only trivialsec/**/*.py > pylint.json
+	pylint --exit-zero --persistent=n -f json -r n --jobs=0 --errors-only src/**/*.py > pylint.json
 
 semgrep-sast-ci: ## run core semgrep rules for CI
-	semgrep --disable-version-check -q --strict --error -o semgrep-ci.json --json --timeout=0 --config=p/r2c-ci --lang=py trivialsec/**/*.py
+	semgrep --disable-version-check -q --strict --error -o semgrep-ci.json --json --timeout=0 --config=p/r2c-ci --lang=py src/**/*.py
 
 semgrep-xss-ci: ## run Flask XSS semgrep rules for CI
-	semgrep --disable-version-check -q --strict --error -o semgrep-flask-xss.json --json --config p/minusworld.flask-xss --lang=py trivialsec/**/*.py
+	semgrep --disable-version-check -q --strict --error -o semgrep-flask-xss.json --json --config p/minusworld.flask-xss --lang=py src/**/*.py
 
 test-all: semgrep-xss-ci semgrep-sast-ci pylint-ci ## Run all CI tests
