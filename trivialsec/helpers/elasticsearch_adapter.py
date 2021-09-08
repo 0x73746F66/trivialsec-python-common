@@ -33,7 +33,7 @@ class Elasticsearch_Collection_Adapter:
         self.__index = 0
 
     def search(self, query_string :str):
-        res = self.es.search(index=self.__index, body={"query_string": {"query": query_string}}) # pylint: disable=unexpected-keyword-arg
+        res = self.es.search(index=self.__index, body={"query_string": {"query": query_string}})
         logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
         class_ = getattr(__models_module__, self.__class_name)
         for hit in res['hits']['hits']:
@@ -46,8 +46,7 @@ class Elasticsearch_Collection_Adapter:
         return self
 
     def count(self, query_string :str) -> int:
-        # query_string 'assigner:"Unknown" AND cve_id:"CVE-2021-39279"'
-        res = self.es.search(index=self.__index, body={"query_string": {"query": query_string}}) # pylint: disable=unexpected-keyword-arg
+        res = self.es.search(index=self.__index, body={"query_string": {"query": query_string}})
         logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
         return len(res['hits']['hits'])
 
@@ -93,24 +92,43 @@ class Elasticsearch_Document_Adapter:
         self.__pk = primary_key
         self.__cols = set()
 
-    def get_doc(self) -> bool:
+    def get_doc(self):
         return self._doc.get('_source') if isinstance(self._doc, dict) else None
 
+    def get_id(self):
+        doc_id = self._id
+        if doc_id is None and self.__pk is not None:
+            doc_id = getattr(self, self.__pk)
+        return doc_id
+
+    def set_id(self, doc_id) -> bool:
+        res = self.es.exists(index=self.__index, id=doc_id, _source=False) # pylint: disable=unexpected-keyword-arg
+        if res['found'] is True:
+            self._id = doc_id
+            return True
+        return False
+
     def hydrate(self, query_string :str = None) -> bool:
+        found = False
         self._doc = None
-        if self.__pk is not None and query_string is None:
+        if self._id is not None:
+            self._doc = self.es.get(index=self.__index, id=self._id, ignore=404) # pylint: disable=unexpected-keyword-arg
+            found = self._doc['found']
+
+        if self.__pk is not None and found is False:
             primary_key = getattr(self, self.__pk)
             if primary_key is None:
                 return False
             self._doc = self.es.get(index=self.__index, id=primary_key, ignore=404) # pylint: disable=unexpected-keyword-arg
-            if self._doc['found'] is False:
-                return False
+            found = self._doc['found']
 
-        if query_string is not None:
-            res = self.es.search(index=self.__index, body={"query_string": {"query": query_string}}) # pylint: disable=unexpected-keyword-arg
+        if query_string is not None and found is False:
+            res = self.es.search(index=self.__index, body={"query_string": {"query": query_string}})
             logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
-            if len(res['hits']['hits']) == 1:
-                self._doc = res['hits']['hits'][0]
+            if len(res['hits']['hits']) != 1:
+                return False
+            self._doc = res['hits']['hits'][0]
+            found = True
 
         if not isinstance(self._doc, dict):
             return False
@@ -121,29 +139,39 @@ class Elasticsearch_Document_Adapter:
                 continue
             setattr(self, col, self._doc.get('_source', {}).get(col))
 
-        return True
+        return found
 
     def exists(self, query_string :str = None) -> bool:
-        # query_string 'assigner:"Unknown" AND cve_id:"CVE-2021-39279"'
-        if self.__pk is not None:
+        found = False
+        if self._id is not None:
+            res = self.es.exists(index=self.__index, id=self._id, _source=False) # pylint: disable=unexpected-keyword-arg
+            found = res['found']
+
+        if self.__pk is not None and found is False:
             primary_key = getattr(self, self.__pk)
             if primary_key is None:
                 return False
-            res = self.es.exists(index=self.__index, id=primary_key, _source=True) # pylint: disable=unexpected-keyword-arg
-            if res['found'] is True:
-                self._doc = res
-                self._id = res.get('_id')
-                return True
-        res = self.es.search(index=self.__index, body={"query_string": {"query": query_string}}) # pylint: disable=unexpected-keyword-arg
-        logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
-        if len(res['hits']['hits']) == 1:
-            self._doc = res['hits']['hits'][0]
-            self._id = self._doc['_id']
-            return True
-        return False
+            res = self.es.exists(index=self.__index, id=primary_key, _source=False) # pylint: disable=unexpected-keyword-arg
+            found = res['found']
+            if found is True:
+                self._id = res['_id']
+
+        if query_string is not None and found is False:
+            res = self.es.search(index=self.__index, body={"query_string": {"query": query_string}})
+            logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
+            if len(res['hits']['hits']) != 1:
+                return False
+            self._id = res['_id']
+            found = True
+
+        return found
 
     def persist(self, extra :dict = None) -> bool:
-        doc_id = None if self.__pk is None else self.__pk
+        doc_id = self._id
+        if doc_id is None:
+            doc_id = getattr(self, self.__pk)
+        if doc_id is None:
+            return False
         doc = vars(self)
         del doc['_Elasticsearch_Document_Adapter__cols']
         if isinstance(extra, dict):
@@ -159,8 +187,10 @@ class Elasticsearch_Document_Adapter:
         self.__cols = list(vars(self).keys())
         return self.__cols
 
-    def delete(self, doc_id = None) -> bool:
-        doc_id = doc_id if self.__pk is None else getattr(self, self.__pk)
+    def delete(self) -> bool:
+        doc_id = self._id
+        if doc_id is None:
+            doc_id = getattr(self, self.__pk)
         if doc_id is None:
             return False
         res = self.es.delete(index=self.__index, id=doc_id, refresh=True) # pylint: disable=unexpected-keyword-arg
