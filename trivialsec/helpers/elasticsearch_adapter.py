@@ -78,7 +78,7 @@ class Elasticsearch_Collection_Adapter:
 
 class Elasticsearch_Document_Adapter:
     __hash__ = object.__hash__
-    _id :str
+    _id = None
     _doc = None
     es = Elasticsearch(
         config.elasticsearch.get('hosts'),
