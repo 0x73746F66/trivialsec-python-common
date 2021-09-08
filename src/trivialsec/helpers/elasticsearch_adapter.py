@@ -33,7 +33,7 @@ class Elasticsearch_Collection_Adapter:
         self.__index = 0
 
     def search(self, query_string :str):
-        res = self.es.search(index=self.__index, body={"query_string": {"query": query_string}})
+        res = self.es.search(index=self.__index, body={'query': {"query_string": {"query": query_string}}})
         logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
         class_ = getattr(__models_module__, self.__class_name)
         for hit in res['hits']['hits']:
@@ -46,7 +46,7 @@ class Elasticsearch_Collection_Adapter:
         return self
 
     def count(self, query_string :str) -> int:
-        res = self.es.search(index=self.__index, body={"query_string": {"query": query_string}})
+        res = self.es.search(index=self.__index, body={'query': {"query_string": {"query": query_string}}})
         logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
         return len(res['hits']['hits'])
 
@@ -123,7 +123,7 @@ class Elasticsearch_Document_Adapter:
             found = self._doc['found']
 
         if query_string is not None and found is False:
-            res = self.es.search(index=self.__index, body={"query_string": {"query": query_string}})
+            res = self.es.search(index=self.__index, body={'query': {"query_string": {"query": query_string}}})
             logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
             if len(res['hits']['hits']) != 1:
                 return False
@@ -158,7 +158,7 @@ class Elasticsearch_Document_Adapter:
 
         if query_string is not None and found is False:
             logger.info(f"index {self.__index} query_string {query_string}")
-            res = self.es.search(index=self.__index, body={"query_string": {"query": query_string}})
+            res = self.es.search(index=self.__index, body={'query': {"query_string": {"query": query_string}}})
             logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
             if len(res['hits']['hits']) != 1:
                 return False
