@@ -13,6 +13,7 @@ class ActivityLog(MySQL_Row_Adapter):
     ACTION_CREATE_PROJECT = 'create_project'
     ACTION_ADDED_IPADDRESS = 'added_ipaddress'
     ACTION_ADDED_DOMAIN = 'added_domain'
+    ACTION_UPDATE_DOMAIN = 'update_domain'
     ACTION_ENABLE_DOMAIN = 'enabled_domain_automation'
     ACTION_DISABLE_DOMAIN = 'disabled_domain_automation'
     ACTION_ENABLE_PROJECT = 'enabled_project_automation'

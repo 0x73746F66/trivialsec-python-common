@@ -14,26 +14,26 @@ from trivialsec.helpers.config import config
 
 __module__ = 'trivialsec.services.jobs'
 SCAN_NEXT = {
-    'domain': ['amass', 'metadata', 'drill', 'nmap', 'orphaned_files'],
-    'subdomain': ['orphaned_files', 'subdomain_takeover'],
-    'external_domain': ['metadata', 'saas_takeover', 'subdomain_takeover', 'dns_fronting', 'cname_collusion'],
-    'tls_port': ['testssl', 'starttls_bugs', 'pwnedkeys_com'],
-    'http_port': ['http_desync', 'request_smuggler'],
-    'ldap_port': ['ldap'],
-    'vpn_port': ['vpn_detect'],
-    'kerberos_port': ['kerberoaster'],
-    'html_port': ['screenshot', 'crawler', 'joomla', 'wordpress', 'compression_bugs', 'anti_bruteforce', 'xss_tester'],
+    'domain': ['amass', 'metadata', 'drill', 'nmap', 'orphaned-files'],
+    'subdomain': ['orphaned-files', 'subdomain-takeover'],
+    'external-domain': ['metadata', 'saas-takeover', 'subdomain-takeover', 'dns-fronting', 'cname-collusion'],
+    'tls-port': ['testssl', 'starttls-bugs', 'pwnedkeys'],
+    'http-port': ['http-desync', 'request-smuggler'],
+    'ldap-port': ['ldap'],
+    'vpn-port': ['vpn-detect'],
+    'kerberos-port': ['kerberoaster'],
+    'html-port': ['screenshot', 'link-crawler', 'joomla', 'wordpress', 'compression-bugs', 'anti-bruteforce', 'xss-tester'],
     'json': [],
-    'xml': ['saml_injection'],
-    'open_port': ['owasp-zap', 'nikto2', 'file_protocols', 'popped_shells', 'reflected_ddos', 'dce_rpc'],
-    'uri_path': ['owasp-zap', 'nikto2', 'git', 'dsstore', 'oauth2_checker'],
+    'xml': ['saml-injection'],
+    'open-port': ['owasp-zap', 'nikto2', 'file-protocols', 'popped-shells', 'reflected-ddos', 'dce-rpc'],
+    'uri-path': ['owasp-zap', 'nikto2', 'git', 'dsstore', 'oauth2-checker'],
     'ipv4': [],
     'ipv6': [],
-    'javascript': ['javascript', 'npm-audit', 'eslint-plugin-security', 'nodejsscan', 'react'],
-    'golang': ['golang', 'gosec'],
-    'python': ['bandit', 'ossaudit'],
-    'ruby': ['ruby', 'minusworld-ruby-on-rails-xss'],
-    'sourcecode': ['dependency-check', 'semgrep-r2c-ci', 'command-injection', 'insecure-transport', 'jwt', 'secrets', 'security-audit', 'docker-compose', 'dockerfile', 'findsecbugs', 'secret_strings', 'xss_tester'],
+    'javascript': ['semgrep-javascript', 'npm-audit', 'eslint-plugin-security', 'nodejsscan', 'semgrep-react'],
+    'golang': ['semgrep-golang', 'gosec'],
+    'python': ['bandit', 'ossaudit', 'flask-xss'],
+    'ruby': ['semgrep-ruby', 'minusworld-ruby-on-rails-xss'],
+    'sourcecode': ['dependency-check', 'semgrep-r2c-ci', 'command-injection', 'insecure-transport', 'jwt', 'secrets', 'security-audit', 'docker-compose', 'dockerfile', 'findsecbugs', 'secret-strings', 'xss-tester'],
 }
 logger = logging.getLogger(__name__)
 
@@ -161,6 +161,11 @@ def get_next_job(service_type_id :int = None, service_type_name :str = None, acc
         return None
     setattr(account, 'config', account_config)
     setattr(current_job, 'account', account)
+    member = Member(member_id=current_job.queue_data.queued_by_member_id)
+    if not member.hydrate():
+        logger.error(f'Error loading member {current_job.queue_data.queued_by_member_id}')
+        return None
+    setattr(current_job, 'member', member)
     project = Project(project_id=current_job.project_id)
     if not project.hydrate():
         logger.error(f'Error loading project {current_job.project_id}')
