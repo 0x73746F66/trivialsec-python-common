@@ -119,6 +119,7 @@ class Domain(Elasticsearch_Document_Adapter):
         self.intel_c2_callbackdomains = bool(kwargs.get('intel_c2_callbackdomains'))
         self.intel_sorbs = bool(kwargs.get('intel_sorbs'))
         self.intel_tor_exit_nodes = bool(kwargs.get('intel_tor_exit_nodes'))
+        self.intel_disposable_email_domain = bool(kwargs.get('intel_disposable_email_domains'))
         self.protocol_sslv2 = bool(kwargs.get('protocol_sslv2'))
         self.protocol_sslv3 = bool(kwargs.get('protocol_sslv3'))
         self.protocol_tls1_0 = bool(kwargs.get('protocol_tls1_0'))
@@ -239,6 +240,7 @@ class Domain(Elasticsearch_Document_Adapter):
             'intel_c2_callbackdomains',
             'intel_sorbs',
             'intel_tor_exit_nodes',
+            'intel_disposable_email_domain',
             'protocol_sslv2',
             'protocol_sslv3',
             'protocol_tls1.0',
