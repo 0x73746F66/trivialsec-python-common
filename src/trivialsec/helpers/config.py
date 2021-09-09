@@ -178,6 +178,10 @@ class Config:
         return self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/domaintools_key', WithDecryption=True)
 
     @property
+    def domainsdb_key(self):
+        return self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/domainsdb_key', WithDecryption=True)
+
+    @property
     def domaintools_user(self):
         return self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/domaintools_user')
 
