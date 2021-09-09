@@ -97,7 +97,7 @@ class Domain(Elasticsearch_Document_Adapter):
         self.scanner_request_smuggler = bool(kwargs.get('scanner_request_smuggler'))
         self.scanner_dce_rpc = bool(kwargs.get('scanner_dce_rpc'))
         self.scanner_http_desync = bool(kwargs.get('scanner_http_desync'))
-        self.scanner_oidc_authz = bool(kwargs.get('scanner_oidc_authz'))
+        self.scanner_oauth2_checker = bool(kwargs.get('scanner_oauth2_checker'))
         self.scanner_saml_injection = bool(kwargs.get('scanner_saml_injection'))
         self.scanner_pwnedkeys_com = bool(kwargs.get('scanner_pwnedkeys_com'))
         self.intel_labs_snort_org = bool(kwargs.get('intel_labs_snort_org'))
@@ -221,7 +221,6 @@ class Domain(Elasticsearch_Document_Adapter):
             'scanner_request_smuggler',
             'scanner_dce_rpc',
             'scanner_http_desync',
-            'scanner_oidc_authz',
             'scanner_saml_injection',
             'scanner_pwnedkeys.com',
             'intel_labs.snort.org',
