@@ -24,7 +24,9 @@ class Domain(Elasticsearch_Document_Adapter):
         self.registrar = kwargs.get('registrar')
         self.registrant = kwargs.get('registrant')
         self.registrar_history = kwargs.get('registrar_history', [])
-        self.reputation = kwargs.get('reputation')
+        self.reputation_whoisxmlapi = kwargs.get('reputation_whoisxmlapi')
+        self.reputation_domaintools = kwargs.get('reputation_domaintools')
+        self.reputation_google_safe_browsing = kwargs.get('reputation_google_safe_browsing')
         self.tls_extensions = kwargs.get('tls_extensions', [])
         self.etls = bool(kwargs.get('etls'))
         self.session_id = bool(kwargs.get('session_id'))
@@ -108,7 +110,6 @@ class Domain(Elasticsearch_Document_Adapter):
         self.intel_phishtank = bool(kwargs.get('intel_phishtank'))
         self.intel_binarydefense = bool(kwargs.get('intel_binarydefense'))
         self.intel_emergingthreats_fwrules = bool(kwargs.get('intel_emergingthreats_fwrules'))
-        self.intel_google_safe_browsing = kwargs.get('intel_google_safe_browsing')
         self.intel_honey_score = kwargs.get('intel_honey_score')
         self.intel_threat_score = kwargs.get('intel_threat_score')
         self.intel_threat_type = kwargs.get('intel_threat_type')
@@ -155,6 +156,7 @@ class Domain(Elasticsearch_Document_Adapter):
         self.revocation_ocsp_stapling = bool(kwargs.get('revocation_ocsp_stapling'))
         self.revocation_ocsp_must_staple = bool(kwargs.get('revocation_ocsp_must_staple'))
         self.certificate_transparency = kwargs.get('certificate_transparency', [])
+        self.phishing_domains = kwargs.get('phishing_domains', [])
 
     def __setattr__(self, name, value):
         if name in [
