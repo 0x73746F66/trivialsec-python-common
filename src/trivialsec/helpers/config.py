@@ -174,6 +174,10 @@ class Config:
         return self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/whoisxmlapi_key', WithDecryption=True)
 
     @property
+    def domaintools_key(self):
+        return self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/domaintools_key', WithDecryption=True)
+
+    @property
     def phishtank_username(self):
         return self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/phishtank_username')
 
