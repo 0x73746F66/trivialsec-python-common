@@ -36,6 +36,8 @@ HTTP_599 = 'Network connect timeout error'
 TLS_ERROR = 'TLS handshake failure'
 SSL_DATE_FMT = r'%b %d %H:%M:%S %Y %Z'
 X509_DATE_FMT = r'%Y%m%d%H%M%SZ'
+SEMVER_REGEX = r'\d+(=?\.(\d+(=?\.(\d+)*)*)*)*'
+DOCSTRING_REGEX = r"\/\*([\s\S]*?)\*\/"
 
 class InspectedHTTPSConnectionPool(HTTPSConnectionPool):
     @property
@@ -382,7 +384,7 @@ class Metadata:
                     cert = sock.getpeercert()
                     self._json_certificate = json.dumps(cert, default=str)
             except SSLCertVerificationError as err:
-                logger.warning(err)
+                logger.exception(err)
 
         try:
             ctx1 = create_default_context(purpose=Purpose.CLIENT_AUTH)
@@ -426,19 +428,141 @@ class Metadata:
             ).content
 
         except Exception as ex:
-            logger.warning(ex)
+            logger.exception(ex)
 
         if self._content:
             self.html_size = len(self._content)
             self.get_site_title()
-            self.get_scripts()
+            self.parse_scripts()
         self.html_last_checked = datetime.utcnow().replace(microsecond=0).isoformat()
 
-    def get_scripts(self) -> list:
+    @staticmethod
+    def query_npm(package :str, version :str = None):
+        url = f'https://www.npmjs.com/package/{package}'
+        if version is not None:
+            url += f'/v/{version}'
+        proxies = None
+        if config.http_proxy or config.https_proxy:
+            proxies = {
+                'http': f'http://{config.http_proxy}',
+                'https': f'https://{config.https_proxy}'
+            }
+        try:
+            resp = requests.get(
+                url,
+                headers={
+                    'User-Agent': config.user_agent,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'x-spiferack': '1',
+                },
+                proxies=proxies,
+                timeout=3
+            )
+            if resp.status_code == 200:
+                return resp.json()
+        except IOError:
+            pass
+        except Exception as err:
+            logger.exception(err)
+        return None
+
+    @staticmethod
+    def parse_docstrings(docstrings :list):
+        tests = [r'([\-\_\.a-zA-Z0-9]*)\.production\.min\.js', r'([\-\_\.a-zA-Z0-9]*)\.min\.js', r'.*\/([\-\_\.a-zA-Z0-9]*)\.js', r'https?:\/\/raw\.githubusercontent\.com\/([\-\_a-zA-Z0-9]*\/[\-\_a-zA-Z0-9]*)\/.*']
+        scripts = []
+        for docstring in docstrings:
+            version = extract_semver(docstring)
+            for test in tests:
+                matches = re.findall(test, docstring, re.MULTILINE)
+                package = matches[0]
+                if package is not None:
+                    break
+            if package is None:
+                continue
+            if '/' in package: # from github link
+                package = package.split('/')[1]
+            npm_resp = Metadata.query_npm(package, version)
+            if isinstance(npm_resp, dict) and 'capsule' in npm_resp:
+                scripts.append({
+                    'package': package,
+                    'url': npm_resp.get('packageVersion', {}).get('homepage', npm_resp.get('packageVersion', {}).get('repository')),
+                    'version': version,
+                    'downloads': npm_resp.get('versionsDownloads', {}).get(version),
+                    'latest_version': npm_resp.get('packument', {}).get('distTags', {}).get('latest'),
+                    'dependencies': npm_resp.get('packageVersion', {}).get('dependencies', {}),
+                    'dev_dependencies': npm_resp.get('packageVersion', {}).get('devDependencies', {}),
+                    'last_updated': npm_resp.get('capsule', {}).get('lastPublish', {}).get('time'),
+                    'license': npm_resp.get('packageVersion', {}).get('license'),
+                    'docstring': docstring,
+                })
+        return scripts
+
+    def parse_scripts(self):
         if self._content is None:
             return self.javascript
         soup = bs(self._content, 'html.parser')
-        self.javascript = [item['src'] for item in soup.select('script[src]')]
+        extracted = None
+        docstrings = []
+        code_blocks = [item.text for item in soup.find_all('script')]
+        for code_block in code_blocks:
+            docstrings += extract_docstrings(code_block)
+        javascripts = [item['src'] for item in soup.select('script[src]')]
+        proxies = None
+        if config.http_proxy or config.https_proxy:
+            proxies = {
+                'http': f'http://{config.http_proxy}',
+                'https': f'https://{config.https_proxy}'
+            }
+        for url in javascripts:
+            try:
+                script_content = requests.get(
+                    url,
+                    allow_redirects=True,
+                    proxies=proxies,
+                    timeout=3
+                ).text
+                if not script_content:
+                    return None
+                extracted = extract_docstrings(script_content)
+                docstrings += extracted
+            except Exception as ex:
+                logger.exception(ex)
+            query_string = None
+            uri = '/'.join(url.split('/')[3:-1])
+            filename_and_qs = url.split('/')[-1:]
+            if '?' in filename_and_qs:
+                filename, query_string = url.split('?')
+            else:
+                filename = filename_and_qs
+            filename = filename.replace('.js', '').replace('.min', '')
+            if query_string is not None:
+                version = extract_semver(query_string)
+            if version is None:
+                version = extract_semver(filename)
+            if version is None:
+                version = extract_semver(uri)
+            if version is None and extracted is not None:
+                for comment in extracted:
+                    if version.lower() in comment.lower():
+                        version = extract_semver(comment)
+            npm_resp = Metadata.query_npm(filename, version)
+            if isinstance(npm_resp, dict) and 'capsule' in npm_resp:
+                js_dict = {
+                    'package': filename,
+                    'url': url,
+                    'version': version,
+                    'downloads': npm_resp.get('versionsDownloads', {}).get(version),
+                    'latest_version': npm_resp.get('packument', {}).get('distTags', {}).get('latest'),
+                    'dependencies': npm_resp.get('packageVersion', {}).get('dependencies', {}),
+                    'dev_dependencies': npm_resp.get('packageVersion', {}).get('devDependencies', {}),
+                    'last_updated': npm_resp.get('capsule', {}).get('lastPublish', {}).get('time'),
+                    'license': npm_resp.get('packageVersion', {}).get('license'),
+                    'docstring': '\n'.join(extracted),
+                }
+                self.javascript.append(js_dict)
+
+        self.javascript.extend(Metadata.parse_docstrings(docstrings))
+
         return self.javascript
 
     def get_site_title(self):
@@ -470,31 +594,28 @@ class Metadata:
         except IOError:
             pass
         except Exception as err:
-            logger.error(err)
+            logger.exception(err)
 
         return self
 
     def safe_browsing_check(self):
         gcp_sb = SafeBrowsing(config.google_api_key)
+        threat = ''
+        platform = ''
         try:
-            resp = gcp_sb.lookup_urls([
+            self.safe_browsing = gcp_sb.lookup_urls([
                 f'http://{self.host}',
                 f'https://{self.host}'
             ])
-            for match in resp.get('matches', []):
-                self.safe_browsing['threat_type'] = match.get('threatType')
-                self.safe_browsing['platform_type'] = match.get('platformType')
-                threat_entry_metadata = match.get('threatEntryMetadata')
-                if threat_entry_metadata:
-                    self.safe_browsing['threat_metadata'] = [
-                        (entry.get('key'), entry.get('value')) for entry in threat_entry_metadata.get('entries', [])
-                    ]
+            for match in self.safe_browsing.get('matches', []):
+                threat = match.get('threatType', threat)
+                platform = match.get('platformType', platform)
         except Exception as err:
-            logger.error(err)
+            logger.exception(err)
 
         self.safe_browsing_status = 'Safe'
         if self.safe_browsing:
-            self.safe_browsing_status = f'{self.safe_browsing.get("platform_type")} {self.safe_browsing.get("threat_type")}'.lower()
+            self.safe_browsing_status = f'{platform} {threat}'.strip()
 
         return self
 
@@ -520,17 +641,17 @@ class Metadata:
                 proxies=proxies,
                 timeout=3
             )
-            self.phishtank = resp.json().get('results')
+            self.phishtank = resp.json()
+            phishtank_results = self.phishtank.get('results', {})
 
         except Exception as err:
-            logger.error(err)
+            logger.exception(err)
 
         self.phishtank_status = 'Unclassified'
-        if self.phishtank:
-            if self.phishtank.get('in_database'):
-                self.phishtank_status = 'Reported Phish'
-            elif self.phishtank.get('verified'):
-                self.phishtank_status = 'Verified Phish'
+        if phishtank_results.get('in_database'):
+            self.phishtank_status = 'Reported Phish'
+        elif phishtank_results.get('verified'):
+            self.phishtank_status = 'Verified Phish'
 
         return self
 
@@ -711,7 +832,7 @@ def ip_for_host(host :str, ports :list = [80, 443]) -> list:
                 if family == AF_INET:
                     ip_list.add(sock_addr[0])
         except IOError as ex:
-            logger.warning(ex)
+            logger.exception(ex)
     return list(ip_list)
 
 def asn_data(host :str, port :int = 80) -> list:
@@ -766,6 +887,19 @@ def cidr_address_list(cidr :str)->list:
 
     return ret
 
+def extract_semver(str_value :str):
+    matches = re.search(SEMVER_REGEX, str_value)
+    if matches:
+        return matches.group()
+    return None
+
+def extract_docstrings(content :str):
+    docstrings = []
+    matches = re.finditer(DOCSTRING_REGEX, content, re.MULTILINE)
+    for _, match in enumerate(matches, start=1):
+        docstrings.append(match.group(1))
+    return docstrings
+
 def extract_server_version(str_value :str) -> tuple:
     trim_values = [
         'via:',
@@ -798,14 +932,10 @@ def extract_server_version(str_value :str) -> tuple:
     server_version = None
     if '/' in server_name and len(server_name.split('/')) == 2:
         server_name, server_version = server_name.split('/')
-        matches = re.search(r'\d+(=?\.(\d+(=?\.(\d+)*)*)*)*', server_version)
-        if matches:
-            server_version = matches.group()
+        server_version = extract_semver(server_version)
 
     if server_version is None:
-        matches = re.search(r'\d+(=?\.(\d+(=?\.(\d+)*)*)*)*', server_name)
-        if matches:
-            server_version = matches.group()
+        server_version = extract_semver(server_name)
 
     if server_version is not None and server_version in server_name:
         server_name = server_name.replace(server_version, '')
