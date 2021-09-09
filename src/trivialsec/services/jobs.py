@@ -1,12 +1,41 @@
+import logging
 import json
+from datetime import datetime
 from trivialsec.models.activity_log import ActivityLog
-from trivialsec.models.job_run import JobRun
+from trivialsec.models.job_run import JobRun, JobRuns
 from trivialsec.models.service_type import ServiceType
+from trivialsec.models.account import Account
+from trivialsec.models.account_config import AccountConfig
 from trivialsec.models.project import Project
+from trivialsec.models.domain import Domain
 from trivialsec.models.member import Member
+from trivialsec.helpers.config import config
 
 
 __module__ = 'trivialsec.services.jobs'
+SCAN_NEXT = {
+    'domain': ['amass', 'metadata', 'drill', 'nmap', 'orphaned_files'],
+    'subdomain': ['orphaned_files', 'subdomain_takeover'],
+    'external_domain': ['metadata', 'saas_takeover', 'subdomain_takeover', 'dns_fronting', 'cname_collusion'],
+    'tls_port': ['testssl', 'starttls_bugs', 'pwnedkeys_com'],
+    'http_port': ['http_desync', 'request_smuggler'],
+    'ldap_port': ['ldap'],
+    'vpn_port': ['vpn_detect'],
+    'kerberos_port': ['kerberoaster'],
+    'html_port': ['screenshot', 'crawler', 'joomla', 'wordpress', 'compression_bugs', 'anti_bruteforce', 'xss_tester'],
+    'json': [],
+    'xml': ['saml_injection'],
+    'open_port': ['owasp-zap', 'nikto2', 'file_protocols', 'popped_shells', 'reflected_ddos', 'dce_rpc'],
+    'uri_path': ['owasp-zap', 'nikto2', 'git', 'dsstore', 'oauth2_checker'],
+    'ipv4': [],
+    'ipv6': [],
+    'javascript': ['javascript', 'npm-audit', 'eslint-plugin-security', 'nodejsscan', 'react'],
+    'golang': ['golang', 'gosec'],
+    'python': ['bandit', 'ossaudit'],
+    'ruby': ['ruby', 'minusworld-ruby-on-rails-xss'],
+    'sourcecode': ['dependency-check', 'semgrep-r2c-ci', 'command-injection', 'insecure-transport', 'jwt', 'secrets', 'security-audit', 'docker-compose', 'dockerfile', 'findsecbugs', 'secret_strings', 'xss_tester'],
+}
+logger = logging.getLogger(__name__)
 
 class QueueData:
     def __init__(self, **kwargs):
@@ -21,13 +50,11 @@ class QueueData:
         self.service_type_id = kwargs.get('service_type_id')
         self.service_type_name = kwargs.get('service_type_name')
         self.service_type_category = kwargs.get('service_type_category')
-        self.scan_next = kwargs.get('scan_next')
-        # amass, drill
         self.target = kwargs.get('target')
-        # timings
+        self.target_type = kwargs.get('target_type')
+        self.report_summary = kwargs.get('report_summary')
         self.started_at = kwargs.get('started_at')
         self.completed_at = kwargs.get('completed_at')
-        self.report_summary = kwargs.get('report_summary')
 
     def __str__(self):
         return json.dumps(self.__dict__, sort_keys=True, default=str)
@@ -49,16 +76,15 @@ class QueueData:
                 'name': self.service_type_name,
                 'category': self.service_type_category
             },
-            'target': self.target,
+            self.target_type: self.target,
             'timings': {
                 'started_at': self.started_at,
                 'completed_at': self.completed_at,
             },
-            'report_summary': self.report_summary,
-            'scan_next': self.scan_next
+            'report_summary': self.report_summary
         }.items()
 
-def queue_job(params :dict, service_type: ServiceType, member: Member, project=Project, priority: int = 0, on_demand :bool = True, scan_next :list = []) -> JobRun:
+def queue_job(params :dict, service_type: ServiceType, member: Member, project=Project, priority: int = 0, on_demand :bool = True) -> JobRun:
     queue_data = QueueData(
         queued_by_member_id=member.member_id,
         on_demand=on_demand,
@@ -66,8 +92,8 @@ def queue_job(params :dict, service_type: ServiceType, member: Member, project=P
         service_type_id=service_type.service_type_id,
         service_type_name=service_type.name,
         service_type_category=service_type.category,
-        scan_next=scan_next,
         target=params.get('target'),
+        target_type=params.get('target_type'),
     )
     new_job_run = JobRun(
         account_id=member.account_id,
@@ -89,3 +115,62 @@ def queue_job(params :dict, service_type: ServiceType, member: Member, project=P
         action=action,
         description=f'{queue_data.scan_type} {service_type.category} {queue_data.target}'
     ).persist()
+
+def get_next_job(service_type_id :int = None, service_type_name :str = None, account_id :int = None):
+    current_service_type = ServiceType()
+    if service_type_id is not None:
+        current_service_type.service_type_id = service_type_id
+        current_service_type.hydrate('name')
+    if service_type_name is not None:
+        current_service_type.name = service_type_name
+        current_service_type.hydrate('name')
+    logger.info(f'checking {current_service_type.name} queue for service {config.node_id}')
+    job_params = [
+        ('state', ServiceType.STATE_QUEUED),
+        ('service_type_id', current_service_type.service_type_id)
+    ]
+    if account_id is not None:
+        job_params.append(('account_id', account_id))
+
+    jobs: JobRuns = JobRuns().find_by(
+        job_params,
+        order_by=['priority', 'DESC'],
+        limit=1,
+    )
+    if len(jobs) != 1 or not isinstance(jobs[0], JobRun):
+        logger.info(f'{current_service_type.name} queue is empty')
+        return None
+
+    current_job: JobRun = jobs[0]
+    setattr(current_job, 'service_type', current_service_type)
+    current_job.node_id = config.node_id
+    current_job.started_at = datetime.utcnow().replace(microsecond=0).isoformat()
+    current_job.updated_at = current_job.started_at
+    data = json.loads(current_job.queue_data)
+    data['service_node_id'] = config.node_id
+    data['started_at'] = current_job.started_at
+    current_job.queue_data = QueueData(**data)
+
+    account = Account(account_id=current_job.account_id)
+    if not account.hydrate():
+        logger.error(f'Error loading account {current_job.account_id}')
+        return None
+    account_config = AccountConfig(account_id=current_job.account_id)
+    if not account_config.hydrate():
+        logger.error(f'Error loading account config {current_job.account_id}')
+        return None
+    setattr(account, 'config', account_config)
+    setattr(current_job, 'account', account)
+    project = Project(project_id=current_job.project_id)
+    if not project.hydrate():
+        logger.error(f'Error loading project {current_job.project_id}')
+        return None
+    setattr(current_job, 'project', project)
+    if current_job.queue_data.target_type == 'domain':
+        domain = Domain(domian_name=current_job.queue_data.target)
+        if not domain.hydrate(query_string=f'domain_name:"{current_job.queue_data.target}"'):
+            logger.error(f'Error loading domain {current_job.queue_data.target}')
+            return None
+        setattr(current_job, 'domain', domain)
+
+    return current_job
