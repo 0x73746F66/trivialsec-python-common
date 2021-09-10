@@ -9,7 +9,6 @@ from socket import socket, gethostbyname, error as SocketError, getaddrinfo, AF_
 from base64 import urlsafe_b64encode
 from urllib.parse import urlparse, urlencode, parse_qs
 from cryptography import x509
-from cryptography.hazmat.backends import default_backend
 from OpenSSL.crypto import load_certificate, dump_certificate, X509, X509Name, TYPE_RSA, FILETYPE_ASN1, FILETYPE_PEM
 from ssl import create_default_context, SSLCertVerificationError, Purpose, CertificateError
 from datetime import datetime
@@ -240,7 +239,7 @@ class Metadata:
         self.port = port
         try:
             der = conn.sock.getpeercert(True)
-            self._peer_certificate_chain = conn.sock.getpeercertchain()                
+            self._peer_certificate_chain = conn.sock.get_unverified_chain(True)                
             self.negotiated_cipher, protocol, _ = conn.sock.cipher()
             self.protocol_version = conn.sock.version() or protocol
             self.server_certificate = load_certificate(FILETYPE_ASN1, der)
@@ -249,8 +248,8 @@ class Metadata:
             public_key = self.server_certificate.get_pubkey()
             self.pubkey_type = 'RSA' if public_key.type() == TYPE_RSA else 'DSA'
             self.server_key_size = public_key.bits()
-            loaded_cert = x509.load_pem_x509_certificate(self.server_certificate, default_backend())
-            self.certificate_san = loaded_cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value.get_values_for_type(x509.DNSName)
+            crypto_x509 = self.server_certificate.to_cryptography()
+            self.certificate_san = crypto_x509.extensions.get_extension_for_class(x509.SubjectAlternativeName).value.get_values_for_type(x509.DNSName)
 
         except CertificateError:
             self.code = 500
@@ -381,7 +380,8 @@ class Metadata:
             self.reason = HTTP_503
 
         if isinstance(self._peer_certificate_chain, list):
-            for pos, cert in enumerate(self._peer_certificate_chain):
+            for pos, der in enumerate(self._peer_certificate_chain):
+                cert = load_certificate(FILETYPE_ASN1, der)
                 pem_filepath = f'/tmp/{self.host}-{pos}.pem'
                 Path(pem_filepath).write_bytes(dump_certificate(FILETYPE_PEM, cert))
                 try:
