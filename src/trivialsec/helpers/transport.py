@@ -373,6 +373,10 @@ class Metadata:
             self.code = 503
             self.reason = HTTP_503
 
+        # simple hack to handle an edge case where getpeercert being called more than once fails
+        # we need the DER so getpeercert must be called with the binary option first so this
+        # block will only run if the second getpeercert without the binary flag - fails
+        # there may be a better way in future to turn a cert into a dict
         if isinstance(self.server_certificate, X509) and self._json_certificate == '{}':
             self._json_certificate = ''
             try_protocols = [ssl.PROTOCOL_TLSv1_2, ssl.PROTOCOL_TLSv1_1, ssl.PROTOCOL_TLSv1, ssl.PROTOCOL_TLS]
@@ -380,7 +384,7 @@ class Metadata:
                 try:
                     cert = get_server_certificate((self.host, 443), ssl_version=ssl_version)
                     if cert:
-                        self._json_certificate = ssl._ssl._test_decode_cert(StringIO(cert)) # pylint: disable=protected-access
+                        self._json_certificate = json.dumps(ssl._ssl._test_decode_cert(StringIO(cert)), default=str) # pylint: disable=protected-access
                         break
                 except Exception:
                     pass
