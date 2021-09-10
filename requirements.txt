@@ -24,3 +24,4 @@ setproctitle>=1.2.2
 elasticsearch>=7.14.0
 aslookup==1.2.0
 tldextract==3.1.0
+certvalidator==0.11.1

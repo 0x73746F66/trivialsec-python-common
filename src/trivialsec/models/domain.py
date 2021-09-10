@@ -145,6 +145,9 @@ class Domain(Elasticsearch_Document_Adapter):
         self.certificate_issuer_country = kwargs.get('certificate_issuer_country')
         self.certificate_not_before = kwargs.get('certificate_not_before')
         self.certificate_not_after = kwargs.get('certificate_not_after')
+        self.certificate_chain_trust = kwargs.get('certificate_chain_trust')
+        self.certificate_chain_valid = kwargs.get('certificate_chain_valid')
+        self.certificate_chain_validation_result = kwargs.get('certificate_chain_validation_result')
         self.offered_cipher_suite_groups = kwargs.get('offered_cipher_suite_groups')
         self.cipher_suite_group_pfs = bool(kwargs.get('cipher_suite_group_pfs'))
         self.cipher_suite_group_aead = bool(kwargs.get('cipher_suite_group_aead'))
@@ -274,6 +277,8 @@ class Domain(Elasticsearch_Document_Adapter):
             'trust_store_windows',
             'extended_validation',
             'certification_authority_authorization',
+            'certificate_chain_trust',
+            'certificate_chain_valid',
             'revocation_ocsp_url',
             'revocation_ocsp_crl',
             'revocation_ocsp_revoked',

@@ -13,6 +13,8 @@ from OpenSSL.crypto import load_certificate, dump_certificate, X509, X509Name, T
 from ssl import create_default_context, SSLCertVerificationError, Purpose, CertificateError
 from datetime import datetime
 import requests
+from certvalidator import CertificateValidator, ValidationContext
+from certvalidator.errors import PathValidationError, RevokedError, InvalidCertificateError
 from bs4 import BeautifulSoup as bs
 from dns import resolver, rdtypes
 from dns.exception import DNSException
@@ -231,7 +233,10 @@ class Metadata:
         self.html_title = None
         self.programs = []
         self.asn_data = []
-        self.certificate_chain = []
+        self.certificate_chain_revoked = None
+        self.certificate_chain_valid = None
+        self.certificate_chain_trust = None
+        self.certificate_chain_validation_result = None
 
     @retry(ValueError, tries=5, delay=1.5, backoff=3)
     def _connection_inspector(self, host, port, conn):
@@ -239,17 +244,8 @@ class Metadata:
         self.port = port
         try:
             der = conn.sock.getpeercert(True)
-            self._peer_certificate_chain = conn.sock.get_unverified_chain(True)                
             self.negotiated_cipher, protocol, _ = conn.sock.cipher()
             self.protocol_version = conn.sock.version() or protocol
-            self.server_certificate = load_certificate(FILETYPE_ASN1, der)
-            self.signature_algorithm = self.server_certificate.get_signature_algorithm().decode('ascii')
-            self.sha1_fingerprint = self.server_certificate.digest('sha1').decode('ascii')
-            public_key = self.server_certificate.get_pubkey()
-            self.pubkey_type = 'RSA' if public_key.type() == TYPE_RSA else 'DSA'
-            self.server_key_size = public_key.bits()
-            crypto_x509 = self.server_certificate.to_cryptography()
-            self.certificate_san = crypto_x509.extensions.get_extension_for_class(x509.SubjectAlternativeName).value.get_values_for_type(x509.DNSName)
 
         except CertificateError:
             self.code = 500
@@ -275,6 +271,39 @@ class Metadata:
         except SocketError:
             self.code = 503
             self.reason = HTTP_503
+
+        self.server_certificate = load_certificate(FILETYPE_ASN1, der)
+        self.signature_algorithm = self.server_certificate.get_signature_algorithm().decode('ascii')
+        self.sha1_fingerprint = self.server_certificate.digest('sha1').decode('ascii')
+        public_key = self.server_certificate.get_pubkey()
+        self.pubkey_type = 'RSA' if public_key.type() == TYPE_RSA else 'DSA'
+        self.server_key_size = public_key.bits()
+        crypto_x509 = self.server_certificate.to_cryptography()
+        self.certificate_san = crypto_x509.extensions.get_extension_for_class(x509.SubjectAlternativeName).value.get_values_for_type(x509.DNSName)
+
+        # TODO perhaps remove certvalidator, consider once merged: https://github.com/pyca/cryptography/issues/2381
+        try:
+            ctx = ValidationContext(allow_fetching=True, revocation_mode='hard-fail', weak_hash_algos=set(["md2", "md5", "sha1"]))
+            validator = CertificateValidator(der, validation_context=ctx)
+            validator.validate_usage(
+                key_usage=set(['digital_signature', 'crl_sign']),
+                extended_key_usage=set(['ocsp_signing']),
+            )
+        except RevokedError as ex:
+            self.certificate_chain_revoked = True
+            self.certificate_chain_validation_result = str(ex)
+        except InvalidCertificateError as ex:
+            self.certificate_chain_valid = False
+            self.certificate_chain_validation_result = str(ex)
+        except PathValidationError as ex:
+            self.certificate_chain_trust = False
+            self.certificate_chain_validation_result = str(ex)
+
+        if self.certificate_chain_validation_result is None:
+            self.certificate_chain_revoked = False
+            self.certificate_chain_trust = True
+            self.certificate_chain_valid = True
+            self.certificate_chain_validation_result = 'Validated CRL, OSCP, and digital signatures'
 
     def head(self, verify_tls :bool = False, allow_redirects :bool = False):
         self.method = 'head'
@@ -379,6 +408,7 @@ class Metadata:
             self.code = 503
             self.reason = HTTP_503
 
+        # TODO waiting for merge https://github.com/python/cpython/pull/17938
         if isinstance(self._peer_certificate_chain, list):
             for pos, der in enumerate(self._peer_certificate_chain):
                 cert = load_certificate(FILETYPE_ASN1, der)
