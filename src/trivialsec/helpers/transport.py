@@ -3,7 +3,6 @@ import re
 import errno
 import json
 import ssl
-from io import BytesIO
 from os import path
 from socket import socket, gethostbyname, error as SocketError, getaddrinfo, AF_INET6, AF_INET, SOCK_STREAM
 from base64 import urlsafe_b64encode
@@ -379,7 +378,7 @@ class Metadata:
         # there may be a better way in future to turn a cert into a dict
         if isinstance(self.server_certificate, X509) and self._json_certificate == '{}':            
             try:
-                self._json_certificate = json.dumps(ssl._ssl._test_decode_cert(BytesIO(dump_certificate(FILETYPE_PEM, self.server_certificate))), default=str) # pylint: disable=protected-access
+                self._json_certificate = json.dumps(ssl._ssl._test_decode_cert(dump_certificate(FILETYPE_PEM, self.server_certificate)), default=str) # pylint: disable=protected-access
             except Exception as ex:
                 logger.exception(ex)
 
