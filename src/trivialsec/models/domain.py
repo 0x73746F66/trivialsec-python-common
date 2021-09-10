@@ -25,7 +25,6 @@ class Domain(Elasticsearch_Document_Adapter):
         self.registered_at = kwargs.get('registered_at')
         self.registrar = kwargs.get('registrar')
         self.registrant = kwargs.get('registrant')
-        self.registrar_history = kwargs.get('registrar_history', [])
         self.reputation_whoisxmlapi = kwargs.get('reputation_whoisxmlapi')
         self.reputation_domaintools = kwargs.get('reputation_domaintools')
         self.reputation_google_safe_browsing = kwargs.get('reputation_google_safe_browsing')
