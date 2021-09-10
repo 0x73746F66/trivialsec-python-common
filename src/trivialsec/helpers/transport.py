@@ -183,7 +183,7 @@ class SafeBrowsing:
 
 class Metadata:
     def __init__(self, url :str, method :str = 'head'):
-        self._peer_certificate_chain = None
+        self._peer_certificate_chain = []
         self._content = None
         target_url = url.replace(":80/", "/").replace(":443/", "/")
         self.url = target_url
@@ -233,6 +233,7 @@ class Metadata:
         self.html_title = None
         self.programs = []
         self.asn_data = []
+        self.certificate_chain = []
         self.certificate_chain_revoked = None
         self.certificate_chain_valid = None
         self.certificate_chain_trust = None
@@ -272,6 +273,7 @@ class Metadata:
             self.code = 503
             self.reason = HTTP_503
 
+        self._peer_certificate_chain.append(der)
         self.server_certificate = load_certificate(FILETYPE_ASN1, der)
         self.signature_algorithm = self.server_certificate.get_signature_algorithm().decode('ascii')
         self.sha1_fingerprint = self.server_certificate.digest('sha1').decode('ascii')
