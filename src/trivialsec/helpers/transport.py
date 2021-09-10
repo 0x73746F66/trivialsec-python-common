@@ -240,7 +240,7 @@ class Metadata:
         self.port = port
         try:
             der = conn.sock.getpeercert(True)
-            self._peer_certificate_chain = conn.sock.get_peer_cert_chain()                
+            self._peer_certificate_chain = conn.get_peer_cert_chain()                
             self.negotiated_cipher, protocol, _ = conn.sock.cipher()
             self.protocol_version = conn.sock.version() or protocol
             self.server_certificate = load_certificate(FILETYPE_ASN1, der)
