@@ -2,6 +2,8 @@ import ipaddress
 import re
 import errno
 import json
+import ssl
+from io import StringIO
 from os import path
 from socket import socket, gethostbyname, error as SocketError, getaddrinfo, AF_INET6, AF_INET, SOCK_STREAM
 from base64 import urlsafe_b64encode
@@ -373,9 +375,12 @@ class Metadata:
 
         if isinstance(self.server_certificate, X509) and self._json_certificate == '{}':
             self._json_certificate = ''
+            try_protocols = [ssl.PROTOCOL_TLSv1_2, ssl.PROTOCOL_TLSv1_1, ssl.PROTOCOL_TLSv1, ssl.PROTOCOL_TLS]
             try:
-                cert = get_server_certificate((self.host, 443))
-                self._json_certificate = cert
+                for ssl_version in try_protocols:
+                    cert = get_server_certificate((self.host, 443), ssl_version=ssl_version)
+                    if cert:
+                        self._json_certificate = ssl._ssl._test_decode_cert(StringIO(cert)) # pylint: disable=protected-access
             except Exception as err:
                 logger.exception(err)
 
