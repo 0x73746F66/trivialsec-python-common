@@ -8,6 +8,8 @@ from os import path
 from socket import socket, gethostbyname, error as SocketError, getaddrinfo, AF_INET6, AF_INET, SOCK_STREAM
 from base64 import urlsafe_b64encode
 from urllib.parse import urlparse, urlencode, parse_qs
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 from OpenSSL.crypto import load_certificate, dump_certificate, X509, X509Name, TYPE_RSA, FILETYPE_ASN1, FILETYPE_PEM
 from ssl import create_default_context, SSLCertVerificationError, Purpose, CertificateError
 from datetime import datetime
@@ -180,7 +182,7 @@ class SafeBrowsing:
 
 class Metadata:
     def __init__(self, url :str, method :str = 'head'):
-        self._json_certificate = None
+        self._peer_certificate_chain = None
         self._content = None
         target_url = url.replace(":80/", "/").replace(":443/", "/")
         self.url = target_url
@@ -203,6 +205,7 @@ class Metadata:
         self.certificate_not_after = None
         self.certificate_issued_desc = None
         self.certificate_expiry_desc = None
+        self.certificate_san = []
         self.headers = {}
         self.application_banner = None
         self.server_banner = None
@@ -228,6 +231,8 @@ class Metadata:
         self.javascript = []
         self.html_title = None
         self.programs = []
+        self.asn_data = []
+        self.certificate_chain = []
 
     @retry(ValueError, tries=5, delay=1.5, backoff=3)
     def _connection_inspector(self, host, port, conn):
@@ -235,7 +240,7 @@ class Metadata:
         self.port = port
         try:
             der = conn.sock.getpeercert(True)
-            self._json_certificate = json.dumps(conn.sock.getpeercert(), default=str)
+            self._peer_certificate_chain = conn.sock.get_peer_cert_chain()                
             self.negotiated_cipher, protocol, _ = conn.sock.cipher()
             self.protocol_version = conn.sock.version() or protocol
             self.server_certificate = load_certificate(FILETYPE_ASN1, der)
@@ -244,6 +249,8 @@ class Metadata:
             public_key = self.server_certificate.get_pubkey()
             self.pubkey_type = 'RSA' if public_key.type() == TYPE_RSA else 'DSA'
             self.server_key_size = public_key.bits()
+            loaded_cert = x509.load_pem_x509_certificate(self.server_certificate, default_backend())
+            self.certificate_san = loaded_cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value.get_values_for_type(x509.DNSName)
 
         except CertificateError:
             self.code = 500
@@ -373,19 +380,17 @@ class Metadata:
             self.code = 503
             self.reason = HTTP_503
 
-        # simple hack to handle an edge case where getpeercert being called more than once fails
-        # we need the DER so getpeercert must be called with the binary option first so this
-        # block will only run if the second getpeercert without the binary flag - fails
-        # there may be a better way in future to turn a cert into a dict
-        if isinstance(self.server_certificate, X509) and self._json_certificate == '{}':
-            try:
-                pem_filepath = f'/tmp/{self.host}.pem'
-                Path(pem_filepath).write_bytes(dump_certificate(FILETYPE_PEM, self.server_certificate))
-                cert_dict = ssl._ssl._test_decode_cert(pem_filepath) # pylint: disable=protected-access
-                self._json_certificate = json.dumps(cert_dict, default=str)
-            except Exception as ex:
-                logger.exception(ex)
+        if isinstance(self._peer_certificate_chain, list):
+            for pos, cert in enumerate(self._peer_certificate_chain):
+                pem_filepath = f'/tmp/{self.host}-{pos}.pem'
+                Path(pem_filepath).write_bytes(dump_certificate(FILETYPE_PEM, cert))
+                try:
+                    cert_dict = ssl._ssl._test_decode_cert(pem_filepath) # pylint: disable=protected-access
+                    self.certificate_chain.append(cert_dict)
+                except Exception as ex:
+                    logger.exception(ex)
 
+        self.certificate_is_self_signed = False
         try:
             ctx1 = create_default_context(purpose=Purpose.CLIENT_AUTH)
             with ctx1.wrap_socket(socket(), server_hostname=self.host) as sock:
@@ -407,10 +412,12 @@ class Metadata:
             self.certificate_not_after = not_after.isoformat()
             self.certificate_issued_desc = f'{(datetime.utcnow() - not_before).days} days ago'
             self.certificate_expiry_desc = f'Expired {(datetime.utcnow() - not_after).days} days ago' if not_after < datetime.utcnow() else f'Valid for {(not_after - datetime.utcnow()).days} days'
+            self.asn_data = asn_data(self.host, self.port)
 
         return self
 
     def website_content(self):
+        logger.info(f"website_content {self.host}")
         if self._content:
             return self._content
 
@@ -421,19 +428,26 @@ class Metadata:
                 'https': f'https://{config.https_proxy}'
             }
         try:
+            logger.info(f"get _content {self.host}")
             self._content = requests.get(f'http://{self.host}',
                 allow_redirects=True,
                 proxies=proxies,
                 timeout=3
             ).content
+            logger.info(f"saved _content {self.host}")
 
         except Exception as ex:
             logger.exception(ex)
 
+        logger.info(f"if _content {self.host}")
         if self._content:
+            logger.info(f"size {self.host}")
             self.html_size = len(self._content)
+            logger.info(f"title {self.host}")
             self.get_site_title()
+            logger.info(f"scripts {self.host}")
             self.parse_scripts()
+        logger.info(f"html done {self.host}")
         self.html_last_checked = datetime.utcnow().replace(microsecond=0).isoformat()
 
     @staticmethod
