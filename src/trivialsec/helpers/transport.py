@@ -239,7 +239,6 @@ class Metadata:
         self.certificate_chain_trust = None
         self.certificate_chain_validation_result = None
 
-    @retry(ValueError, tries=5, delay=1.5, backoff=3)
     def _connection_inspector(self, host, port, conn):
         self.host = host
         self.port = port
