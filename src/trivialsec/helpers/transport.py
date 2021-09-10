@@ -7,7 +7,7 @@ from socket import socket, gethostbyname, error as SocketError, getaddrinfo, AF_
 from base64 import urlsafe_b64encode
 from urllib.parse import urlparse, urlencode, parse_qs
 from OpenSSL.crypto import load_certificate, X509, X509Name, TYPE_RSA, FILETYPE_ASN1
-from ssl import create_default_context, _create_unverified_context, SSLCertVerificationError, Purpose, CertificateError
+from ssl import get_server_certificate, create_default_context, SSLCertVerificationError, Purpose, CertificateError
 from datetime import datetime
 import requests
 from bs4 import BeautifulSoup as bs
@@ -177,59 +177,55 @@ class SafeBrowsing:
         return self.lookup_urls([url], platforms=platforms)[url]
 
 class Metadata:
-    _json_certificate = None
-    _content = None
-    signature_algorithm = None
-    negotiated_cipher = None
-    protocol_version = None
-    server_certificate = None
-    server_key_size = None
-    sha1_fingerprint = None
-    pubkey_type = None
-    certificate_is_self_signed = None
-    certificate_verify_message = None
-    certificate_serial_number = None
-    certificate_issuer = None
-    certificate_issuer_country = None
-    certificate_not_before = None
-    certificate_not_after = None
-    certificate_issued_desc = None
-    certificate_expiry_desc = None
-    headers = {}
-    application_banner = None
-    server_banner = None
-    application_proxy = None
-    cookies = None
-    elapsed_duration = 0
-    code = None
-    reason = None
-    redirect_location = None
-    host = None
-    port = None
-    url = None
-    method = None
-    dns_registered = None
-    verification_hash = None
-    dns_answer = None
-    safe_browsing = {}
-    safe_browsing_status = None
-    phishtank = {}
-    phishtank_status = None
-    honey_score = None
-    threat_score = None
-    threat_type = None
-    html_last_checked = None
-    html_size = None
-    javascript = []
-    html_title = None
-    programs = []
-
     def __init__(self, url :str, method :str = 'head'):
+        self._json_certificate = None
+        self._content = None
         target_url = url.replace(":80/", "/").replace(":443/", "/")
         self.url = target_url
         self.method = method
         parsed_uri = urlparse(self.url)
         self.host = parsed_uri.netloc
+        self.signature_algorithm = None
+        self.negotiated_cipher = None
+        self.protocol_version = None
+        self.server_certificate = None
+        self.server_key_size = None
+        self.sha1_fingerprint = None
+        self.pubkey_type = None
+        self.certificate_is_self_signed = None
+        self.certificate_verify_message = None
+        self.certificate_serial_number = None
+        self.certificate_issuer = None
+        self.certificate_issuer_country = None
+        self.certificate_not_before = None
+        self.certificate_not_after = None
+        self.certificate_issued_desc = None
+        self.certificate_expiry_desc = None
+        self.headers = {}
+        self.application_banner = None
+        self.server_banner = None
+        self.application_proxy = None
+        self.cookies = None
+        self.elapsed_duration = 0
+        self.code = None
+        self.reason = None
+        self.redirect_location = None
+        self.port = None
+        self.dns_registered = None
+        self.verification_hash = None
+        self.dns_answer = None
+        self.safe_browsing = {}
+        self.safe_browsing_status = None
+        self.phishtank = {}
+        self.phishtank_status = None
+        self.honey_score = None
+        self.threat_score = None
+        self.threat_type = None
+        self.html_last_checked = None
+        self.html_size = None
+        self.javascript = []
+        self.html_title = None
+        self.programs = []
 
     @retry(ValueError, tries=5, delay=1.5, backoff=3)
     def _connection_inspector(self, host, port, conn):
@@ -378,12 +374,9 @@ class Metadata:
         if isinstance(self.server_certificate, X509) and self._json_certificate == '{}':
             self._json_certificate = ''
             try:
-                ctx0 = _create_unverified_context(check_hostname=False, purpose=Purpose.CLIENT_AUTH) # nosemgrep NOSONAR get the cert regardless of validation
-                with ctx0.wrap_socket(socket(), server_hostname=self.host) as sock:
-                    sock.connect((self.host, 443))
-                    cert = sock.getpeercert()
-                    self._json_certificate = json.dumps(cert, default=str)
-            except SSLCertVerificationError as err:
+                cert = get_server_certificate((self.host, 443))
+                self._json_certificate = cert
+            except Exception as err:
                 logger.exception(err)
 
         try:
@@ -397,7 +390,7 @@ class Metadata:
             self.certificate_verify_message = str(err)
 
         if isinstance(self.server_certificate, X509):
-            self.certificate_serial_number = self.server_certificate.get_serial_number()
+            self.certificate_serial_number = str(self.server_certificate.get_serial_number())
             issuer: X509Name = self.server_certificate.get_issuer()
             self.certificate_issuer = issuer.commonName
             self.certificate_issuer_country = issuer.countryName
