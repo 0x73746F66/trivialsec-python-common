@@ -887,7 +887,7 @@ def asn_data(host :str, port :int = 80) -> list:
     for addr in ip_for_host(host, [port]):
         if is_valid_ipv4_address(addr):
             try:
-                as_data.append(get_as_data(addr))
+                as_data.append(get_as_data(addr)._asdict())
             except (NoASDataError, NonroutableAddressError, AddressFormatError) as ex:
                 logger.exception(ex)
     return as_data
