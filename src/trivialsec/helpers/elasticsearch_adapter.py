@@ -103,7 +103,7 @@ class Elasticsearch_Document_Adapter:
 
     def set_id(self, doc_id) -> bool:
         res = self.es.exists(index=self.__index, id=doc_id, _source=False) # pylint: disable=unexpected-keyword-arg
-        if res['found'] is True:
+        if res is True:
             self._id = doc_id
             return True
         return False
@@ -144,17 +144,14 @@ class Elasticsearch_Document_Adapter:
     def exists(self, query_string :str = None) -> bool:
         found = False
         if self._id is not None:
-            res = self.es.exists(index=self.__index, id=self._id, _source=False) # pylint: disable=unexpected-keyword-arg
-            found = res['found']
+            found = self.es.exists(index=self.__index, id=self._id, _source=False) # pylint: disable=unexpected-keyword-arg
 
         if self.__pk is not None and found is False:
             primary_key = getattr(self, self.__pk)
-            if primary_key is None:
-                return False
-            res = self.es.exists(index=self.__index, id=primary_key, _source=False) # pylint: disable=unexpected-keyword-arg
-            found = res['found']
-            if found is True:
-                self._id = res['_id']
+            if primary_key is not None:
+                found = self.es.exists(index=self.__index, id=primary_key, _source=False) # pylint: disable=unexpected-keyword-arg
+                if found is True:
+                    self._id = primary_key
 
         if query_string is not None and found is False:
             logger.info(f"index {self.__index} query_string {query_string}")
