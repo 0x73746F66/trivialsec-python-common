@@ -8,7 +8,7 @@ from os import path
 from socket import socket, gethostbyname, error as SocketError, getaddrinfo, AF_INET6, AF_INET, SOCK_STREAM
 from base64 import urlsafe_b64encode
 from urllib.parse import urlparse, urlencode, parse_qs
-from OpenSSL.crypto import load_certificate, X509, X509Name, TYPE_RSA, FILETYPE_ASN1
+from OpenSSL.crypto import load_certificate, dump_certificate, X509, X509Name, TYPE_RSA, FILETYPE_ASN1, FILETYPE_TEXT
 from ssl import get_server_certificate, create_default_context, SSLCertVerificationError, Purpose, CertificateError
 from datetime import datetime
 import requests
@@ -378,16 +378,21 @@ class Metadata:
         # block will only run if the second getpeercert without the binary flag - fails
         # there may be a better way in future to turn a cert into a dict
         if isinstance(self.server_certificate, X509) and self._json_certificate == '{}':
-            self._json_certificate = ''
-            try_protocols = [ssl.PROTOCOL_TLSv1_2, ssl.PROTOCOL_TLSv1_1, ssl.PROTOCOL_TLSv1, ssl.PROTOCOL_TLS]
-            for ssl_version in try_protocols:
+            self._json_certificate = dump_certificate(FILETYPE_TEXT, self.server_certificate)
+            try_protocols = {
+                'TLS 1.2': ssl.PROTOCOL_TLSv1_2,
+                'TLS 1.1': ssl.PROTOCOL_TLSv1_1,
+                'TLS 1.0': ssl.PROTOCOL_TLSv1,
+                'SSL 23': ssl.PROTOCOL_TLS
+            }
+            for name, ssl_version in try_protocols.items():
                 try:
                     cert = get_server_certificate((self.host, 443), ssl_version=ssl_version)
                     if cert:
                         self._json_certificate = json.dumps(ssl._ssl._test_decode_cert(StringIO(cert)), default=str) # pylint: disable=protected-access
                         break
                 except Exception:
-                    pass
+                    logger.info(f'Failed: {name} server certificate {self.host}:443')
 
         try:
             ctx1 = create_default_context(purpose=Purpose.CLIENT_AUTH)
