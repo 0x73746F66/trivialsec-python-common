@@ -18,6 +18,7 @@ class Domain(Elasticsearch_Document_Adapter):
         self.source = kwargs.get('source')
         self.asn = kwargs.get('asn')
         self.dns_registered = bool(kwargs.get('dns_registered'))
+        self.dns_answer = kwargs.get('dns_answer')
         self.screenshot = bool(kwargs.get('screenshot'))
         self.assessed_at = kwargs.get('assessed_at')
         self.registered_at = kwargs.get('registered_at')
@@ -140,13 +141,15 @@ class Domain(Elasticsearch_Document_Adapter):
         self.server_key_size = kwargs.get('server_key_size')
         self.server_cipher_order = kwargs.get('server_cipher_order')
         self.pubkey_type = kwargs.get('pubkey_type')
+        self.certificate_valid = bool(kwargs.get('certificate_valid'))
+        self.certificate_validation_result = kwargs.get('certificate_validation_result')
         self.certificate_is_self_signed = kwargs.get('certificate_is_self_signed')
         self.certificate_issuer = kwargs.get('certificate_issuer')
         self.certificate_issuer_country = kwargs.get('certificate_issuer_country')
         self.certificate_not_before = kwargs.get('certificate_not_before')
         self.certificate_not_after = kwargs.get('certificate_not_after')
-        self.certificate_chain_trust = kwargs.get('certificate_chain_trust')
-        self.certificate_chain_valid = kwargs.get('certificate_chain_valid')
+        self.certificate_chain_trust = bool(kwargs.get('certificate_chain_trust'))
+        self.certificate_chain_valid = bool(kwargs.get('certificate_chain_valid'))
         self.certificate_chain_validation_result = kwargs.get('certificate_chain_validation_result')
         self.offered_cipher_suite_groups = kwargs.get('offered_cipher_suite_groups')
         self.cipher_suite_group_pfs = bool(kwargs.get('cipher_suite_group_pfs'))
@@ -279,6 +282,7 @@ class Domain(Elasticsearch_Document_Adapter):
             'certification_authority_authorization',
             'certificate_chain_trust',
             'certificate_chain_valid',
+            'certificate_valid',
             'revocation_ocsp_url',
             'revocation_ocsp_crl',
             'revocation_ocsp_revoked',

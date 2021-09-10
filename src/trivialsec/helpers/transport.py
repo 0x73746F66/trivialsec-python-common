@@ -339,6 +339,8 @@ class Metadata:
             titles = _codes[self.code]
             status, *_ = titles
             self.reason = resp.reason or status
+            if self.method.lower() not in ['head', 'options', 'delete']:
+                self._content = resp.content
 
             for header, directive in resp.headers.items():
                 header_name = header.lower()
