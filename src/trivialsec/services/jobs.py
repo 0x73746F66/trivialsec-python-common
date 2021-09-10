@@ -15,7 +15,7 @@ from trivialsec.helpers.config import config
 __module__ = 'trivialsec.services.jobs'
 SCAN_NEXT = {
     'domain': ['amass', 'metadata', 'drill', 'nmap', 'orphaned-files'],
-    'subdomain': ['orphaned-files', 'subdomain-takeover'],
+    'subdomain': ['metadata', 'nmap', 'orphaned-files', 'subdomain-takeover'],
     'external-domain': ['metadata', 'saas-takeover', 'subdomain-takeover', 'dns-fronting', 'cname-collusion'],
     'tls-port': ['testssl', 'starttls-bugs', 'pwnedkeys'],
     'http-port': ['http-desync', 'request-smuggler'],
@@ -139,7 +139,7 @@ def get_next_job(service_type_id :int = None, service_type_name :str = None, acc
     )
     if len(jobs) != 1 or not isinstance(jobs[0], JobRun):
         logger.info(f'{current_service_type.name} queue is empty')
-        return None
+        return False
 
     current_job: JobRun = jobs[0]
     setattr(current_job, 'service_type', current_service_type)
