@@ -220,6 +220,14 @@ class MySQL_Row_Adapter:
         self.__pk = pk
         self.__cols = set()
 
+    def __repr__(self):
+        ret = {}
+        for col in self.cols():
+            if col.startswith('_'):
+                continue
+            ret[col] = getattr(self, col)
+        return repr(ret)
+
     def hydrate(self, by_column = None, value=None, conditional :str = 'AND', no_cache :bool = False, ttl_seconds: int = 30) -> bool:
         try:
             cache_key = f'{self.__table}/{self.__pk}/{self.__getattribute__(self.__pk)}'

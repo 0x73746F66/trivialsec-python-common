@@ -92,6 +92,14 @@ class Elasticsearch_Document_Adapter:
         self.__pk = primary_key
         self.__cols = set()
 
+    def __repr__(self):
+        ret = {}
+        for col in self.cols():
+            if col.startswith('_'):
+                continue
+            ret[col] = getattr(self, col)
+        return repr(ret)
+
     def get_doc(self):
         return self._doc.get('_source') if isinstance(self._doc, dict) else None
 
