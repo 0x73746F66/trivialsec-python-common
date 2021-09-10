@@ -376,13 +376,14 @@ class Metadata:
         if isinstance(self.server_certificate, X509) and self._json_certificate == '{}':
             self._json_certificate = ''
             try_protocols = [ssl.PROTOCOL_TLSv1_2, ssl.PROTOCOL_TLSv1_1, ssl.PROTOCOL_TLSv1, ssl.PROTOCOL_TLS]
-            try:
-                for ssl_version in try_protocols:
+            for ssl_version in try_protocols:
+                try:
                     cert = get_server_certificate((self.host, 443), ssl_version=ssl_version)
                     if cert:
                         self._json_certificate = ssl._ssl._test_decode_cert(StringIO(cert)) # pylint: disable=protected-access
-            except Exception as err:
-                logger.exception(err)
+                        break
+                except Exception:
+                    pass
 
         try:
             ctx1 = create_default_context(purpose=Purpose.CLIENT_AUTH)
