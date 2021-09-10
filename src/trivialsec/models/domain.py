@@ -16,6 +16,7 @@ class Domain(Elasticsearch_Document_Adapter):
         self.apex = kwargs.get('apex')
         self.tld = kwargs.get('tld')
         self.source = kwargs.get('source')
+        self.txt_verification = kwargs.get('txt_verification')
         self.asn = kwargs.get('asn')
         self.dns_registered = bool(kwargs.get('dns_registered'))
         self.dns_answer = kwargs.get('dns_answer')

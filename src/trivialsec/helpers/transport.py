@@ -217,8 +217,8 @@ class Metadata:
         self.reason = None
         self.redirect_location = None
         self.port = None
-        self.dns_registered = None
         self.verification_hash = None
+        self.txt_verification = False
         self.dns_answer = None
         self.safe_browsing = {}
         self.safe_browsing_status = None
@@ -761,11 +761,11 @@ class Metadata:
 
     def verification_check(self):
         self.verification_hash, self.dns_answer = self.get_txt_value(self.host, 'trivialsec')
-        registered = True
+        verified = True
         if self.verification_hash is False:
-            registered = False
+            verified = False
             self.verification_hash = None
-        self.dns_registered = registered
+        self.txt_verification = verified
         return self
 
     @staticmethod
