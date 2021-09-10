@@ -63,8 +63,8 @@ def control_timing_attacks(seconds: float):
             try:
                 ret = func(*args, **kwargs)
             except Exception as err:
-                logger.error(err)
-                ret = err
+                logger.exception(err)
+                ret = str(err)
             end = time()
             elapsed_time = end - start
             logger.debug(f'elapsed_time {elapsed_time}')
@@ -126,8 +126,8 @@ def require_recaptcha(action :str):
             try:
                 ret = func(*args, **kwargs)
             except Exception as err:
-                logger.error(err)
-                ret = err
+                logger.exception(err)
+                ret = str(err)
 
             return ret
 

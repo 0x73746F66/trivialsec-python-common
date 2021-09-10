@@ -58,7 +58,7 @@ def extract_cve_id(search_string :str) -> str:
         if matches:
             cve = matches.group()
     except Exception as ex:
-        logger.error(ex)
+        logger.exception(ex)
     return cve
 
 def extract_cwe_id(search_string :str) -> str:
@@ -68,7 +68,7 @@ def extract_cwe_id(search_string :str) -> str:
         if matches:
             cwe = matches.group()
     except Exception as ex:
-        logger.error(ex)
+        logger.exception(ex)
     return cwe
 
 def handle_finding_actions(params :dict, member: Member) -> Finding:

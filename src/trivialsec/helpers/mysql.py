@@ -189,7 +189,7 @@ class MySQL:
                 redis_value = config.redis_client.get(f'{config.app_version}{cache_key}')
                 logger.debug(f'{cache_key} {redis_value}')
         except Exception as ex:
-            logger.error(ex)
+            logger.exception(ex)
             return None
 
         if redis_value is not None:

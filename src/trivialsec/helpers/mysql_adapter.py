@@ -263,7 +263,7 @@ class MySQL_Row_Adapter:
                         setattr(self, col, val)
 
         except Exception as ex:
-            logger.error(ex)
+            logger.exception(ex)
             return False
 
         return True

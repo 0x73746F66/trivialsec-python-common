@@ -59,7 +59,7 @@ def fetch_metadata(domain_name :str, port :int = None):
     try:
         http_metadata.head()
     except Exception as ex:
-        logger.error(ex)
+        logger.exception(ex)
 
     if not str(http_metadata.code).startswith('2'):
         try:
@@ -68,30 +68,30 @@ def fetch_metadata(domain_name :str, port :int = None):
             else:
                 http_metadata = Metadata(f'https://{domain_name}')
         except Exception as ex:
-            logger.error(ex)
+            logger.erexceptionror(ex)
 
     try:
         http_metadata.verification_check()
     except Exception as ex:
-        logger.error(ex)
+        logger.exception(ex)
     try:
         http_metadata.safe_browsing_check()
     except Exception as ex:
-        logger.error(ex)
+        logger.exception(ex)
     try:
         http_metadata.phishtank_check()
     except Exception as ex:
-        logger.error(ex)
+        logger.exception(ex)
     try:
         http_metadata.projecthoneypot()
     except Exception as ex:
-        logger.error(ex)
+        logger.exception(ex)
     try:
         http_metadata.honeyscore_check()
     except Exception as ex:
-        logger.error(ex)
+        logger.exception(ex)
 
     try:
         http_metadata.website_content()
     except Exception as ex:
-        logger.error(ex)
+        logger.exception(ex)
