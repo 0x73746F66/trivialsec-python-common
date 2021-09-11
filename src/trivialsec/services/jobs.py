@@ -84,7 +84,7 @@ class QueueData:
             'report_summary': self.report_summary
         }.items()
 
-def queue_job(params :dict, service_type: ServiceType, member: Member, project=Project, priority: int = 0, on_demand :bool = True) -> JobRun:
+def queue_job(params :dict, service_type: ServiceType, member: Member, project=Project, priority: int = 0, on_demand :bool = True):
     queue_data = QueueData(
         queued_by_member_id=member.member_id,
         on_demand=on_demand,
@@ -103,7 +103,16 @@ def queue_job(params :dict, service_type: ServiceType, member: Member, project=P
         state=ServiceType.STATE_QUEUED,
         priority=priority
     )
-    if not new_job_run.persist():
+    check_job_run = JobRun(
+        project_id=project.project_id,
+        service_type_id=service_type.service_type_id,
+        state=ServiceType.STATE_QUEUED
+    )
+    if check_job_run.exists(['project_id', 'service_type_id', 'state']):
+        logger.debug(f'JobRun exists: project_id {project.project_id} {service_type.name}')
+        return None
+
+    if not new_job_run.persist(exists=False):
         raise ValueError(f'queue_job {queue_data.target} persist error')
 
     action=ActivityLog.ACTION_ON_DEMAND_PASSIVE_SCAN if queue_data.scan_type == 'passive' else ActivityLog.ACTION_ON_DEMAND_ACTIVE_SCAN
