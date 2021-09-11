@@ -2,7 +2,6 @@ import string
 import secrets
 import uuid
 from random import random
-from trivialsec.helpers.config import config
 from trivialsec.helpers import check_email_rules, oneway_hash
 from trivialsec.models.account import Account
 from trivialsec.models.account_config import AccountConfig
@@ -21,7 +20,7 @@ def generate_api_key_secret(sequence_range: int = 8):
 def generate_api_key():
     return generate_api_key_secret(32).upper()
 
-def register(email_addr :str, company=None, verified=False, account_id=None, role_id=Role.ROLE_OWNER_ID) -> Member:
+def register(email_addr :str, company=None, verified=False, account_id=None, role_id=Role.ROLE_OWNER_ID):
     res = check_email_rules(email_addr)
     if not res:
         return None
@@ -34,7 +33,7 @@ def register(email_addr :str, company=None, verified=False, account_id=None, rol
         billing_email=email_addr,
         account_id=account_id,
         alias=company,
-        verification_hash=oneway_hash(random()),
+        verification_hash=oneway_hash(str(random())),
         socket_key=str(uuid.uuid5(uuid.NAMESPACE_URL, email_addr))
     )
     if account_id is not None:
@@ -51,7 +50,7 @@ def register(email_addr :str, company=None, verified=False, account_id=None, rol
         plan.persist()
 
     member.account_id = account.account_id
-    member.confirmation_url = f"/confirmation/{oneway_hash(random())}" if not verified else 'verified'
+    member.confirmation_url = f"/confirmation/{oneway_hash(str(random()))}" if not verified else 'verified'
     if verified:
         member.verified = True
     member.persist()

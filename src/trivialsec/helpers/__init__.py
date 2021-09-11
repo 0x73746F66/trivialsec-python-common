@@ -1,16 +1,13 @@
 import re
 import socket
 import hashlib
+import validators
 from passlib.hash import pbkdf2_sha256
 from gunicorn.glogging import logging
 
 
 __module__ = 'trivialsec.helpers'
 logger = logging.getLogger(__name__)
-
-def check_domain_rules(domain_name :str):
-    # TODO implement
-    return True
 
 def check_subdomain_rules(sub_domain :str, domain_name :str = None) -> bool:
     if domain_name is not None:
@@ -71,7 +68,7 @@ def check_email_rules(email_addr :str) -> bool:
         logger.info('check_email_rules: invalid format')
         return False
 
-    res = check_domain_rules(parts[1])
+    res = validators.domain(parts[1])
     if not res:
         logger.info('check_email_rules: invalid domain')
         return False
