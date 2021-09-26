@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class Domain(Elasticsearch_Document_Adapter):
     def __init__(self, **kwargs):
-        super().__init__(__index__)
+        super().__init__(__index__, 'domain_name')
         self.domain_name = kwargs.get('domain_name')
         self.apex = kwargs.get('apex')
         self.tld = kwargs.get('tld')
@@ -20,6 +20,7 @@ class Domain(Elasticsearch_Document_Adapter):
         self.asn = kwargs.get('asn')
         self.dns_registered = bool(kwargs.get('dns_registered'))
         self.dns_answer = kwargs.get('dns_answer')
+        self.dns_transfer_allowed = bool(kwargs.get('dns_transfer_allowed'))
         self.screenshot = bool(kwargs.get('screenshot'))
         self.assessed_at = kwargs.get('assessed_at')
         self.registered_at = kwargs.get('registered_at')
@@ -180,6 +181,7 @@ class Domain(Elasticsearch_Document_Adapter):
     def __setattr__(self, name, value):
         if name in [
             'dns_registered',
+            'dns_transfer_allowed',
             'screenshot',
             'etls',
             'session_id',
@@ -293,7 +295,7 @@ class Domain(Elasticsearch_Document_Adapter):
 
 class Domains(Elasticsearch_Collection_Adapter):
     def __init__(self):
-        super().__init__('DomainDoc', __index__)
+        super().__init__('DomainDoc', __index__, 'domain_name')
 
 class DomainMonitor(MySQL_Row_Adapter):
     def __init__(self, **kwargs):

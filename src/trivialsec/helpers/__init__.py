@@ -55,13 +55,6 @@ def default(func, ex: Exception, value):
     except ex:
         return value
 
-def is_valid_email(address) -> bool:
-    try:
-        matched = re.match(r'^[a-z\d]([\w\-]*[a-z\d]|[\w\+\-\.]*[a-z\d]{2,}|[a-z\d])*@[a-z\d]([\w\-]*[a-z\d]|[\w\-\.]*[a-z\d]{2,}|[a-z\d]){4,}?.[a-z]{2,}$', address)
-        return bool(matched)
-    except Exception: # not a valid address
-        return False
-
 def check_email_rules(email_addr :str) -> bool:
     parts = email_addr.split('@')
     if len(parts) != 2:
@@ -73,7 +66,7 @@ def check_email_rules(email_addr :str) -> bool:
         logger.info('check_email_rules: invalid domain')
         return False
 
-    if not is_valid_email(email_addr):
+    if not validators.email(email_addr):
         logger.info('check_email_rules: validation error')
         return False
 
