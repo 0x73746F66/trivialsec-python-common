@@ -645,55 +645,61 @@ class Metadata:
 
         return self
 
-    def safe_browsing_check(self):
-        gcp_sb = SafeBrowsing(config.google_api_key)
-        threat = ''
-        platform = ''
-        try:
-            self.safe_browsing = gcp_sb.lookup_urls([
-                f'http://{self.host}',
-                f'https://{self.host}'
-            ])
-            for match in self.safe_browsing.get('matches', []):
-                threat = match.get('threatType', threat)
-                platform = match.get('platformType', platform)
-        except Exception as err:
-            logger.exception(err)
+    def safe_browsing_check(self, data = None):
+        if data is None:
+            gcp_sb = SafeBrowsing(config.google_api_key)
+            threat = ''
+            platform = ''
+            try:
+                self.safe_browsing = gcp_sb.lookup_urls([
+                    f'http://{self.host}',
+                    f'https://{self.host}'
+                ])
+            except Exception as err:
+                logger.exception(err)
+        else:
+            self.safe_browsing = data
 
+        for match in self.safe_browsing.get('matches', []):
+            threat = match.get('threatType', threat)
+            platform = match.get('platformType', platform)
         self.safe_browsing_status = 'Safe'
         if self.safe_browsing:
             self.safe_browsing_status = f'{platform} {threat}'.strip()
 
         return self
 
-    def phishtank_check(self):
-        proxies = None
-        if config.http_proxy or config.https_proxy:
-            proxies = {
-                'http': f'http://{config.http_proxy}',
-                'https': f'https://{config.https_proxy}'
-            }
-        try:
-            resp = requests.post(
-                'https://checkurl.phishtank.com/checkurl/',
-                data=urlencode({
-                    'url': urlsafe_b64encode(bytes(f'https://{self.host}', 'utf8')),
-                    'format': 'json',
-                    'app_key': config.phishtank_key
-                }),
-                headers={
-                    'User-Agent': f'phishtank/{config.phishtank_username}',
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                proxies=proxies,
-                timeout=3
-            )
-            self.phishtank = resp.json()
-            phishtank_results = self.phishtank.get('results', {})
+    def phishtank_check(self, data = None):
+        if data is None:
+            proxies = None
+            if config.http_proxy or config.https_proxy:
+                proxies = {
+                    'http': f'http://{config.http_proxy}',
+                    'https': f'https://{config.https_proxy}'
+                }
+            try:
+                resp = requests.post(
+                    'https://checkurl.phishtank.com/checkurl/',
+                    data=urlencode({
+                        'url': urlsafe_b64encode(bytes(f'https://{self.host}', 'utf8')),
+                        'format': 'json',
+                        'app_key': config.phishtank_key
+                    }),
+                    headers={
+                        'User-Agent': f'phishtank/{config.phishtank_username}',
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    proxies=proxies,
+                    timeout=3
+                )
+                self.phishtank = resp.json()
 
-        except Exception as err:
-            logger.exception(err)
+            except Exception as err:
+                logger.exception(err)
+        else:
+            self.phishtank = data
 
+        phishtank_results = self.phishtank.get('results', {})
         self.phishtank_status = 'Unclassified'
         if phishtank_results.get('in_database'):
             self.phishtank_status = 'Reported Phish'
