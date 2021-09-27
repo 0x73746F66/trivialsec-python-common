@@ -1,6 +1,7 @@
 import importlib
 from gunicorn.glogging import logging
 from elasticsearch import Elasticsearch
+from elasticsearch.exceptions import NotFoundError
 from .config import config
 
 
@@ -156,25 +157,30 @@ class Elasticsearch_Document_Adapter:
 
     def exists(self, query_string :str = None) -> bool:
         found = False
-        if self._id is not None:
-            found = self.es.exists(index=self.__index, id=self._id, _source=False) # pylint: disable=unexpected-keyword-arg
+        try:
+            if self._id is not None:
+                found = self.es.exists(index=self.__index, id=self._id, _source=False) # pylint: disable=unexpected-keyword-arg
 
-        if self.__pk is not None and found is False:
-            primary_key = getattr(self, self.__pk)
-            if primary_key is not None:
-                found = self.es.exists(index=self.__index, id=primary_key, _source=False) # pylint: disable=unexpected-keyword-arg
-                if found is True:
-                    self._id = primary_key
+            if self.__pk is not None and found is False:
+                primary_key = getattr(self, self.__pk)
+                if primary_key is not None:
+                    found = self.es.exists(index=self.__index, id=primary_key, _source=False) # pylint: disable=unexpected-keyword-arg
+                    if found is True:
+                        self._id = primary_key
 
-        if query_string is not None and found is False:
-            logger.debug(f"index {self.__index} query_string {query_string}")
-            res = self.es.search(index=self.__index, body={'query': {"query_string": {"query": query_string}}})
-            logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
-            if len(res.get('hits', []).get('hits', [])) != 1:
-                logger.error(f"exists {type(self)} query_string returned {len(res.get('hits', []).get('hits', []))} Hits, expected 1\n{query_string}")
-                return False
-            self._id = res.get('hits', []).get('hits', [])[0]['_id']
-            found = True
+            if query_string is not None and found is False:
+                logger.debug(f"index {self.__index} query_string {query_string}")
+                res = self.es.search(index=self.__index, body={'query': {"query_string": {"query": query_string}}})
+                logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
+                if len(res.get('hits', []).get('hits', [])) != 1:
+                    logger.error(f"exists {type(self)} query_string returned {len(res.get('hits', []).get('hits', []))} Hits, expected 1\n{query_string}")
+                    return False
+                self._id = res.get('hits', []).get('hits', [])[0]['_id']
+                found = True
+        except NotFoundError:
+            pass
+        except Exception as ex:
+            logger.exception(ex)
 
         return found
 
