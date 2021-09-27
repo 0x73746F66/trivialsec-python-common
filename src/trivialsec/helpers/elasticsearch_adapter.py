@@ -131,7 +131,7 @@ class Elasticsearch_Document_Adapter:
                 logger.error(f'[HYDRATE] {type(self)} primary_key is None')
                 return False
             self._doc = self.es.get(index=self.__index, id=primary_key, ignore=404) # pylint: disable=unexpected-keyword-arg
-            found = self._doc['found']
+            found = self._doc.get('found', False)
 
         if query_string is not None and found is False:
             logger.info(f'[HYDRATE] {type(self)} trying query_string')
