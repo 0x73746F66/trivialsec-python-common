@@ -759,13 +759,12 @@ class Metadata:
 
         return self
 
-    def verification_check(self):
+    def verification_check(self, verification_hash):
         self.verification_hash, self.dns_answer = self.get_txt_value(self.host, 'trivialsec')
-        verified = True
+        self.txt_verification = self.verification_hash == verification_hash
         if self.verification_hash is False:
-            verified = False
+            self.txt_verification = False
             self.verification_hash = None
-        self.txt_verification = verified
         return self
 
     @staticmethod
@@ -793,6 +792,22 @@ class Metadata:
             return False, dns_answer
 
         return None, dns_answer
+
+
+def get_dns_value(domain_name :str, rdtype :int): # dns.rdatatype.RdataType
+    dns_answer = None
+    res, err = Metadata.dig(domain_name, rdtype=rdtype)
+    if res is not None:
+        for rrdata in res.response.answer:
+            dns_answer = str(rrdata)
+
+    if err:
+        if 'None of DNS query names exist' in err:
+            return False, dns_answer
+        if err == 'DNS Timeout':
+            return False, dns_answer
+
+    return err, dns_answer
 
 @retry((SocketError), tries=3, delay=1.5, backoff=1)
 def download_file(remote_file :str, temp_name :str = None, temp_dir :str = '/tmp') -> str:
