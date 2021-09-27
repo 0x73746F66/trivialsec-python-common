@@ -177,6 +177,7 @@ class Domain(Elasticsearch_Document_Adapter):
         self.revocation_ocsp_must_staple = bool(kwargs.get('revocation_ocsp_must_staple'))
         self.certificate_transparency = kwargs.get('certificate_transparency', [])
         self.phishing_domains = kwargs.get('phishing_domains', [])
+        self.breaches = kwargs.get('breaches', [])
 
     def __setattr__(self, name, value):
         if name in [
