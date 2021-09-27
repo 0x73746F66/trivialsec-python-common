@@ -36,7 +36,7 @@ class Elasticsearch_Collection_Adapter:
         res = self.es.search(index=self.__index, body={'query': {"query_string": {"query": query_string}}})
         logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
         class_ = getattr(__models_module__, self.__class_name)
-        for hit in res['hits']['hits']:
+        for hit in res.get('hits', []).get('hits', []):
             model = class_()
             for col, val in hit['_source'].items():
                 setattr(model, col, val)
@@ -47,8 +47,8 @@ class Elasticsearch_Collection_Adapter:
 
     def count(self, query_string :str) -> int:
         res = self.es.search(index=self.__index, body={'query': {"query_string": {"query": query_string}}})
-        logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
-        return len(res['hits']['hits'])
+        logger.debug(f"count {type(self)} query_string returned {len(res.get('hits', []).get('hits', []))} Hits\n{query_string}")
+        return len(res.get('hits', []).get('hits', []))
 
     def set_items(self, items :list):
         self.__items = items
@@ -120,30 +120,30 @@ class Elasticsearch_Document_Adapter:
         found = False
         self._doc = None
         if self._id is not None:
-            logger.info(f'[HYDRATE] {type(self)} trying _id')
+            logger.debug(f'hydrate {type(self)} trying _id')
             self._doc = self.es.get(index=self.__index, id=self._id, ignore=404) # pylint: disable=unexpected-keyword-arg
             found = self._doc['found']
 
         if self.__pk is not None and found is False:
-            logger.info(f'[HYDRATE] {type(self)} trying primary_key')
+            logger.debug(f'hydrate {type(self)} trying primary_key')
             primary_key = getattr(self, self.__pk)
             if primary_key is None:
-                logger.error(f'[HYDRATE] {type(self)} primary_key is None')
+                logger.error(f'hydrate {type(self)} primary_key is None')
                 return False
             self._doc = self.es.get(index=self.__index, id=primary_key, ignore=404) # pylint: disable=unexpected-keyword-arg
             found = self._doc.get('found', False)
 
         if query_string is not None and found is False:
-            logger.info(f'[HYDRATE] {type(self)} trying query_string')
+            logger.debug(f'hydrate {type(self)} trying query_string')
             res = self.es.search(index=self.__index, body={'query': {"query_string": {"query": query_string}}}, ignore=404) # pylint: disable=unexpected-keyword-arg
             if len(res.get('hits', []).get('hits', [])) != 1:
-                logger.error(f"[HYDRATE] {type(self)} query_string returned {len(res['hits']['hits'])} results, expected 1\n{query_string}")
+                logger.error(f"hydrate {type(self)} query_string returned {len(res.get('hits', []).get('hits', []))} Hits, expected 1\n{query_string}")
                 return False
-            self._doc = res['hits']['hits'][0]
+            self._doc = res.get('hits', []).get('hits', [])[0]
             found = True
 
         if not isinstance(self._doc, dict):
-            logger.error(f'[HYDRATE] {type(self)} _doc is misssing')
+            logger.error(f'hydrate {type(self)} _doc is misssing')
             return False
 
         self._id = self._doc.get('_id')
@@ -167,12 +167,13 @@ class Elasticsearch_Document_Adapter:
                     self._id = primary_key
 
         if query_string is not None and found is False:
-            logger.info(f"index {self.__index} query_string {query_string}")
+            logger.debug(f"index {self.__index} query_string {query_string}")
             res = self.es.search(index=self.__index, body={'query': {"query_string": {"query": query_string}}})
             logger.debug(f"{res['hits']['total']['value']} Hits: {query_string}")
-            if len(res['hits']['hits']) != 1:
+            if len(res.get('hits', []).get('hits', [])) != 1:
+                logger.error(f"exists {type(self)} query_string returned {len(res.get('hits', []).get('hits', []))} Hits, expected 1\n{query_string}")
                 return False
-            self._id = res['hits']['hits'][0]['_id']
+            self._id = res.get('hits', []).get('hits', [])[0]['_id']
             found = True
 
         return found
@@ -191,6 +192,7 @@ class Elasticsearch_Document_Adapter:
             self._doc = {'_source': doc}
             self._id = res['_id']
             return True
+        logger.error(f'persist {type(self)} {res.__dict__}')
         return False
 
     def cols(self) -> list:
