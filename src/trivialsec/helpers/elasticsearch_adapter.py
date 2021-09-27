@@ -135,8 +135,8 @@ class Elasticsearch_Document_Adapter:
 
         if query_string is not None and found is False:
             logger.info(f'[HYDRATE] {type(self)} trying query_string')
-            res = self.es.search(index=self.__index, body={'query': {"query_string": {"query": query_string}}})
-            if len(res['hits']['hits']) != 1:
+            res = self.es.search(index=self.__index, body={'query': {"query_string": {"query": query_string}}}, ignore=404) # pylint: disable=unexpected-keyword-arg
+            if len(res.get('hits', []).get('hits', [])) != 1:
                 logger.error(f"[HYDRATE] {type(self)} query_string returned {len(res['hits']['hits'])} results, expected 1\n{query_string}")
                 return False
             self._doc = res['hits']['hits'][0]
