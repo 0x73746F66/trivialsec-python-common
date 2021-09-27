@@ -16,7 +16,7 @@ import requests
 from certvalidator import CertificateValidator, ValidationContext
 from certvalidator.errors import PathValidationError, RevokedError, InvalidCertificateError
 from bs4 import BeautifulSoup as bs
-from dns import resolver, rdtypes
+from dns import query, zone, resolver, rdtypes
 from dns.exception import DNSException
 from aslookup import get_as_data
 from aslookup.exceptions import NoASDataError, NonroutableAddressError, AddressFormatError
@@ -808,6 +808,25 @@ def get_dns_value(domain_name :str, rdtype :int): # dns.rdatatype.RdataType
             return False, dns_answer
 
     return err, dns_answer
+
+def get_nameservers(fqdn):
+    try:
+        ans = resolver.query(fqdn, 'NS')
+        return [a.to_text() for a in ans]
+    except DNSException:
+        return []
+
+def try_zone_transfer(domain):
+    for nameserver in get_nameservers(domain):
+        recs = None
+        try:
+            res = zone.from_xfr(query.xfr(nameserver, domain, lifetime=15))
+            recs = [res[n].to_text(n) for n in res.nodes.keys()]
+        except Exception:
+            continue
+        if recs is not None:
+            return True, recs
+    return False, None
 
 @retry((SocketError), tries=3, delay=1.5, backoff=1)
 def download_file(remote_file :str, temp_name :str = None, temp_dir :str = '/tmp') -> str:
