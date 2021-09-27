@@ -22,6 +22,7 @@ class Domain(Elasticsearch_Document_Adapter):
         self.dns_answer = kwargs.get('dns_answer')
         self.dns_transfer_allowed = bool(kwargs.get('dns_transfer_allowed'))
         self.domain_registration_expiry = kwargs.get('domain_registration_expiry')
+        self.dnssec = bool(kwargs.get('dnssec'))
         self.screenshot = bool(kwargs.get('screenshot'))
         self.assessed_at = kwargs.get('assessed_at')
         self.registered_at = kwargs.get('registered_at')
@@ -184,6 +185,7 @@ class Domain(Elasticsearch_Document_Adapter):
         if name in [
             'dns_registered',
             'dns_transfer_allowed',
+            'dnssec',
             'screenshot',
             'etls',
             'session_id',
