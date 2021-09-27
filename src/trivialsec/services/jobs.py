@@ -181,7 +181,7 @@ def get_next_job(service_type_id :int = None, service_type_name :str = None, acc
         return None
     setattr(current_job, 'project', project)
     if current_job.queue_data.target_type == 'domain':
-        domain = Domain(domian_name=current_job.queue_data.target)
+        domain = Domain(domain_name=current_job.queue_data.target)
         if not domain.hydrate(query_string=f'domain_name:"{current_job.queue_data.target}"'):
             logger.error(f'Error loading domain {current_job.queue_data.target}')
             return None
