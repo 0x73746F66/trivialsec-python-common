@@ -1,8 +1,8 @@
-from trivialsec.helpers.elasticsearch_adapter import ElasticsearchDocumentAdapter, ElasticsearchCollectionAdapter
+from trivialsec.helpers.elasticsearch_adapter import Indexes, ElasticsearchDocumentAdapter, ElasticsearchCollectionAdapter
 
 
 __module__ = 'trivialsec.models.cwe'
-__index__ = 'cwes'
+__index__ = Indexes.cwes
 __pk__ = 'cwe_id'
 
 class CWE(ElasticsearchDocumentAdapter):

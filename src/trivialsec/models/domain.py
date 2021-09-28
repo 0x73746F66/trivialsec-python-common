@@ -1,10 +1,10 @@
 from gunicorn.glogging import logging
-from trivialsec.helpers.elasticsearch_adapter import ElasticsearchDocumentAdapter, ElasticsearchCollectionAdapter
+from trivialsec.helpers.elasticsearch_adapter import Indexes, ElasticsearchDocumentAdapter, ElasticsearchCollectionAdapter
 from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 
 __module__ = 'trivialsec.models.domain'
-__index__ = 'domains'
+__index__ = Indexes.domains
 __table__ = 'domain_monitoring'
 __pk__ = 'domain_monitoring_id'
 logger = logging.getLogger(__name__)

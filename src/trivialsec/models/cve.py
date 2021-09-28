@@ -1,9 +1,9 @@
 from decimal import Decimal, ROUND_DOWN
-from trivialsec.helpers.elasticsearch_adapter import ElasticsearchCollectionAdapter, ElasticsearchDocumentAdapter
+from trivialsec.helpers.elasticsearch_adapter import Indexes, ElasticsearchCollectionAdapter, ElasticsearchDocumentAdapter
 
 
 __module__ = 'trivialsec.models.cve'
-__index__ = 'cves'
+__index__ = Indexes.cves
 __pk__ = 'cve_id'
 
 class CVE(ElasticsearchDocumentAdapter):
