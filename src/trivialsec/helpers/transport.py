@@ -220,13 +220,6 @@ class Metadata:
         self.verification_hash = None
         self.txt_verification = False
         self.dns_answer = None
-        self.safe_browsing = {}
-        self.safe_browsing_status = None
-        self.phishtank = {}
-        self.phishtank_status = None
-        self.honey_score = None
-        self.threat_score = None
-        self.threat_type = None
         self.html_last_checked = None
         self.html_size = None
         self.javascript = []
@@ -650,34 +643,6 @@ class Metadata:
             err = 'Name or service not known'
 
         return res, err
-
-    def projecthoneypot(self):
-        visitor_types = {
-            0: 'Spider',
-            1: 'Suspicious',
-            2: 'Harvester',
-            3: 'Suspicious & Harvester',
-            4: 'Comment Spammer',
-            5: 'Suspicious & Comment Spammer',
-            6: 'Harvester & Comment Spammer',
-            7: 'Suspicious & Harvester & Comment Spammer',
-        }
-        for addr in ip_for_host(self.host):
-            reverse_octet = ipaddress.ip_address(addr).reverse_pointer.replace('.in-addr.arpa', '').replace('.ip6.arpa', '')
-            query = f'{config.projecthoneypot_key}.{reverse_octet}.dnsbl.httpbl.org'
-            logger.info(query)
-            res, err = Metadata.dig(query, rdtype=1)
-            if err:
-                logger.warning(err)
-            if res is not None:
-                dns_answer = str(res.response.answer[0][0])
-                logger.info(f'projecthoneypot dns_answer {dns_answer}')
-                check, last_activity_days, threat_score, visitor_type = dns_answer.split('.') # pylint: disable=unused-variable
-                if int(check) == 127:
-                    self.threat_type = visitor_types[int(visitor_type)]
-                    self.threat_score = int(threat_score)
-
-        return self
 
     def verification_check(self, verification_hash):
         self.verification_hash, self.dns_answer = self.get_txt_value(self.host, 'trivialsec')
