@@ -9,7 +9,38 @@ logger = logging.getLogger(__name__)
 __module__ = 'trivialsec.helpers.elasticsearch_adapter'
 __models_module__ = importlib.import_module('trivialsec.models')
 
-class Elasticsearch_Collection_Adapter:
+
+class Indexes(object):
+    cves = "cves"
+    cwes = "cwes"
+    domains = "domains"
+    domaintools = "domaintools"
+    domaintools_reputation = "domaintools-reputation"
+    domaintools_hosting_history = 'domaintools-hosting-history'
+    whoisxmlapi_brand_alert = "whoisxmlapi-brand-alert"
+    whoisxmlapi_reputation = "whoisxmlapi-reputation"
+    x509 = "x509"
+    domainsdb = 'domainsdb'
+    hibp_monitor = 'hibp-domain-monitor'
+    hibp_breaches = 'hibp-breaches'
+    safe_browsing = 'safe-browsing'
+    phishtank = 'phishtank'
+    shodan_honeyscore = 'shodan-honeyscore'
+
+    @staticmethod
+    def create():
+        con = Elasticsearch(
+            config.elasticsearch.get('hosts'),
+            http_auth=(config.elasticsearch.get('user'), config.elasticsearch_password),
+            scheme=config.elasticsearch.get('scheme'),
+            port=config.elasticsearch.get('port'),
+        )
+        for index in vars(Indexes):
+            if index.startswith('_'):
+                continue
+            con.indices.create(index=getattr(Indexes, index), ignore=400) # pylint: disable=unexpected-keyword-arg
+
+class ElasticsearchCollectionAdapter:
     es = Elasticsearch(
         config.elasticsearch.get('hosts'),
         http_auth=(config.elasticsearch.get('user'), config.elasticsearch_password),
@@ -77,7 +108,7 @@ class Elasticsearch_Collection_Adapter:
     def to_list(self):
         return self.__items
 
-class Elasticsearch_Document_Adapter:
+class ElasticsearchDocumentAdapter:
     __hash__ = object.__hash__
     _id = None
     _doc = None
