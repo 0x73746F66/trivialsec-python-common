@@ -1,5 +1,5 @@
 from gunicorn.glogging import logging
-from trivialsec.helpers.elasticsearch_adapter import Elasticsearch_Document_Adapter, Elasticsearch_Collection_Adapter
+from trivialsec.helpers.elasticsearch_adapter import ElasticsearchDocumentAdapter, ElasticsearchCollectionAdapter
 from trivialsec.helpers.mysql_adapter import MySQL_Row_Adapter, MySQL_Table_Adapter
 
 
@@ -9,7 +9,7 @@ __table__ = 'domain_monitoring'
 __pk__ = 'domain_monitoring_id'
 logger = logging.getLogger(__name__)
 
-class Domain(Elasticsearch_Document_Adapter):
+class Domain(ElasticsearchDocumentAdapter):
     def __init__(self, **kwargs):
         super().__init__(__index__, 'domain_name')
         self.domain_name = kwargs.get('domain_name')
@@ -297,7 +297,7 @@ class Domain(Elasticsearch_Document_Adapter):
             value = bool(value)
         super().__setattr__(name, value)
 
-class Domains(Elasticsearch_Collection_Adapter):
+class Domains(ElasticsearchCollectionAdapter):
     def __init__(self):
         super().__init__('DomainDoc', __index__, 'domain_name')
 

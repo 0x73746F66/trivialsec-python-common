@@ -5,9 +5,9 @@ import json
 import ssl
 from pathlib import Path
 from os import path
-from socket import socket, gethostbyname, error as SocketError, getaddrinfo, AF_INET6, AF_INET, SOCK_STREAM
+from socket import socket, error as SocketError, getaddrinfo, AF_INET6, AF_INET, SOCK_STREAM
 from base64 import urlsafe_b64encode
-from urllib.parse import urlparse, urlencode, parse_qs
+from urllib.parse import urlparse, parse_qs
 from cryptography import x509
 from OpenSSL.crypto import load_certificate, dump_certificate, X509, X509Name, TYPE_RSA, FILETYPE_ASN1, FILETYPE_PEM
 from ssl import create_default_context, SSLCertVerificationError, Purpose, CertificateError
@@ -621,92 +621,6 @@ class Metadata:
             self.html_title = title.string.strip()
 
         return self.html_title
-
-    def honeyscore_check(self):
-        proxies = None
-        if config.http_proxy or config.https_proxy:
-            proxies = {
-                'http': f'http://{config.http_proxy}',
-                'https': f'https://{config.https_proxy}'
-            }
-        try:
-            resp = requests.get(f'https://api.shodan.io/labs/honeyscore/{gethostbyname(self.host)}?key={config.honeyscore_key}',
-                proxies=proxies,
-                timeout=3
-            )
-            if resp.status_code != 200:
-                return self
-            self.honey_score = resp.text
-
-        except IOError:
-            pass
-        except Exception as err:
-            logger.exception(err)
-
-        return self
-
-    def safe_browsing_check(self, data = None):
-        if data is None:
-            gcp_sb = SafeBrowsing(config.google_api_key)
-            threat = ''
-            platform = ''
-            try:
-                self.safe_browsing = gcp_sb.lookup_urls([
-                    f'http://{self.host}',
-                    f'https://{self.host}'
-                ])
-            except Exception as err:
-                logger.exception(err)
-        else:
-            self.safe_browsing = data
-
-        for match in self.safe_browsing.get('matches', []):
-            threat = match.get('threatType', threat)
-            platform = match.get('platformType', platform)
-        self.safe_browsing_status = 'Safe'
-        if self.safe_browsing:
-            self.safe_browsing_status = f'{platform} {threat}'.strip()
-
-        return self
-
-    def phishtank_check(self, data = None):
-        if data is None:
-            proxies = None
-            if config.http_proxy or config.https_proxy:
-                proxies = {
-                    'http': f'http://{config.http_proxy}',
-                    'https': f'https://{config.https_proxy}'
-                }
-            try:
-                resp = requests.post(
-                    'https://checkurl.phishtank.com/checkurl/',
-                    data=urlencode({
-                        'url': urlsafe_b64encode(bytes(f'https://{self.host}', 'utf8')),
-                        'format': 'json',
-                        'app_key': config.phishtank_key
-                    }),
-                    headers={
-                        'User-Agent': f'phishtank/{config.phishtank_username}',
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    proxies=proxies,
-                    timeout=3
-                )
-                self.phishtank = resp.json()
-
-            except Exception as err:
-                logger.exception(err)
-        else:
-            self.phishtank = data
-
-        phishtank_results = self.phishtank.get('results', {})
-        self.phishtank_status = 'Unclassified'
-        if phishtank_results.get('in_database'):
-            self.phishtank_status = 'Reported Phish'
-        elif phishtank_results.get('verified'):
-            self.phishtank_status = 'Verified Phish'
-
-        return self
 
     @staticmethod
     def dig(host, rdtype=16):

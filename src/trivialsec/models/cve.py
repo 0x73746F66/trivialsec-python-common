@@ -1,12 +1,12 @@
 from decimal import Decimal, ROUND_DOWN
-from trivialsec.helpers.elasticsearch_adapter import Elasticsearch_Collection_Adapter, Elasticsearch_Document_Adapter
+from trivialsec.helpers.elasticsearch_adapter import ElasticsearchCollectionAdapter, ElasticsearchDocumentAdapter
 
 
 __module__ = 'trivialsec.models.cve'
 __index__ = 'cves'
 __pk__ = 'cve_id'
 
-class CVE(Elasticsearch_Document_Adapter):
+class CVE(ElasticsearchDocumentAdapter):
     def __init__(self, **kwargs):
         super().__init__(__index__, __pk__)
         self.cve_id = kwargs.get('cve_id')
@@ -165,6 +165,6 @@ class CVE(Elasticsearch_Document_Adapter):
                 vector.append(f'{req}:{vector_data[req]}')
         return '/'.join(vector)
 
-class CVEs(Elasticsearch_Collection_Adapter):
+class CVEs(ElasticsearchCollectionAdapter):
     def __init__(self):
         super().__init__('CVE', __index__, __pk__)

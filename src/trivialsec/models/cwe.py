@@ -1,11 +1,11 @@
-from trivialsec.helpers.elasticsearch_adapter import Elasticsearch_Document_Adapter, Elasticsearch_Collection_Adapter
+from trivialsec.helpers.elasticsearch_adapter import ElasticsearchDocumentAdapter, ElasticsearchCollectionAdapter
 
 
 __module__ = 'trivialsec.models.cwe'
 __index__ = 'cwes'
 __pk__ = 'cwe_id'
 
-class CWE(Elasticsearch_Document_Adapter):
+class CWE(ElasticsearchDocumentAdapter):
     cves = []
     def __init__(self, **kwargs):
         super().__init__(__index__, __pk__)
@@ -28,6 +28,6 @@ class CWE(Elasticsearch_Document_Adapter):
             value = bool(value)
         super().__setattr__(name, value)
 
-class CWEs(Elasticsearch_Collection_Adapter):
+class CWEs(ElasticsearchCollectionAdapter):
     def __init__(self):
         super().__init__('CWE', __index__, __pk__)
