@@ -26,6 +26,7 @@ class Indexes(object):
     safe_browsing = 'safe-browsing'
     phishtank = 'phishtank'
     shodan_honeyscore = 'shodan-honeyscore'
+    project_honeypot = 'project-honeypot'
 
     @staticmethod
     def create():
