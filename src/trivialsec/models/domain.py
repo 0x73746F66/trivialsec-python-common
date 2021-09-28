@@ -113,7 +113,7 @@ class Domain(ElasticsearchDocumentAdapter):
         self.intel_isc_sans_intelfeed = bool(kwargs.get('intel_isc_sans_intelfeed'))
         self.intel_abuseipdb = bool(kwargs.get('intel_abuseipdb'))
         self.intel_spamhaus = bool(kwargs.get('intel_spamhaus'))
-        self.intel_phishtank = bool(kwargs.get('intel_phishtank'))
+        self.intel_phishtank = kwargs.get('intel_phishtank')
         self.intel_binarydefense = bool(kwargs.get('intel_binarydefense'))
         self.intel_emergingthreats_fwrules = bool(kwargs.get('intel_emergingthreats_fwrules'))
         self.intel_honey_score = kwargs.get('intel_honey_score')
@@ -255,7 +255,6 @@ class Domain(ElasticsearchDocumentAdapter):
             'intel_isc_sans_intelfeed',
             'intel_abuseipdb',
             'intel_spamhaus',
-            'intel_phishtank',
             'intel_binarydefense',
             'intel_emergingthreats_fwrules',
             'intel_hibp_exposure',
