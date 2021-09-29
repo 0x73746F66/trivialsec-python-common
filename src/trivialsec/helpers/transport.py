@@ -186,6 +186,7 @@ class SafeBrowsing:
 
 class Metadata:
     def __init__(self, url :str, method :str = 'head'):
+        self._der = None
         self._peer_certificate_chain = []
         self._content = None
         target_url = url.replace(":80/", "/").replace(":443/", "/")
@@ -240,7 +241,7 @@ class Metadata:
         self.host = host
         self.port = port
         try:
-            der = conn.sock.getpeercert(True)
+            self._der = conn.sock.getpeercert(True)
             self.negotiated_cipher, protocol, _ = conn.sock.cipher()
             self.protocol_version = conn.sock.version() or protocol
 
@@ -556,48 +557,47 @@ class Metadata:
                     data['only_some_reasons'] = ext.value.only_some_reasons
                     data['indirect_crl'] = ext.value.indirect_crl
                     data['only_contains_attribute_certs'] = ext.value.only_contains_attribute_certs
-
-
                 self.certificate_extensions.append(data)
-            certificate_valid = self.certificate_verify_message is None
-            der = cryptography_x509.tbs_certificate_bytes
-            # TODO perhaps remove certvalidator, consider once merged: https://github.com/pyca/cryptography/issues/2381
-            try:
-                ctx = ValidationContext(allow_fetching=True, revocation_mode='hard-fail', weak_hash_algos=set(["md2", "md5", "sha1"]))
-                intermediate_certs = []
-                for cert in self._peer_certificate_chain:
-                    intermediate_certs.append(dump_certificate(FILETYPE_PEM, cert))
-                validator = CertificateValidator(der, validation_context=ctx, intermediate_certs=intermediate_certs)
-                validator.validate_usage(
-                    key_usage=set(['digital_signature', 'crl_sign']),
-                    extended_key_usage=set(['ocsp_signing']),
-                )
-            except RevokedError as ex:
-                self.certificate_chain_revoked = True
-                self.certificate_chain_trust = False
-                self.certificate_chain_valid = False
-                self.certificate_chain_validation_result = str(ex)
-            except InvalidCertificateError as ex:
-                self.certificate_chain_trust = False
-                self.certificate_chain_valid = False
-                self.certificate_chain_validation_result = str(ex)
-            except PathValidationError as ex:
-                self.certificate_chain_trust = certificate_valid
-                self.certificate_chain_valid = False
-                self.certificate_chain_validation_result = str(ex)
-            except PathBuildingError as ex:
-                self.certificate_chain_trust = certificate_valid
-                self.certificate_chain_valid = False
-                self.certificate_chain_validation_result = str(ex)
-            except Exception as ex:
-                logger.exception(ex)
-                self.certificate_chain_validation_result = str(ex)
 
-            if self.certificate_chain_validation_result is None:
-                self.certificate_chain_revoked = False
-                self.certificate_chain_trust = certificate_valid
-                self.certificate_chain_valid = True
-                self.certificate_chain_validation_result = 'Validated CRL, OSCP, and digital signatures'
+            certificate_valid = self.certificate_verify_message is None
+            # TODO perhaps remove certvalidator, consider once merged: https://github.com/pyca/cryptography/issues/2381
+            if self._der is not None:
+                try:
+                    ctx = ValidationContext(allow_fetching=True, revocation_mode='hard-fail', weak_hash_algos=set(["md2", "md5", "sha1"]))
+                    intermediate_certs = []
+                    for cert in self._peer_certificate_chain:
+                        intermediate_certs.append(dump_certificate(FILETYPE_PEM, cert))
+                    validator = CertificateValidator(self._der, validation_context=ctx, intermediate_certs=intermediate_certs)
+                    validator.validate_usage(
+                        key_usage=set(['digital_signature', 'crl_sign']),
+                        extended_key_usage=set(['ocsp_signing']),
+                    )
+                except RevokedError as ex:
+                    self.certificate_chain_revoked = True
+                    self.certificate_chain_trust = False
+                    self.certificate_chain_valid = False
+                    self.certificate_chain_validation_result = str(ex)
+                except InvalidCertificateError as ex:
+                    self.certificate_chain_trust = False
+                    self.certificate_chain_valid = False
+                    self.certificate_chain_validation_result = str(ex)
+                except PathValidationError as ex:
+                    self.certificate_chain_trust = certificate_valid
+                    self.certificate_chain_valid = False
+                    self.certificate_chain_validation_result = str(ex)
+                except PathBuildingError as ex:
+                    self.certificate_chain_trust = certificate_valid
+                    self.certificate_chain_valid = False
+                    self.certificate_chain_validation_result = str(ex)
+                except Exception as ex:
+                    logger.exception(ex)
+                    self.certificate_chain_validation_result = str(ex)
+
+                if self.certificate_chain_validation_result is None:
+                    self.certificate_chain_revoked = False
+                    self.certificate_chain_trust = certificate_valid
+                    self.certificate_chain_valid = True
+                    self.certificate_chain_validation_result = 'Validated CRL, OSCP, and digital signatures'
 
         return self
 
