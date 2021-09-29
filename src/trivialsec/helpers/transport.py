@@ -560,6 +560,7 @@ class Metadata:
                 self.certificate_chain_valid = False
                 self.certificate_chain_validation_result = str(ex)
             except Exception as ex:
+                logger.exception(ex)
                 self.certificate_chain_validation_result = str(ex)
 
             if self.certificate_chain_validation_result is None:
