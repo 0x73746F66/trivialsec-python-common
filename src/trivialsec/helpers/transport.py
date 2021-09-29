@@ -14,7 +14,7 @@ from ssl import create_default_context, SSLCertVerificationError, Purpose, Certi
 from datetime import datetime
 import requests
 from certvalidator import CertificateValidator, ValidationContext
-from certvalidator.errors import PathValidationError, RevokedError, InvalidCertificateError
+from certvalidator.errors import PathValidationError, RevokedError, InvalidCertificateError, PathBuildingError
 from bs4 import BeautifulSoup as bs
 from dns import query, zone, resolver, rdtypes
 from dns.exception import DNSException
@@ -199,6 +199,7 @@ class Metadata:
         self.pubkey_type = None
         self.certificate_is_self_signed = None
         self.certificate_verify_message = None
+        self.certificate_extensions = []
         self.certificate_serial_number = None
         self.certificate_issuer = None
         self.certificate_issuer_country = None
@@ -274,30 +275,6 @@ class Metadata:
         self.server_key_size = public_key.bits()
         crypto_x509 = self.server_certificate.to_cryptography()
         self.certificate_san = crypto_x509.extensions.get_extension_for_class(x509.SubjectAlternativeName).value.get_values_for_type(x509.DNSName)
-
-        # TODO perhaps remove certvalidator, consider once merged: https://github.com/pyca/cryptography/issues/2381
-        try:
-            ctx = ValidationContext(allow_fetching=True, revocation_mode='hard-fail', weak_hash_algos=set(["md2", "md5", "sha1"]))
-            validator = CertificateValidator(der, validation_context=ctx)
-            validator.validate_usage(
-                key_usage=set(['digital_signature', 'crl_sign']),
-                extended_key_usage=set(['ocsp_signing']),
-            )
-        except RevokedError as ex:
-            self.certificate_chain_revoked = True
-            self.certificate_chain_validation_result = str(ex)
-        except InvalidCertificateError as ex:
-            self.certificate_chain_valid = False
-            self.certificate_chain_validation_result = str(ex)
-        except PathValidationError as ex:
-            self.certificate_chain_trust = False
-            self.certificate_chain_validation_result = str(ex)
-
-        if self.certificate_chain_validation_result is None:
-            self.certificate_chain_revoked = False
-            self.certificate_chain_trust = True
-            self.certificate_chain_valid = True
-            self.certificate_chain_validation_result = 'Validated CRL, OSCP, and digital signatures'
 
     def head(self, verify_tls :bool = False, allow_redirects :bool = False):
         self.method = 'head'
@@ -405,8 +382,10 @@ class Metadata:
             self.reason = HTTP_503
 
         # TODO waiting for merge https://github.com/python/cpython/pull/17938
+        intermediate_certs = []
         if isinstance(self._peer_certificate_chain, list):
             for pos, der in enumerate(self._peer_certificate_chain):
+                intermediate_certs.append(der)
                 cert = load_certificate(FILETYPE_ASN1, der)
                 pem_filepath = f'/tmp/{self.host}-{pos}.pem'
                 Path(pem_filepath).write_bytes(dump_certificate(FILETYPE_PEM, cert))
@@ -427,7 +406,9 @@ class Metadata:
                 self.certificate_is_self_signed = True
             self.certificate_verify_message = str(err)
 
+        cryptography_x509 = None
         if isinstance(self.server_certificate, X509):
+            cryptography_x509 = self.server_certificate.to_cryptography()
             self.certificate_serial_number = str(self.server_certificate.get_serial_number())
             issuer: X509Name = self.server_certificate.get_issuer()
             self.certificate_issuer = issuer.commonName
@@ -439,6 +420,45 @@ class Metadata:
             self.certificate_issued_desc = f'{(datetime.utcnow() - not_before).days} days ago'
             self.certificate_expiry_desc = f'Expired {(datetime.utcnow() - not_after).days} days ago' if not_after < datetime.utcnow() else f'Valid for {(not_after - datetime.utcnow()).days} days'
             self.asn_data = asn_data(self.host, self.port)
+
+        if isinstance(cryptography_x509, x509.Certificate):
+            for ext in cryptography_x509.extensions():
+                self.certificate_extensions.append(ext.__dict__)
+            certificate_valid = self.certificate_verify_message is None
+            der = cryptography_x509.tbs_certificate_bytes
+            # TODO perhaps remove certvalidator, consider once merged: https://github.com/pyca/cryptography/issues/2381
+            try:
+                ctx = ValidationContext(allow_fetching=True, revocation_mode='hard-fail', weak_hash_algos=set(["md2", "md5", "sha1"]))
+                validator = CertificateValidator(der, validation_context=ctx, intermediate_certs=intermediate_certs)
+                validator.validate_usage(
+                    key_usage=set(['digital_signature', 'crl_sign']),
+                    extended_key_usage=set(['ocsp_signing']),
+                )
+            except RevokedError as ex:
+                self.certificate_chain_revoked = True
+                self.certificate_chain_trust = False
+                self.certificate_chain_valid = False
+                self.certificate_chain_validation_result = str(ex)
+            except InvalidCertificateError as ex:
+                self.certificate_chain_trust = False
+                self.certificate_chain_valid = False
+                self.certificate_chain_validation_result = str(ex)
+            except PathValidationError as ex:
+                self.certificate_chain_trust = certificate_valid
+                self.certificate_chain_valid = False
+                self.certificate_chain_validation_result = str(ex)
+            except PathBuildingError as ex:
+                self.certificate_chain_trust = certificate_valid
+                self.certificate_chain_valid = False
+                self.certificate_chain_validation_result = str(ex)
+            except Exception as ex:
+                self.certificate_chain_validation_result = str(ex)
+
+            if self.certificate_chain_validation_result is None:
+                self.certificate_chain_revoked = False
+                self.certificate_chain_trust = certificate_valid
+                self.certificate_chain_valid = True
+                self.certificate_chain_validation_result = 'Validated CRL, OSCP, and digital signatures'
 
         return self
 
