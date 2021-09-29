@@ -5,7 +5,6 @@ from trivialsec.models.domain import Domain
 from trivialsec.models.member import Member
 from trivialsec.models.activity_log import ActivityLog
 from trivialsec.models.service_type import ServiceType
-from trivialsec.helpers.transport import Metadata
 from trivialsec.services.jobs import SCAN_NEXT, queue_job
 
 
