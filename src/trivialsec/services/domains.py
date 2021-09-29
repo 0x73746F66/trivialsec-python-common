@@ -12,7 +12,7 @@ from trivialsec.services.jobs import SCAN_NEXT, queue_job
 __module__ = 'trivialsec.services.domains'
 logger = logging.getLogger(__name__)
 
-def upsert_domain(domain :Domain, member :Member, project :Project, external_domain :bool = False) -> bool:
+def upsert_domain(domain :Domain, member :Member, project :Project, external_domain :bool = False, on_demand :bool = True) -> bool:
     saved = False
     scan_next_key = 'domain'
     extractor = TLDExtract(cache_dir='/tmp')
@@ -38,14 +38,14 @@ def upsert_domain(domain :Domain, member :Member, project :Project, external_dom
         scan_next_key = 'external-domain'
     for service_type_name in SCAN_NEXT.get(scan_next_key, []):
         service_type = ServiceType(name=service_type_name)
-        service_type.hydrate('name')
-        queue_job(
-            service_type=service_type,
-            priority=2,
-            member=member,
-            project=project,
-            params={'target': domain.domain_name, 'target_type': 'domain'},
-            on_demand=False
-        )
+        if service_type.hydrate('name'):
+            queue_job(
+                service_type=service_type,
+                priority=2,
+                member=member,
+                project=project,
+                params={'target': domain.domain_name, 'target_type': 'domain'},
+                on_demand=on_demand
+            )
 
     return saved
