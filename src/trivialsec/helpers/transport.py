@@ -282,7 +282,7 @@ class Metadata:
                 sock.setblocking(1)
                 sock.do_handshake()
                 for (_, cert) in enumerate(sock.get_peer_cert_chain()):
-                    self._peer_certificate_chain.append(dump_certificate(FILETYPE_ASN1, cert))
+                    self._peer_certificate_chain.append(dump_certificate(FILETYPE_PEM, cert))
             except Exception as ex:
                 logger.exception(ex)
             sock.shutdown()
@@ -404,8 +404,7 @@ class Metadata:
 
         # TODO waiting for merge https://github.com/python/cpython/pull/17938
         if isinstance(self._peer_certificate_chain, list):
-            for pos, der in enumerate(self._peer_certificate_chain):
-                cert = load_certificate(FILETYPE_ASN1, der)
+            for (pos, cert) in enumerate(self._peer_certificate_chain):
                 pem_filepath = f'/tmp/{self.host}-{pos}.pem'
                 Path(pem_filepath).write_bytes(dump_certificate(FILETYPE_PEM, cert))
                 try:
