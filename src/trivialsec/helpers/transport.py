@@ -434,11 +434,11 @@ class Metadata:
                 if isinstance(ext.value, extensions.CRLNumber):
                     data['crl_number'] = ext.value.crl_number
                 if isinstance(ext.value, extensions.AuthorityKeyIdentifier):
-                    data['key_identifier'] = hexlify(ext.value.key_identifier)
+                    data['key_identifier'] = hexlify(ext.value.key_identifier).decode('utf-8')
                     data['authority_cert_issuer'] = ', '.join([x.value for x in ext.value.authority_cert_issuer or []])
                     data['authority_cert_serial_number'] = ext.value.authority_cert_serial_number
                 if isinstance(ext.value, extensions.SubjectKeyIdentifier):
-                    data['digest'] = hexlify(ext.value.digest)
+                    data['digest'] = hexlify(ext.value.digest).decode('utf-8')
                 if isinstance(ext.value, (extensions.AuthorityInformationAccess, extensions.SubjectInformationAccess)):
                     data['descriptions'] = []
                     for description in ext.value:
@@ -515,7 +515,7 @@ class Metadata:
                     for signed_cert_timestamp in ext.value:
                         data['signed_certificate_timestamps'].append({
                             'version': signed_cert_timestamp.version.name,
-                            'log_id': hexlify(signed_cert_timestamp.log_id),
+                            'log_id': hexlify(signed_cert_timestamp.log_id).decode('utf-8'),
                             'timestamp': signed_cert_timestamp.timestamp,
                             'pre_certificate': signed_cert_timestamp.entry_type.value == 1,
                         })
