@@ -12,6 +12,7 @@ from urllib.parse import urlparse, parse_qs
 from cryptography import x509
 from cryptography.x509 import extensions
 from OpenSSL.crypto import load_certificate, dump_certificate, X509, X509Name, TYPE_RSA, FILETYPE_ASN1, FILETYPE_PEM
+from OpenSSL import SSL
 from ssl import create_default_context, SSLCertVerificationError, Purpose, CertificateError
 from datetime import datetime
 import requests
@@ -267,8 +268,26 @@ class Metadata:
         except SocketError:
             self.code = 503
             self.reason = HTTP_503
+        except Exception as ex:
+            logger.exception(ex)
 
-        self._peer_certificate_chain.append(der)
+        for method in [SSL.TLSv1_2_METHOD, SSL.TLSv1_1_METHOD, SSL.TLSv1_METHOD, SSL.SSLv23_METHOD]:
+            context = SSL.Context(method=method)
+            for bundle in [requests.certs.where()]:
+                context.load_verify_locations(cafile=bundle)
+            sock = SSL.Connection(context=context, socket=socket(AF_INET, SOCK_STREAM))
+            sock.settimeout(5)
+            try:
+                sock.connect((self.host, self.port))
+                sock.setblocking(1)
+                sock.do_handshake()
+                for (_, cert) in enumerate(sock.get_peer_cert_chain()):
+                    self._peer_certificate_chain.append(dump_certificate(FILETYPE_ASN1, cert))
+            except Exception as ex:
+                logger.exception(ex)
+            sock.shutdown()
+            sock.close()
+
         self.server_certificate = load_certificate(FILETYPE_ASN1, der)
         self.signature_algorithm = self.server_certificate.get_signature_algorithm().decode('ascii')
         self.sha1_fingerprint = self.server_certificate.digest('sha1').decode('ascii')
@@ -384,10 +403,8 @@ class Metadata:
             self.reason = HTTP_503
 
         # TODO waiting for merge https://github.com/python/cpython/pull/17938
-        intermediate_certs = []
         if isinstance(self._peer_certificate_chain, list):
             for pos, der in enumerate(self._peer_certificate_chain):
-                intermediate_certs.append(der)
                 cert = load_certificate(FILETYPE_ASN1, der)
                 pem_filepath = f'/tmp/{self.host}-{pos}.pem'
                 Path(pem_filepath).write_bytes(dump_certificate(FILETYPE_PEM, cert))
@@ -537,7 +554,7 @@ class Metadata:
             # TODO perhaps remove certvalidator, consider once merged: https://github.com/pyca/cryptography/issues/2381
             try:
                 ctx = ValidationContext(allow_fetching=True, revocation_mode='hard-fail', weak_hash_algos=set(["md2", "md5", "sha1"]))
-                validator = CertificateValidator(der, validation_context=ctx, intermediate_certs=intermediate_certs)
+                validator = CertificateValidator(der, validation_context=ctx, intermediate_certs=self._peer_certificate_chain)
                 validator.validate_usage(
                     key_usage=set(['digital_signature', 'crl_sign']),
                     extended_key_usage=set(['ocsp_signing']),
@@ -836,7 +853,8 @@ def try_zone_transfer(domain):
         try:
             res = zone.from_xfr(query.xfr(nameserver, domain, lifetime=15))
             recs = [res[n].to_text(n) for n in res.nodes.keys()]
-        except Exception:
+        except Exception as ex:
+            logger.exception(ex)
             continue
         if recs is not None:
             return True, recs
