@@ -293,7 +293,7 @@ class Metadata:
                 sock.shutdown()
                 sock.close()
 
-        self.server_certificate = load_certificate(FILETYPE_ASN1, der)
+        self.server_certificate = load_certificate(FILETYPE_ASN1, self._der)
         self.signature_algorithm = self.server_certificate.get_signature_algorithm().decode('ascii')
         self.sha1_fingerprint = self.server_certificate.digest('sha1').decode('ascii')
         public_key = self.server_certificate.get_pubkey()
