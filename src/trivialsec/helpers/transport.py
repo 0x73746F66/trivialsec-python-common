@@ -476,8 +476,6 @@ class Metadata:
                             'access_location': description.access_location.value,
                             'access_method': description.access_method._name, # pylint: disable=protected-access
                         })
-                        if description.access_method._name == 'OCSP': # pylint: disable=protected-access
-                            validator_extended_key_usage.append('ocsp_signing')
                 if isinstance(ext.value, extensions.BasicConstraints):
                     data['ca'] = ext.value.ca
                     data['path_length'] = ext.value.path_length
@@ -492,8 +490,6 @@ class Metadata:
                             'reasons': distribution_point.reasons,
                             'crl_issuer': ', '.join([x.value for x in distribution_point.crl_issuer or []]),
                         })
-                    if len(data['distribution_points']) > 0:
-                        validator_key_usage.append('crl_sign')
                 if isinstance(ext.value, extensions.PolicyConstraints):
                     data['policy_information'] = []
                     data['user_notices'] = []
@@ -510,7 +506,7 @@ class Metadata:
                                 'explicit_text': info.explicit_text,
                             })
                 if isinstance(ext.value, extensions.ExtendedKeyUsage):
-                    data['key_usages'] = [x._name for x in ext.value or []]
+                    data['key_usages'] = [x._name for x in ext.value or []] # pylint: disable=protected-access
                     if 'serverAuth' in data['key_usages']:
                         validator_extended_key_usage.append('server_auth')
                 if isinstance(ext.value, extensions.TLSFeature):
