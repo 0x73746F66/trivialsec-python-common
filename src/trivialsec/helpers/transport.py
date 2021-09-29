@@ -451,6 +451,8 @@ class Metadata:
             self.certificate_expiry_desc = f'Expired {(datetime.utcnow() - not_after).days} days ago' if not_after < datetime.utcnow() else f'Valid for {(not_after - datetime.utcnow()).days} days'
             self.asn_data = asn_data(self.host, self.port)
 
+        validator_key_usage = []
+        validator_extended_key_usage = []
         if isinstance(cryptography_x509, x509.Certificate):
             for ext in cryptography_x509.extensions:
                 data = {
@@ -505,26 +507,47 @@ class Metadata:
                             })
                 if isinstance(ext.value, extensions.ExtendedKeyUsage):
                     data['key_usages'] = [x._name for x in ext.value or []]
+                    if 'serverAuth' in data['key_usages']:
+                        validator_extended_key_usage.append('server_auth')
                 if isinstance(ext.value, extensions.TLSFeature):
                     data['features'] = []
                     for feature in ext.value:
                         if feature.value == 5:
                             data['features'].append('OCSP Must-Staple (rfc6066)')
+                            validator_extended_key_usage.append('ocsp_signing')
                         if feature.value == 17:
                             data['features'].append('multiple OCSP responses (rfc6961)')
+                            validator_extended_key_usage.append('ocsp_signing')
                 if isinstance(ext.value, extensions.InhibitAnyPolicy):
                     data['skip_certs'] = ext.value.skip_certs
                 if isinstance(ext.value, extensions.KeyUsage):
                     data['digital_signature'] = ext.value.digital_signature
+                    if ext.value.digital_signature:
+                        validator_key_usage.append('digital_signature')
                     data['content_commitment'] = ext.value.content_commitment
+                    if ext.value.content_commitment:
+                        validator_key_usage.append('content_commitment')
                     data['key_encipherment'] = ext.value.key_encipherment
+                    if ext.value.key_encipherment:
+                        validator_key_usage.append('key_encipherment')
                     data['data_encipherment'] = ext.value.data_encipherment
+                    if ext.value.data_encipherment:
+                        validator_key_usage.append('data_encipherment')
                     data['key_agreement'] = ext.value.key_agreement
                     if ext.value.key_agreement:
+                        validator_key_usage.append('key_agreement')
                         data['decipher_only'] = ext.value.decipher_only
+                        if ext.value.decipher_only:
+                            validator_key_usage.append('decipher_only')
                         data['encipher_only'] = ext.value.encipher_only
+                        if ext.value.encipher_only:
+                            validator_key_usage.append('encipher_only')
                     data['key_cert_sign'] = ext.value.key_cert_sign
+                    if ext.value.key_cert_sign:
+                        validator_key_usage.append('key_cert_sign')
                     data['crl_sign'] = ext.value.crl_sign
+                    if ext.value.crl_sign:
+                        validator_key_usage.append('crl_sign')
                 if isinstance(ext.value, extensions.NameConstraints):
                     data['permitted_subtrees'] = [x.value for x in ext.value.permitted_subtrees or []]
                     data['excluded_subtrees'] = [x.value for x in ext.value.excluded_subtrees or []]
@@ -547,6 +570,8 @@ class Metadata:
                             'timestamp': signed_cert_timestamp.timestamp,
                             'pre_certificate': signed_cert_timestamp.entry_type.value == 1,
                         })
+                    if len(data['signed_certificate_timestamps']) > 0:
+                        validator_extended_key_usage.append('time_stamping')
                 if isinstance(ext.value, extensions.OCSPNonce):
                     data['nonce'] = ext.value.nonce
                 if isinstance(ext.value, extensions.IssuingDistributionPoint):
@@ -559,45 +584,45 @@ class Metadata:
                     data['only_contains_attribute_certs'] = ext.value.only_contains_attribute_certs
                 self.certificate_extensions.append(data)
 
-            certificate_valid = self.certificate_verify_message is None
-            # TODO perhaps remove certvalidator, consider once merged: https://github.com/pyca/cryptography/issues/2381
-            if self._der is not None:
-                try:
-                    ctx = ValidationContext(allow_fetching=True, revocation_mode='hard-fail', weak_hash_algos=set(["md2", "md5", "sha1"]))
-                    intermediate_certs = []
-                    for cert in self._peer_certificate_chain:
-                        intermediate_certs.append(dump_certificate(FILETYPE_PEM, cert))
-                    validator = CertificateValidator(self._der, validation_context=ctx, intermediate_certs=intermediate_certs)
-                    validator.validate_usage(
-                        key_usage=set(['digital_signature', 'crl_sign']),
-                        extended_key_usage=set(['ocsp_signing']),
-                    )
-                except RevokedError as ex:
-                    self.certificate_chain_revoked = True
-                    self.certificate_chain_trust = False
-                    self.certificate_chain_valid = False
-                    self.certificate_chain_validation_result = str(ex)
-                except InvalidCertificateError as ex:
-                    self.certificate_chain_trust = False
-                    self.certificate_chain_valid = False
-                    self.certificate_chain_validation_result = str(ex)
-                except PathValidationError as ex:
-                    self.certificate_chain_trust = certificate_valid
-                    self.certificate_chain_valid = False
-                    self.certificate_chain_validation_result = str(ex)
-                except PathBuildingError as ex:
-                    self.certificate_chain_trust = certificate_valid
-                    self.certificate_chain_valid = False
-                    self.certificate_chain_validation_result = str(ex)
-                except Exception as ex:
-                    logger.exception(ex)
-                    self.certificate_chain_validation_result = str(ex)
+        certificate_valid = self.certificate_verify_message is None
+        # TODO perhaps remove certvalidator, consider once merged: https://github.com/pyca/cryptography/issues/2381
+        if self._der is not None:
+            try:
+                ctx = ValidationContext(allow_fetching=True, revocation_mode='hard-fail', weak_hash_algos=set(["md2", "md5", "sha1"]))
+                intermediate_certs = []
+                for cert in self._peer_certificate_chain:
+                    intermediate_certs.append(dump_certificate(FILETYPE_PEM, cert))
+                validator = CertificateValidator(self._der, validation_context=ctx, intermediate_certs=intermediate_certs)
+                validator.validate_usage(
+                    key_usage=set(validator_key_usage),
+                    extended_key_usage=set(validator_extended_key_usage),
+                )
+            except RevokedError as ex:
+                self.certificate_chain_revoked = True
+                self.certificate_chain_trust = False
+                self.certificate_chain_valid = False
+                self.certificate_chain_validation_result = str(ex)
+            except InvalidCertificateError as ex:
+                self.certificate_chain_trust = False
+                self.certificate_chain_valid = False
+                self.certificate_chain_validation_result = str(ex)
+            except PathValidationError as ex:
+                self.certificate_chain_trust = certificate_valid
+                self.certificate_chain_valid = False
+                self.certificate_chain_validation_result = str(ex)
+            except PathBuildingError as ex:
+                self.certificate_chain_trust = certificate_valid
+                self.certificate_chain_valid = False
+                self.certificate_chain_validation_result = str(ex)
+            except Exception as ex:
+                logger.exception(ex)
+                self.certificate_chain_validation_result = str(ex)
 
-                if self.certificate_chain_validation_result is None:
-                    self.certificate_chain_revoked = False
-                    self.certificate_chain_trust = certificate_valid
-                    self.certificate_chain_valid = True
-                    self.certificate_chain_validation_result = 'Validated CRL, OSCP, and digital signatures'
+            if self.certificate_chain_validation_result is None:
+                self.certificate_chain_revoked = False
+                self.certificate_chain_trust = certificate_valid
+                self.certificate_chain_valid = True
+                self.certificate_chain_validation_result = 'Validated CRL, OSCP, and digital signatures'
 
         return self
 
