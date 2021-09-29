@@ -622,7 +622,7 @@ class Metadata:
                 self.certificate_chain_revoked = False
                 self.certificate_chain_trust = certificate_valid
                 self.certificate_chain_valid = True
-                self.certificate_chain_validation_result = 'Validated CRL, OSCP, and digital signatures'
+                self.certificate_chain_validation_result = f'Validated: {",".join(validator_key_usage + validator_extended_key_usage)}'
 
         return self
 
