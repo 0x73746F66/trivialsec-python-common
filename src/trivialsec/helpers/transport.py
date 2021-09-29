@@ -422,7 +422,7 @@ class Metadata:
             self.asn_data = asn_data(self.host, self.port)
 
         if isinstance(cryptography_x509, x509.Certificate):
-            for ext in cryptography_x509.extensions():
+            for ext in cryptography_x509.extensions:
                 self.certificate_extensions.append(ext.__dict__)
             certificate_valid = self.certificate_verify_message is None
             der = cryptography_x509.tbs_certificate_bytes
