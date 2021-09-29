@@ -146,6 +146,7 @@ class Domain(ElasticsearchDocumentAdapter):
         self.pubkey_type = kwargs.get('pubkey_type')
         self.certificate_valid = bool(kwargs.get('certificate_valid'))
         self.certificate_validation_result = kwargs.get('certificate_validation_result')
+        self.certificate_extensions = kwargs.get('certificate_extensions', [])
         self.certificate_is_self_signed = kwargs.get('certificate_is_self_signed')
         self.certificate_issuer = kwargs.get('certificate_issuer')
         self.certificate_issuer_country = kwargs.get('certificate_issuer_country')
