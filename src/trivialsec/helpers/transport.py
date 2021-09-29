@@ -426,6 +426,13 @@ class Metadata:
 
         cryptography_x509 = None
         if isinstance(self.server_certificate, X509):
+            pem_filepath = f'/tmp/{self.host}-server.pem'
+            Path(pem_filepath).write_bytes(dump_certificate(FILETYPE_PEM, self.server_certificate))
+            try:
+                cert_dict = ssl._ssl._test_decode_cert(pem_filepath) # pylint: disable=protected-access
+                self.certificate_chain.append(cert_dict)
+            except Exception as ex:
+                logger.exception(ex)
             cryptography_x509 = self.server_certificate.to_cryptography()
             self.certificate_serial_number = str(self.server_certificate.get_serial_number())
             issuer: X509Name = self.server_certificate.get_issuer()
@@ -443,7 +450,7 @@ class Metadata:
             for ext in cryptography_x509.extensions:
                 data = {
                     'critical': ext.critical,
-                    'name': ext.oid._name
+                    'name': ext.oid._name # pylint: disable=protected-access
                 }
                 if isinstance(ext.value, extensions.UnrecognizedExtension):
                     continue
@@ -460,7 +467,7 @@ class Metadata:
                     for description in ext.value:
                         data['descriptions'].append({
                             'access_location': description.access_location.value,
-                            'access_method': description.access_method._name,
+                            'access_method': description.access_method._name, # pylint: disable=protected-access
                         })
                 if isinstance(ext.value, extensions.BasicConstraints):
                     data['ca'] = ext.value.ca
