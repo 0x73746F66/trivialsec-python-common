@@ -3,12 +3,14 @@ import re
 import errno
 import json
 import ssl
+from binascii import hexlify
 from pathlib import Path
 from os import path
 from socket import socket, error as SocketError, getaddrinfo, AF_INET6, AF_INET, SOCK_STREAM
 from base64 import urlsafe_b64encode
 from urllib.parse import urlparse, parse_qs
 from cryptography import x509
+from cryptography.x509 import extensions
 from OpenSSL.crypto import load_certificate, dump_certificate, X509, X509Name, TYPE_RSA, FILETYPE_ASN1, FILETYPE_PEM
 from ssl import create_default_context, SSLCertVerificationError, Purpose, CertificateError
 from datetime import datetime
@@ -423,11 +425,113 @@ class Metadata:
 
         if isinstance(cryptography_x509, x509.Certificate):
             for ext in cryptography_x509.extensions:
-                self.certificate_extensions.append(ext)
-                # self.certificate_extensions.append({**{
-                #     'critical': ext.critical,
-                #     'oid': ext.oid.name
-                # }, **ext.value.__dict__})
+                data = {
+                    'critical': ext.critical,
+                    'name': ext.oid._name
+                }
+                if isinstance(ext.value, extensions.UnrecognizedExtension):
+                    continue
+                if isinstance(ext.value, extensions.CRLNumber):
+                    data['crl_number'] = ext.value.crl_number
+                if isinstance(ext.value, extensions.AuthorityKeyIdentifier):
+                    data['key_identifier'] = hexlify(ext.value.key_identifier)
+                    data['authority_cert_issuer'] = ', '.join([x.value for x in ext.value.authority_cert_issuer or []])
+                    data['authority_cert_serial_number'] = ext.value.authority_cert_serial_number
+                if isinstance(ext.value, extensions.SubjectKeyIdentifier):
+                    data['digest'] = hexlify(ext.value.digest)
+                if isinstance(ext.value, (extensions.AuthorityInformationAccess, extensions.SubjectInformationAccess)):
+                    data['descriptions'] = []
+                    for description in ext.value:
+                        data['descriptions'].append({
+                            'access_location': description.access_location.value,
+                            'access_method': description.access_method._name,
+                        })
+                if isinstance(ext.value, extensions.BasicConstraints):
+                    data['ca'] = ext.value.ca
+                    data['path_length'] = ext.value.path_length
+                if isinstance(ext.value, extensions.DeltaCRLIndicator):
+                    data['crl_number'] = ext.value.crl_number
+                if isinstance(ext.value, (extensions.CRLDistributionPoints, extensions.FreshestCRL)):
+                    data['distribution_points'] = []
+                    for distribution_point in ext.value:
+                        data['distribution_points'].append({
+                            'full_name': ', '.join([x.value for x in distribution_point.full_name or []]),
+                            'relative_name': distribution_point.relative_name,
+                            'reasons': distribution_point.reasons,
+                            'crl_issuer': ', '.join([x.value for x in distribution_point.crl_issuer or []]),
+                        })
+                if isinstance(ext.value, extensions.PolicyConstraints):
+                    data['policy_information'] = []
+                    data['user_notices'] = []
+                    for info in ext.value:
+                        if hasattr(info, 'require_explicit_policy'):
+                            data['policy_information'].append({
+                                'require_explicit_policy': info.require_explicit_policy,
+                                'inhibit_policy_mapping': info.inhibit_policy_mapping,
+                            })
+                        if hasattr(info, 'notice_reference'):
+                            data['user_notices'].append({
+                                'organization': info.notice_reference.organization,
+                                'notice_numbers': info.notice_reference.notice_numbers,
+                                'explicit_text': info.explicit_text,
+                            })
+                if isinstance(ext.value, extensions.ExtendedKeyUsage):
+                    data['key_usages'] = [x._name for x in ext.value or []]
+                if isinstance(ext.value, extensions.TLSFeature):
+                    data['features'] = []
+                    for feature in ext.value:
+                        if feature.value == 5:
+                            data['features'].append('OCSP Must-Staple (rfc6066)')
+                        if feature.value == 17:
+                            data['features'].append('multiple OCSP responses (rfc6961)')
+                if isinstance(ext.value, extensions.InhibitAnyPolicy):
+                    data['skip_certs'] = ext.value.skip_certs
+                if isinstance(ext.value, extensions.KeyUsage):
+                    data['digital_signature'] = ext.value.digital_signature
+                    data['content_commitment'] = ext.value.content_commitment
+                    data['key_encipherment'] = ext.value.key_encipherment
+                    data['data_encipherment'] = ext.value.data_encipherment
+                    data['key_agreement'] = ext.value.key_agreement
+                    if ext.value.key_agreement:
+                        data['decipher_only'] = ext.value.decipher_only
+                        data['encipher_only'] = ext.value.encipher_only
+                    data['key_cert_sign'] = ext.value.key_cert_sign
+                    data['crl_sign'] = ext.value.crl_sign
+                if isinstance(ext.value, extensions.NameConstraints):
+                    data['permitted_subtrees'] = [x.value for x in ext.value.permitted_subtrees or []]
+                    data['excluded_subtrees'] = [x.value for x in ext.value.excluded_subtrees or []]
+                if isinstance(ext.value, extensions.SubjectAlternativeName):
+                    data['subject_alternative_names'] = [x.value for x in ext.value or []]
+                if isinstance(ext.value, extensions.IssuerAlternativeName):
+                    data['issuer_alternative_names'] = [x.value for x in ext.value or []]
+                if isinstance(ext.value, extensions.CertificateIssuer):
+                    data['certificate_issuers'] = [x.value for x in ext.value or []]
+                if isinstance(ext.value, extensions.CRLReason):
+                    data['reason'] = ext.value.reason
+                if isinstance(ext.value, extensions.InvalidityDate):
+                    data['invalidity_date'] = ext.value.invalidity_date
+                if isinstance(ext.value, (extensions.PrecertificateSignedCertificateTimestamps, extensions.SignedCertificateTimestamps)):
+                    data['signed_certificate_timestamps'] = []
+                    for signed_cert_timestamp in ext.value:
+                        data['signed_certificate_timestamps'].append({
+                            'version': signed_cert_timestamp.version.name,
+                            'log_id': hexlify(signed_cert_timestamp.log_id),
+                            'timestamp': signed_cert_timestamp.timestamp,
+                            'pre_certificate': signed_cert_timestamp.entry_type.value == 1,
+                        })
+                if isinstance(ext.value, extensions.OCSPNonce):
+                    data['nonce'] = ext.value.nonce
+                if isinstance(ext.value, extensions.IssuingDistributionPoint):
+                    data['full_name'] = ext.value.full_name
+                    data['relative_name'] = ext.value.relative_name
+                    data['only_contains_user_certs'] = ext.value.only_contains_user_certs
+                    data['only_contains_ca_certs'] = ext.value.only_contains_ca_certs
+                    data['only_some_reasons'] = ext.value.only_some_reasons
+                    data['indirect_crl'] = ext.value.indirect_crl
+                    data['only_contains_attribute_certs'] = ext.value.only_contains_attribute_certs
+
+
+                self.certificate_extensions.append(data)
             certificate_valid = self.certificate_verify_message is None
             der = cryptography_x509.tbs_certificate_bytes
             # TODO perhaps remove certvalidator, consider once merged: https://github.com/pyca/cryptography/issues/2381
