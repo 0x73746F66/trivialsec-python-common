@@ -146,7 +146,6 @@ class Domain(ElasticsearchDocumentAdapter):
         self.pubkey_type = kwargs.get('pubkey_type')
         self.certificate_valid = bool(kwargs.get('certificate_valid'))
         self.certificate_validation_result = kwargs.get('certificate_validation_result')
-        self.certificate_extensions = kwargs.get('certificate_extensions', [])
         self.certificate_is_self_signed = kwargs.get('certificate_is_self_signed')
         self.certificate_issuer = kwargs.get('certificate_issuer')
         self.certificate_issuer_country = kwargs.get('certificate_issuer_country')
@@ -183,6 +182,19 @@ class Domain(ElasticsearchDocumentAdapter):
         self.breaches = kwargs.get('breaches', [])
 
     def __setattr__(self, name, value):
+        if name in [
+                'tls_extensions',
+                'http_headers',
+                'cookies',
+                'browser_simulations',
+                'javascript',
+                'offered_protocols',
+                'certificates',
+                'certificate_transparency',
+                'phishing_domains',
+                'breaches',
+            ] and not isinstance(value, list):
+            value = value.split(',') if isinstance(value, str) else []
         if name in [
             'dns_registered',
             'dns_transfer_allowed',
