@@ -476,6 +476,8 @@ class Metadata:
                             'access_location': description.access_location.value,
                             'access_method': description.access_method._name, # pylint: disable=protected-access
                         })
+                        if description.access_method._name == 'OCSP': # pylint: disable=protected-access
+                            validator_extended_key_usage.append('ocsp_signing')
                 if isinstance(ext.value, extensions.BasicConstraints):
                     data['ca'] = ext.value.ca
                     data['path_length'] = ext.value.path_length
@@ -490,6 +492,8 @@ class Metadata:
                             'reasons': distribution_point.reasons,
                             'crl_issuer': ', '.join([x.value for x in distribution_point.crl_issuer or []]),
                         })
+                    if len(data['distribution_points']) > 0:
+                        validator_key_usage.append('crl_sign')
                 if isinstance(ext.value, extensions.PolicyConstraints):
                     data['policy_information'] = []
                     data['user_notices'] = []
@@ -570,8 +574,6 @@ class Metadata:
                             'timestamp': signed_cert_timestamp.timestamp,
                             'pre_certificate': signed_cert_timestamp.entry_type.value == 1,
                         })
-                    if len(data['signed_certificate_timestamps']) > 0:
-                        validator_extended_key_usage.append('time_stamping')
                 if isinstance(ext.value, extensions.OCSPNonce):
                     data['nonce'] = ext.value.nonce
                 if isinstance(ext.value, extensions.IssuingDistributionPoint):
