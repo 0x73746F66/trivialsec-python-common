@@ -277,16 +277,20 @@ class Metadata:
                 context.load_verify_locations(cafile=bundle)
             sock = SSL.Connection(context=context, socket=socket(AF_INET, SOCK_STREAM))
             sock.settimeout(5)
+            sock.set_tlsext_host_name(self.host.encode())
             try:
                 sock.connect((self.host, self.port))
                 sock.setblocking(1)
                 sock.do_handshake()
                 for (_, cert) in enumerate(sock.get_peer_cert_chain()):
                     self._peer_certificate_chain.append(dump_certificate(FILETYPE_PEM, cert))
+                sock.shutdown()
+                sock.close()
+                break
             except Exception as ex:
                 logger.exception(ex)
-            sock.shutdown()
-            sock.close()
+                sock.shutdown()
+                sock.close()
 
         self.server_certificate = load_certificate(FILETYPE_ASN1, der)
         self.signature_algorithm = self.server_certificate.get_signature_algorithm().decode('ascii')
