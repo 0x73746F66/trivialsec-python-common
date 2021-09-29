@@ -283,7 +283,7 @@ class Metadata:
                 sock.setblocking(1)
                 sock.do_handshake()
                 for (_, cert) in enumerate(sock.get_peer_cert_chain()):
-                    self._peer_certificate_chain.append(dump_certificate(FILETYPE_PEM, cert))
+                    self._peer_certificate_chain.append(cert)
                 sock.shutdown()
                 sock.close()
                 break
@@ -564,7 +564,10 @@ class Metadata:
             # TODO perhaps remove certvalidator, consider once merged: https://github.com/pyca/cryptography/issues/2381
             try:
                 ctx = ValidationContext(allow_fetching=True, revocation_mode='hard-fail', weak_hash_algos=set(["md2", "md5", "sha1"]))
-                validator = CertificateValidator(der, validation_context=ctx, intermediate_certs=self._peer_certificate_chain)
+                intermediate_certs = []
+                for cert in self._peer_certificate_chain:
+                    intermediate_certs.append(dump_certificate(FILETYPE_PEM, cert))
+                validator = CertificateValidator(der, validation_context=ctx, intermediate_certs=intermediate_certs)
                 validator.validate_usage(
                     key_usage=set(['digital_signature', 'crl_sign']),
                     extended_key_usage=set(['ocsp_signing']),
