@@ -462,25 +462,30 @@ class Metadata:
             # SSLCertVerificationError does not handle most validation problems at all, see: https://badssl.com/
             validation_checks['not_expired'] = not_after > datetime.utcnow()
             validation_checks['issued_past_tense'] = not_before < datetime.utcnow()
+            wildcard_hosts = set()
+            fqdns = set()
             for fields in self._x509.subject:
                 current = str(fields.oid)
                 if "commonName" in current:
                     self.certificate_common_name = fields.value
-            wildcard_san = set()
-            fqn_san = set()
+                    if self.certificate_common_name.startswith('*.'):
+                        wildcard_hosts.add(self.certificate_common_name)
+                    else:
+                        fqdns.add(self.certificate_common_name)
+
             for san in self.certificate_san:
                 if san.startswith('*.'):
-                    wildcard_san.add(san)
+                    wildcard_hosts.add(san)
                 else:
-                    fqn_san.add(san)
+                    fqdns.add(san)
             matched_wildcard = False
-            for wildcard in wildcard_san:
+            for wildcard in wildcard_hosts:
                 check = wildcard.replace('*', '')
                 if self.host.endswith(check):
                     matched_wildcard = True
                     break
             validation_checks['common_name_defined'] = self.certificate_common_name is not None
-            validation_checks['match_hostname'] = self.host == self.certificate_common_name or matched_wildcard is True or self.host in fqn_san
+            validation_checks['match_hostname'] = matched_wildcard is True or self.host in fqdns
             validation_checks['avoid_known_weak_signature_algorithm'] = self.signature_algorithm not in self.known_weak_signature_algorithms
             if validation_checks['avoid_known_weak_signature_algorithm'] is False:
                 certificate_verify_messages.append(self.weak_signature_reason[self.signature_algorithm])
@@ -514,8 +519,8 @@ class Metadata:
                 self.certificate_is_self_signed = True
 
         # this value is a dependency for chain validation, CertificateValidator results
-        self.certificate_valid = all(validation_checks)
-        self.certificate_verify_message = '\n'.join(certificate_verify_messages)
+        self.certificate_valid = all(validation_checks.values())
+        self.certificate_verify_message = '\n'.join([f'{k}={v}' for (k, v) in enumerate(certificate_verify_messages)])
         validator_key_usage = []
         validator_extended_key_usage = []
         if isinstance(self._x509, x509.Certificate):
