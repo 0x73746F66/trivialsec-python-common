@@ -392,8 +392,7 @@ class Metadata:
 
         for method in [SSL.TLSv1_2_METHOD, SSL.TLSv1_1_METHOD, SSL.TLSv1_METHOD, SSL.SSLv23_METHOD]:
             context = SSL.Context(method=method)
-            for bundle in [requests.certs.where(), path.join(path.dirname(__file__), "mozilla-server-authentication-root-certificates.pem")]:
-                context.load_verify_locations(cafile=bundle)
+            context.load_verify_locations(cafile=requests.certs.where())
             sock = SSL.Connection(context=context, socket=socket(AF_INET, SOCK_STREAM))
             sock.settimeout(5)
             sock.set_tlsext_host_name(self.host.encode())
