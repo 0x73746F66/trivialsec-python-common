@@ -190,6 +190,11 @@ class Metadata:
         'DSA',
         'EC',
     ]
+    weak_key_size = {
+        'RSA': 1024,
+        'DSA': 2048,
+        'EC': 160,
+    }
     weak_key_reason = {
         'RSA': '2000: Factorization of a 512-bit RSA Modulus, essentially derive a private key knowing only the public key. Verified bt EFF in 2001. Later in 2009 factorization of up to 1024-bit keys',
         'DSA': '1999: HPL Laboratories demonstrated lattice attacks on DSA, a non-trivial example of the known message attack that is a total break and message forgery technique. 2010 Dimitrios Poulakis demonstrated a lattice reduction technique for single or multiple message forgery',
@@ -295,7 +300,6 @@ class Metadata:
             self.reason = HTTP_503
         except Exception as ex:
             logger.exception(ex)
-
 
     def head(self, verify_tls :bool = False, allow_redirects :bool = False):
         self.method = 'head'
@@ -477,11 +481,11 @@ class Metadata:
                     break
             validation_checks['common_name_defined'] = self.certificate_common_name is not None
             validation_checks['match_hostname'] = self.host == self.certificate_common_name or matched_wildcard is True or self.host in fqn_san
-            validation_checks['not_using_known_weak_signature_algorithm'] = self.signature_algorithm not in self.known_weak_signature_algorithms
-            if validation_checks['not_using_known_weak_signature_algorithm'] is False:
+            validation_checks['avoid_known_weak_signature_algorithm'] = self.signature_algorithm not in self.known_weak_signature_algorithms
+            if validation_checks['avoid_known_weak_signature_algorithm'] is False:
                 certificate_verify_messages.append(self.weak_signature_reason[self.signature_algorithm])
-            validation_checks['not_using_known_weak_keys'] = self.pubkey_type not in self.known_weak_keys
-            if validation_checks['not_using_known_weak_keys'] is False:
+            if self.pubkey_type in self.known_weak_keys and self.server_key_size <= self.weak_key_size[self.pubkey_type]:
+                validation_checks['avoid_known_weak_keys'] = False
                 certificate_verify_messages.append(self.weak_key_reason[self.pubkey_type])
 
         # TODO rely on undocumented _test_decode_cert(), waiting for merge https://github.com/python/cpython/pull/17938
@@ -510,8 +514,7 @@ class Metadata:
                 self.certificate_is_self_signed = True
 
         # this value is a dependency for chain validation, CertificateValidator results
-        if all(validation_checks):
-            self.certificate_valid = True
+        self.certificate_valid = all(validation_checks)
         self.certificate_verify_message = '\n'.join(certificate_verify_messages)
         validator_key_usage = []
         validator_extended_key_usage = []
