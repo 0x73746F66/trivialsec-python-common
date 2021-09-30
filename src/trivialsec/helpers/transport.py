@@ -185,6 +185,16 @@ class SafeBrowsing:
         return self.lookup_urls([url], platforms=platforms)[url]
 
 class Metadata:
+    known_weak_keys = [
+        'RSA',
+        'DSA',
+        'EC',
+    ]
+    weak_key_reason = {
+        'RSA': '2000: Factorization of a 512-bit RSA Modulus, essentially derive a private key knowing only the public key. Verified bt EFF in 2001. Later in 2009 factorization of up to 1024-bit keys',
+        'DSA': '1999: HPL Laboratories demonstrated lattice attacks on DSA, a non-trivial example of the known message attack that is a total break and message forgery technique. 2010 Dimitrios Poulakis demonstrated a lattice reduction technique for single or multiple message forgery',
+        'EC': '2010 Dimitrios Poulakis demonstrated a lattice reduction technique to attack ECDSA for single or multiple message forgery',
+    }
     known_weak_signature_algorithms = [
         'sha1WithRSAEncryption',
         'md5WithRSAEncryption',
@@ -424,7 +434,6 @@ class Metadata:
             public_key = self.server_certificate.get_pubkey()
             if public_key.type() == TYPE_RSA:
                 self.pubkey_type = 'RSA'
-                validation_checks['rsa_private_key_consistency'] = public_key.check()
             if public_key.type() == TYPE_DSA:
                 self.pubkey_type = 'DSA'
             if public_key.type() == TYPE_DH:
@@ -468,9 +477,13 @@ class Metadata:
                     break
             validation_checks['common_name_defined'] = self.certificate_common_name is not None
             validation_checks['match_hostname'] = self.host == self.certificate_common_name or matched_wildcard is True or self.host in fqn_san
-            validation_checks['not_known_weak_signature_algorithm'] = self.signature_algorithm not in self.known_weak_signature_algorithms
-            if validation_checks['not_known_weak_signature_algorithm'] is False:
+            validation_checks['not_using_known_weak_signature_algorithm'] = self.signature_algorithm not in self.known_weak_signature_algorithms
+            if validation_checks['not_using_known_weak_signature_algorithm'] is False:
                 certificate_verify_messages.append(self.weak_signature_reason[self.signature_algorithm])
+            validation_checks['not_using_known_weak_keys'] = self.pubkey_type not in self.known_weak_keys
+            if validation_checks['not_using_known_weak_keys'] is False:
+                certificate_verify_messages.append(self.weak_key_reason[self.pubkey_type])
+
         # TODO rely on undocumented _test_decode_cert(), waiting for merge https://github.com/python/cpython/pull/17938
         if isinstance(self._peer_certificate_chain, list):
             for (pos, cert) in enumerate(self._peer_certificate_chain):
