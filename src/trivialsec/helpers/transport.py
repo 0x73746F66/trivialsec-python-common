@@ -11,7 +11,7 @@ from base64 import urlsafe_b64encode
 from urllib.parse import urlparse, parse_qs
 from cryptography import x509
 from cryptography.x509 import extensions
-from OpenSSL.crypto import load_certificate, dump_certificate, X509, X509Name, TYPE_RSA, FILETYPE_ASN1, FILETYPE_PEM
+from OpenSSL.crypto import load_certificate, dump_certificate, X509, X509Name, TYPE_RSA, TYPE_DSA, TYPE_DH, TYPE_EC, FILETYPE_ASN1, FILETYPE_PEM
 from OpenSSL import SSL
 from ssl import create_default_context, SSLCertVerificationError, Purpose, CertificateError
 from datetime import datetime
@@ -185,6 +185,16 @@ class SafeBrowsing:
         return self.lookup_urls([url], platforms=platforms)[url]
 
 class Metadata:
+    known_weak_signature_algorithms = [
+        'sha1WithRSAEncryption',
+        'md5WithRSAEncryption',
+        'md2WithRSAEncryption',
+    ]
+    weak_signature_reason = {
+        'sha1WithRSAEncryption': 'Macquarie University Australia 2009: identified vulnerabilities to collision attacks, later in 2017 Marc Stevens demonstrated collision proofs',
+        'md5WithRSAEncryption': 'Arjen Lenstra and Benne de Weger 2005: vulnerable to hash collision attacks',
+        'md2WithRSAEncryption': 'Rogier, N. and Chauvaud, P. in 1995: vulnerable to collision, later preimage resistance, and second-preimage resistance attacks were demonstrated at BlackHat 2008 by Mark Twain',
+    }
     def __init__(self, url :str, method :str = 'head'):
         self._der = None
         self._peer_certificate_chain = []
@@ -198,10 +208,12 @@ class Metadata:
         self.negotiated_cipher = None
         self.protocol_version = None
         self.server_certificate = None
+        self._x509 = None
         self.server_key_size = None
         self.sha1_fingerprint = None
         self.pubkey_type = None
         self.certificate_is_self_signed = None
+        self.certificate_valid = False
         self.certificate_verify_message = None
         self.certificate_extensions = []
         self.certificate_serial_number = None
@@ -211,6 +223,7 @@ class Metadata:
         self.certificate_not_after = None
         self.certificate_issued_desc = None
         self.certificate_expiry_desc = None
+        self.certificate_common_name = None
         self.certificate_san = []
         self.headers = {}
         self.application_banner = None
@@ -241,10 +254,11 @@ class Metadata:
         self.host = host
         self.port = port
         try:
-            self._der = conn.sock.getpeercert(True)
+            self._der = conn.sock.getpeercert(True) # der used for chain validation temp solution
+            self.server_certificate = load_certificate(FILETYPE_ASN1, self._der) # OpenSSL X509 used for most cases
+            self._x509 = self.server_certificate.to_cryptography() # cryptography x509.Certificate used for parsing extensions and building chain validation key usages (but can't actually do chain validation itself yet)
             self.negotiated_cipher, protocol, _ = conn.sock.cipher()
             self.protocol_version = conn.sock.version() or protocol
-
         except CertificateError:
             self.code = 500
             self.reason = TLS_ERROR
@@ -272,35 +286,6 @@ class Metadata:
         except Exception as ex:
             logger.exception(ex)
 
-        for method in [SSL.TLSv1_2_METHOD, SSL.TLSv1_1_METHOD, SSL.TLSv1_METHOD, SSL.SSLv23_METHOD]:
-            context = SSL.Context(method=method)
-            for bundle in [requests.certs.where()]:
-                context.load_verify_locations(cafile=bundle)
-            sock = SSL.Connection(context=context, socket=socket(AF_INET, SOCK_STREAM))
-            sock.settimeout(5)
-            sock.set_tlsext_host_name(self.host.encode())
-            try:
-                sock.connect((self.host, self.port))
-                sock.setblocking(1)
-                sock.do_handshake()
-                for (_, cert) in enumerate(sock.get_peer_cert_chain()):
-                    self._peer_certificate_chain.append(cert)
-                sock.shutdown()
-                sock.close()
-                break
-            except Exception as ex:
-                logger.exception(ex)
-                sock.shutdown()
-                sock.close()
-
-        self.server_certificate = load_certificate(FILETYPE_ASN1, self._der)
-        self.signature_algorithm = self.server_certificate.get_signature_algorithm().decode('ascii')
-        self.sha1_fingerprint = self.server_certificate.digest('sha1').decode('ascii')
-        public_key = self.server_certificate.get_pubkey()
-        self.pubkey_type = 'RSA' if public_key.type() == TYPE_RSA else 'DSA'
-        self.server_key_size = public_key.bits()
-        crypto_x509 = self.server_certificate.to_cryptography()
-        self.certificate_san = crypto_x509.extensions.get_extension_for_class(x509.SubjectAlternativeName).value.get_values_for_type(x509.DNSName)
 
     def head(self, verify_tls :bool = False, allow_redirects :bool = False):
         self.method = 'head'
@@ -363,22 +348,6 @@ class Metadata:
                         'category': 'proxy-cache',
                     })
 
-            if not str(self.code).startswith('2'):
-                if self.code == 403:
-                    logger.warning(f"Forbidden {self.url}")
-                    self.code = 403
-                    self.reason = 'Forbidden'
-                elif self.code in [301, 302]:
-                    self.redirect_location = self.headers.get('location')
-                elif self.code == 404:
-                    logger.warning(f"Not Found {self.url}")
-                    self.code = 404
-                    self.reason = 'Not Found'
-                elif self.code in [502, 503, 401]:
-                    logger.warning(f"HTTP response code {self.code} for URL {self.url}")
-                else:
-                    logger.warning(f"Unexpected HTTP response code {self.code} for URL {self.url}")
-
         except ReadTimeout:
             self.code = 504
             self.reason = HTTP_504
@@ -407,29 +376,41 @@ class Metadata:
             self.code = 503
             self.reason = HTTP_503
 
-        # TODO waiting for merge https://github.com/python/cpython/pull/17938
-        if isinstance(self._peer_certificate_chain, list):
-            for (pos, cert) in enumerate(self._peer_certificate_chain):
-                pem_filepath = f'/tmp/{self.host}-{pos}.pem'
-                Path(pem_filepath).write_bytes(dump_certificate(FILETYPE_PEM, cert))
-                try:
-                    cert_dict = ssl._ssl._test_decode_cert(pem_filepath) # pylint: disable=protected-access
-                    self.certificate_chain.append(cert_dict)
-                except Exception as ex:
-                    logger.exception(ex)
+        if not str(self.code).startswith('2'):
+            if self.code == 403:
+                logger.warning(f"Forbidden {self.url}")
+                self.reason = 'Forbidden'
+            elif self.code in [301, 302]:
+                self.redirect_location = self.headers.get('location')
+            elif self.code == 404:
+                logger.warning(f"Not Found {self.url}")
+                self.reason = 'Not Found'
+            elif self.code in [502, 503, 401]:
+                logger.warning(f"HTTP response code {self.code} for URL {self.url}")
+            else:
+                logger.warning(f"Unexpected HTTP response code {self.code} for URL {self.url}")
 
-        self.certificate_is_self_signed = False
-        try:
-            ctx1 = create_default_context(purpose=Purpose.CLIENT_AUTH)
-            with ctx1.wrap_socket(socket(), server_hostname=self.host) as sock:
-                sock.connect((self.host, 443))
+        for method in [SSL.TLSv1_2_METHOD, SSL.TLSv1_1_METHOD, SSL.TLSv1_METHOD, SSL.SSLv23_METHOD]:
+            context = SSL.Context(method=method)
+            for bundle in [requests.certs.where(), path.join(path.dirname(__file__), "mozilla-server-authentication-root-certificates.pem")]:
+                context.load_verify_locations(cafile=bundle)
+            sock = SSL.Connection(context=context, socket=socket(AF_INET, SOCK_STREAM))
+            sock.settimeout(5)
+            sock.set_tlsext_host_name(self.host.encode())
+            try:
+                sock.connect((self.host, self.port))
+                sock.setblocking(1)
+                sock.do_handshake()
+                for (_, cert) in enumerate(sock.get_peer_cert_chain()):
+                    self._peer_certificate_chain.append(cert)
+                sock.shutdown()
+                sock.close()
+                break
+            except Exception as ex:
+                logger.exception(ex)
+                sock.shutdown()
+                sock.close()
 
-        except SSLCertVerificationError as err:
-            if 'self signed certificate' in err.verify_message:
-                self.certificate_is_self_signed = True
-            self.certificate_verify_message = str(err)
-
-        cryptography_x509 = None
         if isinstance(self.server_certificate, X509):
             pem_filepath = f'/tmp/{self.host}-server.pem'
             Path(pem_filepath).write_bytes(dump_certificate(FILETYPE_PEM, self.server_certificate))
@@ -438,23 +419,92 @@ class Metadata:
                 self.certificate_chain.append(cert_dict)
             except Exception as ex:
                 logger.exception(ex)
-            cryptography_x509 = self.server_certificate.to_cryptography()
+
+            certificate_verify_messages = []
+            validation_checks = {}
+            public_key = self.server_certificate.get_pubkey()
+            if public_key.type() == TYPE_RSA:
+                self.pubkey_type = 'RSA'
+                validation_checks['rsa_private_key_consistency'] = public_key.check()
+            if public_key.type() == TYPE_DSA:
+                self.pubkey_type = 'DSA'
+            if public_key.type() == TYPE_DH:
+                self.pubkey_type = 'DH'
+            if public_key.type() == TYPE_EC:
+                self.pubkey_type = 'EC'
+            self.server_key_size = public_key.bits()
             self.certificate_serial_number = str(self.server_certificate.get_serial_number())
             issuer: X509Name = self.server_certificate.get_issuer()
             self.certificate_issuer = issuer.commonName
             self.certificate_issuer_country = issuer.countryName
+            self.asn_data = get_asn_data(self.host, self.port)
+            self.signature_algorithm = self.server_certificate.get_signature_algorithm().decode('ascii')
+            self.sha1_fingerprint = self.server_certificate.digest('sha1').decode('ascii')
+            self.certificate_san = self._x509.extensions.get_extension_for_class(x509.SubjectAlternativeName).value.get_values_for_type(x509.DNSName)
             not_before = datetime.strptime(self.server_certificate.get_notBefore().decode('ascii'), X509_DATE_FMT)
             not_after = datetime.strptime(self.server_certificate.get_notAfter().decode('ascii'), X509_DATE_FMT)
             self.certificate_not_before = not_before.isoformat()
             self.certificate_not_after = not_after.isoformat()
             self.certificate_issued_desc = f'{(datetime.utcnow() - not_before).days} days ago'
             self.certificate_expiry_desc = f'Expired {(datetime.utcnow() - not_after).days} days ago' if not_after < datetime.utcnow() else f'Valid for {(not_after - datetime.utcnow()).days} days'
-            self.asn_data = asn_data(self.host, self.port)
+            # SSLCertVerificationError does not handle most validation problems at all, see: https://badssl.com/
+            validation_checks['not_expired'] = not_after > datetime.utcnow()
+            validation_checks['issued_past_tense'] = not_before < datetime.utcnow()
+            for fields in self._x509.subject:
+                current = str(fields.oid)
+                if "commonName" in current:
+                    self.certificate_common_name = fields.value
+            wildcard_san = set()
+            fqn_san = set()
+            for san in self.certificate_san:
+                if san.startswith('*.'):
+                    wildcard_san.add(san)
+                else:
+                    fqn_san.add(san)
+            matched_wildcard = False
+            for wildcard in wildcard_san:
+                check = wildcard.replace('*', '')
+                if self.host.endswith(check):
+                    matched_wildcard = True
+                    break
+            validation_checks['common_name_defined'] = self.certificate_common_name is not None
+            validation_checks['match_hostname'] = self.host == self.certificate_common_name or matched_wildcard is True or self.host in fqn_san
+            validation_checks['not_known_weak_signature_algorithm'] = self.signature_algorithm not in self.known_weak_signature_algorithms
+            if validation_checks['not_known_weak_signature_algorithm'] is False:
+                certificate_verify_messages.append(self.weak_signature_reason[self.signature_algorithm])
+        # TODO rely on undocumented _test_decode_cert(), waiting for merge https://github.com/python/cpython/pull/17938
+        if isinstance(self._peer_certificate_chain, list):
+            for (pos, cert) in enumerate(self._peer_certificate_chain):
+                pem_filepath = f'/tmp/{self.host}-{pos}.pem'
+                Path(pem_filepath).write_bytes(dump_certificate(FILETYPE_PEM, cert))
+                try:
+                    cert_dict = ssl._ssl._test_decode_cert(pem_filepath) # pylint: disable=protected-access
+                    self.certificate_chain.append(cert_dict)
+                except Exception as ex:
+                    certificate_verify_messages.append(str(ex))
+                    logger.exception(ex)
 
+        self.certificate_is_self_signed = False
+        try:
+            ctx1 = create_default_context(purpose=Purpose.CLIENT_AUTH)
+            with ctx1.wrap_socket(socket(), server_hostname=self.host) as sock:
+                sock.connect((self.host, 443))
+
+        except SSLCertVerificationError as ex:
+            certificate_verify_messages.append(ex.verify_message)
+            if 'self signed certificate' in ex.verify_message:
+                validation_checks['trusted_CA'] = False
+                certificate_verify_messages.append('The CA is not properly imported as a trusted CA into the browser, Chrome based browsers will block visitors and show them ERR_CERT_AUTHORITY_INVALID')
+                self.certificate_is_self_signed = True
+
+        # this value is a dependency for chain validation, CertificateValidator results
+        if all(validation_checks):
+            self.certificate_valid = True
+        self.certificate_verify_message = '\n'.join(certificate_verify_messages)
         validator_key_usage = []
         validator_extended_key_usage = []
-        if isinstance(cryptography_x509, x509.Certificate):
-            for ext in cryptography_x509.extensions:
+        if isinstance(self._x509, x509.Certificate):
+            for ext in self._x509.extensions:
                 data = {
                     'critical': ext.critical,
                     'name': ext.oid._name # pylint: disable=protected-access
@@ -581,10 +631,7 @@ class Metadata:
                     data['indirect_crl'] = ext.value.indirect_crl
                     data['only_contains_attribute_certs'] = ext.value.only_contains_attribute_certs
                 self.certificate_extensions.append(data)
-
-        certificate_valid = self.certificate_verify_message is None
-        # TODO perhaps remove certvalidator, consider once merged: https://github.com/pyca/cryptography/issues/2381
-        if self._der is not None:
+            # TODO perhaps remove certvalidator, consider once merged: https://github.com/pyca/cryptography/issues/2381
             try:
                 ctx = ValidationContext(allow_fetching=True, revocation_mode='hard-fail', weak_hash_algos=set(["md2", "md5", "sha1"]))
                 intermediate_certs = []
@@ -596,6 +643,7 @@ class Metadata:
                     extended_key_usage=set(validator_extended_key_usage),
                 )
             except RevokedError as ex:
+                self.certificate_valid = False
                 self.certificate_chain_revoked = True
                 self.certificate_chain_trust = False
                 self.certificate_chain_valid = False
@@ -605,11 +653,11 @@ class Metadata:
                 self.certificate_chain_valid = False
                 self.certificate_chain_validation_result = str(ex)
             except PathValidationError as ex:
-                self.certificate_chain_trust = certificate_valid
+                self.certificate_chain_trust = self.certificate_valid
                 self.certificate_chain_valid = False
                 self.certificate_chain_validation_result = str(ex)
             except PathBuildingError as ex:
-                self.certificate_chain_trust = certificate_valid
+                self.certificate_chain_trust = self.certificate_valid
                 self.certificate_chain_valid = False
                 self.certificate_chain_validation_result = str(ex)
             except Exception as ex:
@@ -618,7 +666,7 @@ class Metadata:
 
             if self.certificate_chain_validation_result is None:
                 self.certificate_chain_revoked = False
-                self.certificate_chain_trust = certificate_valid
+                self.certificate_chain_trust = self.certificate_valid
                 self.certificate_chain_valid = True
                 self.certificate_chain_validation_result = f'Validated: {",".join(validator_key_usage + validator_extended_key_usage)}'
 
@@ -984,7 +1032,7 @@ def ip_for_host(host :str, ports :list = [80, 443]) -> list:
             logger.exception(ex)
     return list(ip_list)
 
-def asn_data(host :str, port :int = 80) -> list:
+def get_asn_data(host :str, port :int = 80) -> list:
     as_data = []
     for addr in ip_for_host(host, [port]):
         if is_valid_ipv4_address(addr):

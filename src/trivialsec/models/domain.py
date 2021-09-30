@@ -151,6 +151,8 @@ class Domain(ElasticsearchDocumentAdapter):
         self.certificate_issuer_country = kwargs.get('certificate_issuer_country')
         self.certificate_not_before = kwargs.get('certificate_not_before')
         self.certificate_not_after = kwargs.get('certificate_not_after')
+        self.certificate_common_name = kwargs.get('certificate_common_name')
+        self.certificate_san = kwargs.get('certificate_san')
         self.certificate_chain_trust = bool(kwargs.get('certificate_chain_trust'))
         self.certificate_chain_valid = bool(kwargs.get('certificate_chain_valid'))
         self.certificate_chain_validation_result = kwargs.get('certificate_chain_validation_result')
