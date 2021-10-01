@@ -461,7 +461,11 @@ class Metadata:
             self.certificate_expiry_desc = f'Expired {(datetime.utcnow() - not_after).days} days ago' if not_after < datetime.utcnow() else f'Valid for {(not_after - datetime.utcnow()).days} days'
             # SSLCertVerificationError does not handle most validation problems at all, see: https://badssl.com/
             validation_checks['not_expired'] = not_after > datetime.utcnow()
+            if validation_checks['not_expired'] is False:
+                certificate_verify_messages.append(self.certificate_expiry_desc)
             validation_checks['issued_past_tense'] = not_before < datetime.utcnow()
+            if validation_checks['issued_past_tense'] is False:
+                certificate_verify_messages.append(f'Will only be valid for use in {(datetime.utcnow() - not_before).days} days')
             wildcard_hosts = set()
             fqdns = set()
             for fields in self._x509.subject:
@@ -489,8 +493,8 @@ class Metadata:
             validation_checks['avoid_known_weak_signature_algorithm'] = self.signature_algorithm not in self.known_weak_signature_algorithms
             if validation_checks['avoid_known_weak_signature_algorithm'] is False:
                 certificate_verify_messages.append(self.weak_signature_reason[self.signature_algorithm])
-            if self.pubkey_type in self.known_weak_keys and self.server_key_size <= self.weak_key_size[self.pubkey_type]:
-                validation_checks['avoid_known_weak_keys'] = False
+            validation_checks['avoid_known_weak_keys'] = self.pubkey_type not in self.known_weak_keys or self.server_key_size > self.weak_key_size[self.pubkey_type]
+            if validation_checks['avoid_known_weak_keys'] is False:
                 certificate_verify_messages.append(self.weak_key_reason[self.pubkey_type])
 
         # TODO rely on undocumented _test_decode_cert(), waiting for merge https://github.com/python/cpython/pull/17938
@@ -519,8 +523,8 @@ class Metadata:
                 self.certificate_is_self_signed = True
 
         # this value is a dependency for chain validation, CertificateValidator results
-        self.certificate_valid = all(validation_checks.values())
-        self.certificate_verify_message = '\n'.join([f'{k}={v}' for (k, v) in enumerate(certificate_verify_messages)])
+        self.certificate_valid = all(list(validation_checks.values()))
+        self.certificate_verify_message = '\n'.join([f'{k}={validation_checks[k]}' for k in validation_checks.keys()] + certificate_verify_messages)
         validator_key_usage = []
         validator_extended_key_usage = []
         if isinstance(self._x509, x509.Certificate):
