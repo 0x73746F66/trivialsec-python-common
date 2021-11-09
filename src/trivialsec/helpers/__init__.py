@@ -61,7 +61,7 @@ def check_email_rules(email_addr :str) -> bool:
         logger.info('check_email_rules: invalid format')
         return False
 
-    res = validators.domain(parts[1])
+    res = validators.domain(parts[1]) is True
     if not res:
         logger.info('check_email_rules: invalid domain')
         return False
