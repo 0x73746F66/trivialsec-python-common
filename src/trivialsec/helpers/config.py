@@ -54,7 +54,7 @@ class Config:
         if aws_role_arn is None:
             aws_role_arn = getenv('AWS_ROLE_ARN')
         if aws_role_arn is not None:
-            session_name = 'trivialsec'
+            session_name = self.app_name
             aws_role_external_id = dotenv.get('AWS_ROLE_EXTERNAL_ID')
             if aws_role_external_id is None:
                 aws_role_external_id = getenv('AWS_ROLE_EXTERNAL_ID')
@@ -76,57 +76,52 @@ class Config:
 
     def configure(self):
         config_key = f'/{self.app_env}/Deploy/{self.app_name}/app_config'
-        try:
-            main_raw :str = self.ssm_secret(config_key, skip_cache=True)
-            main_conf :dict = yaml.safe_load(StringIO(main_raw))
-            amass_raw :str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/amass_config', skip_cache=True)
-            amass_conf :dict = yaml.safe_load(StringIO(amass_raw))
-            routes_raw :str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/routes_config', skip_cache=True)
-            routes_conf :dict = yaml.safe_load(StringIO(routes_raw))
-            self.redis :dict = main_conf.get('redis', {})
-            self.redis_client = redis.Redis(
-                host=self.redis.get('host'),
-                ssl=bool(self.redis.get('ssl')),
-                username=self.redis.get('user', 'trivialsec'),
-                password=self.redis_password
-            )
-            self.log_level: int = self._log_level if isinstance(self._log_level, int) else logging._nameToLevel.get(self._log_level) # pylint: disable=protected-access
-            proc = subprocess.run('cat /etc/hostname', shell=True, capture_output=True, check=True)
-            node_id :str = proc.stdout.decode('utf-8').strip()
-            err = proc.stderr.decode('utf-8')
-            if err or not node_id:
-                raise OSError(f'/etc/hostname could not be used\ngot node_id {node_id}\n{err}')
-            self.node_id :str = node_id
-            self.app_version = main_conf.get('version')
-            self.http_proxy = main_conf.get('http_proxy')
-            self.https_proxy = main_conf.get('https_proxy')
-            self.authz_expiry_seconds = main_conf.get('authz_expiry_seconds', 3600)
-            self.session_expiry_minutes = main_conf.get('session_expiry_minutes', 1440)
-            self.session_cookie_name = main_conf.get('session_cookie_name', 'trivialsec')
-            self.mysql :dict = main_conf.get('mysql', {})
-            self.elasticsearch :dict = main_conf.get('elasticsearch', {})
-            self.aws :dict = main_conf.get('aws', {})
-            self.assets :dict = main_conf.get('assets', {})
-            self.website :dict = main_conf.get('website', {})
-            self.appserver :dict = main_conf.get('appserver', {})
-            self.public_api :dict = main_conf.get('public-api', {})
-            self.push :dict = main_conf.get('push', {})
-            self.sendgrid :dict = main_conf.get('sendgrid', {})
-            self.stripe :dict = main_conf.get('stripe', {})
-            self.nameservers :list = list(set(main_conf.get('nameservers', list())))
-            self.queue_wait_timeout: int = main_conf.get('queue_wait_timeout', 5)
-            self.nmap :dict = main_conf.get('nmap', {})
-            self.amass :dict = amass_conf.get('amass', {})
-            self.public_endpoints :list = list(routes_conf.get('public_endpoints', list()))
-            self.require_authz :list = list(routes_conf.get('require_authz', list()))
-
-        except Exception as ex:
-            pprint(ex)
-            sys.exit(1)
+        main_raw :str = self.ssm_secret(config_key, skip_cache=True)
+        main_conf :dict = yaml.safe_load(StringIO(main_raw))
+        amass_raw :str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/amass_config', skip_cache=True)
+        amass_conf :dict = yaml.safe_load(StringIO(amass_raw))
+        routes_raw :str = self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/routes_config', skip_cache=True)
+        routes_conf :dict = yaml.safe_load(StringIO(routes_raw))
+        self.redis :dict = main_conf.get('redis', {})
+        self.redis_client = redis.Redis(
+            host=self.redis.get('host'),
+            ssl=bool(self.redis.get('ssl')),
+            username=self.redis.get('user', 'trivialsec'),
+            password=self.redis_password
+        )
+        self.log_level: int = self._log_level if isinstance(self._log_level, int) else logging._nameToLevel.get(self._log_level) # pylint: disable=protected-access
+        proc = subprocess.run('cat /etc/hostname', shell=True, capture_output=True, check=True)
+        node_id :str = proc.stdout.decode('utf-8').strip()
+        err = proc.stderr.decode('utf-8')
+        if err or not node_id:
+            raise OSError(f'/etc/hostname could not be used\ngot node_id {node_id}\n{err}')
+        self.node_id :str = node_id
+        self.app_version = main_conf.get('version')
+        self.http_proxy = main_conf.get('http_proxy')
+        self.https_proxy = main_conf.get('https_proxy')
+        self.authz_expiry_seconds = main_conf.get('authz_expiry_seconds', 3600)
+        self.session_expiry_minutes = main_conf.get('session_expiry_minutes', 1440)
+        self.session_cookie_name = main_conf.get('session_cookie_name', 'trivialsec')
+        self.mysql :dict = main_conf.get('mysql', {})
+        self.elasticsearch :dict = main_conf.get('elasticsearch', {})
+        self.aws :dict = main_conf.get('aws', {})
+        self.assets :dict = main_conf.get('assets', {})
+        self.website :dict = main_conf.get('website', {})
+        self.appserver :dict = main_conf.get('appserver', {})
+        self.public_api :dict = main_conf.get('public-api', {})
+        self.push :dict = main_conf.get('push', {})
+        self.sendgrid :dict = main_conf.get('sendgrid', {})
+        self.stripe :dict = main_conf.get('stripe', {})
+        self.nameservers :list = list(set(main_conf.get('nameservers', list())))
+        self.queue_wait_timeout: int = main_conf.get('queue_wait_timeout', 5)
+        self.nmap :dict = main_conf.get('nmap', {})
+        self.amass :dict = amass_conf.get('amass', {})
+        self.public_endpoints :list = list(routes_conf.get('public_endpoints', list()))
+        self.require_authz :list = list(routes_conf.get('require_authz', list()))
 
     @property
     def redis_password(self):
-        return self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/redis_password', WithDecryption=True)
+        return self.ssm_secret(f'/{self.app_env}/Deploy/{self.app_name}/redis_password', skip_cache=True, WithDecryption=True)
 
     @property
     def elasticsearch_password(self):
