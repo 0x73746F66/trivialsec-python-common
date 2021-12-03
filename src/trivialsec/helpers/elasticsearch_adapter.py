@@ -126,11 +126,12 @@ class ElasticsearchDocumentAdapter:
         self.__cols = set()
 
     def __repr__(self):
-        ret = {}
-        for col in self.cols():
-            if col.startswith('_'):
-                continue
-            ret[col] = getattr(self, col)
+        ret = {
+            col: getattr(self, col)
+            for col in self.cols()
+            if not col.startswith('_')
+        }
+
         return repr(ret)
 
     def get_doc(self):
@@ -218,11 +219,12 @@ class ElasticsearchDocumentAdapter:
 
     def persist(self, extra :dict = None) -> bool:
         doc_id = self.get_id()
-        doc = {}
-        for col in vars(self).keys():
-            if col.startswith('_'):
-                continue
-            doc[col] = getattr(self, col)
+        doc = {
+            col: getattr(self, col)
+            for col in vars(self).keys()
+            if not col.startswith('_')
+        }
+
         if isinstance(extra, dict):
             doc = {**doc, **extra}
         res = self.es.index(index=self.__index, id=doc_id, body=doc)

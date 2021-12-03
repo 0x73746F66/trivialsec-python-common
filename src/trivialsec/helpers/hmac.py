@@ -102,10 +102,9 @@ class HMAC:
         if config.redis_client.get(key):
             # We have already processed this nonce + timestamp.
             return False
-        else:
-            # Save this nonce + timestamp for later.
-            config.redis_client.set(key, '1')
-            return True
+        # Save this nonce + timestamp for later.
+        config.redis_client.set(key, '1')
+        return True
 
     def is_valid_scheme(self) -> bool:
         return self.authorization_header.startswith('HMAC')

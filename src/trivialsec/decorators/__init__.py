@@ -24,16 +24,11 @@ def require_authz(func):
             if authorization_token is None:
                 raise ValueError('X-Authorization-Token header is required')
             request_path = request.path[3:]
-            authorized = False
-            for u2f_key in current_user.u2f_keys:
-                if verify_transaction(
+            authorized = any(verify_transaction(
                         mfa_key=u2f_key.get('webauthn_id'),
                         target=request_path,
                         authorization_token=authorization_token,
-                    ):
-                    authorized = True
-                    break
-
+                    ) for u2f_key in current_user.u2f_keys)
             if hasattr(current_user, 'totp_mfa_id'):
                 mfa = MemberMfa(mfa_id=current_user.totp_mfa_id)
                 if mfa.hydrate() and verify_transaction(
@@ -48,7 +43,7 @@ def require_authz(func):
             return func(*args, **kwargs)
         except Exception as err:
             logger.exception(err)
-            params = {"status": 'error', "message": "Unauthorized"}
+            params = {'status': 'error', 'message': 'Unauthorized'}
             if app.debug:
                 params['error'] = str(err)
             return jsonify(params), 401

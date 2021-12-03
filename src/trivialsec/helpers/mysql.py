@@ -37,11 +37,7 @@ class MySQL:
         """
         self.database = config.mysql.get('internal_database') if database is None else database
         self._read_only = read_replica
-        if read_replica is True:
-            self._write_only = False
-        else:
-            self._write_only = True
-
+        self._write_only = read_replica is not True
         self.raise_on_warnings = raise_on_warnings is True
 
     def close(self):
@@ -110,13 +106,11 @@ class MySQL:
         row = self.cur.fetchone()
         logger.debug(self.cur.statement)
         logger.debug(row)
-        self.cur.close()
         if row:
-            index = 0
-            for col in self.cur.column_names:
+            for index, col in enumerate(self.cur.column_names):
                 data[col] = row[index]
-                index += 1
-        response = data if data else row
+        self.cur.close()
+        response = data or row
         if cache_key and response is not None:
             self._save_to_redis(cache_key, response, cache_ttl)
             response = self._get_from_redis(cache_key)
@@ -160,11 +154,7 @@ class MySQL:
 
         if sql.lower().startswith('select'):
             for row in self.cur:
-                data = {}
-                index = 0
-                for col in self.cur.column_names:
-                    data[col] = row[index]
-                    index += 1
+                data = {col: row[index] for index, col in enumerate(self.cur.column_names)}
                 results.append(data)
         elif sql.lower().startswith('insert'):
             results = self.cur.lastrowid

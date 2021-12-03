@@ -14,10 +14,7 @@ def check_subdomain_rules(sub_domain :str, domain_name :str = None) -> bool:
         return sub_domain.endswith(domain_name) and domain_name != sub_domain
 
     parts = sub_domain.split('.')
-    if len(parts) > 2:
-        return True
-
-    return False
+    return len(parts) > 2
 
 def is_valid_ipv4_address(address):
     try:

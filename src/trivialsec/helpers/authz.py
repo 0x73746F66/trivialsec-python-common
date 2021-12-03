@@ -41,10 +41,7 @@ def is_active_transaction(transaction_id :str, target :str) -> bool:
 
     secret_key = stored_value.decode()
     gen_transaction_id = get_transaction_id(secret_key, target)
-    if gen_transaction_id == transaction_id:
-        return True
-
-    return False
+    return gen_transaction_id == transaction_id
 
 def verify_transaction(mfa_key : str, target :str, authorization_token :str) -> bool:
     cache_key_tid = f'{config.app_version}{authorization_token}'
