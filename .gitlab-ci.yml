@@ -1,5 +1,5 @@
 variables:
-  COMMON_VERSION: 0.9.0
+  TRIVIALSEC_PY_LIB_VER: 0.9.0
   GIT_COMMIT_EMAIL: support@trivialsec.com
   GIT_COMMIT_NAME: gitlab-ci
 
@@ -80,7 +80,7 @@ release:wheel:
     refs:
       - main
   artifacts:
-    name: trivialsec_common-${COMMON_VERSION}-py2.py3-none-any.whl
+    name: trivialsec_common-${TRIVIALSEC_PY_LIB_VER}-py2.py3-none-any.whl
     paths:
       - trivialsec.tar.gz
 
@@ -98,9 +98,9 @@ release:tag:
     - git remote show origin
     - git config user.name $GIT_COMMIT_NAME
     - git config user.email $GIT_COMMIT_EMAIL
-    - git tag -f ${COMMON_VERSION}
+    - git tag -f ${TRIVIALSEC_PY_LIB_VER}
     - ssh-keyscan -H gitlab.com >> ~/.ssh/known_hosts
-    - git push -f origin ${COMMON_VERSION}
+    - git push -f origin ${TRIVIALSEC_PY_LIB_VER}
   only:
     refs:
       - main

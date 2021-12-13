@@ -14,7 +14,7 @@ PACKAGES = find_packages(where="src")
 
 setup(
     name='trivialsec-common',
-    version=getenv('COMMON_VERSION'),
+    version=getenv('TRIVIALSEC_PY_LIB_VER'),
     url='https://www.trivialsec.com/',
     author='Christopher Langton',
     author_email='chris@trivialsec.com',
@@ -22,8 +22,8 @@ setup(
     package_dir={"": "src"},
     classifiers=[
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
         'Private :: Do Not Upload'
     ],
     install_requires=install_requires,
