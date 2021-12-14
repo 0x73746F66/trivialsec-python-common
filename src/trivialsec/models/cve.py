@@ -29,6 +29,8 @@ class CVE(ElasticsearchDocumentAdapter):
         self.exploit = kwargs.get('exploit', [])
 
     def __setattr__(self, name, value):
+        if name in ['cwe', 'cpe', 'references', 'remediation', 'exploit']:
+            value = value if isinstance(value, list) else []
         if name in ['base_score', 'exploitability_score', 'impact_score']:
             value = Decimal(value or 0).quantize(Decimal('.1'), rounding=ROUND_DOWN)
         super().__setattr__(name, value)
