@@ -23,14 +23,14 @@ wheel: prep ## builds python wheel files
 		python3 setup.py bdist_wheel --universal
 	pip install --no-cache-dir --find-links=build/wheel --no-index dist/trivialsec_common-$(TRIVIALSEC_PY_LIB_VER)-py2.py3-none-any.whl
 
+setup: prep ## setup for development of this project
+	pip install -q -U pip setuptools wheel semgrep pylint
+	pip install -q -U -r requirements.txt
+
 install: ## Install trivialsec modules
 	python3 setup.py check
 	python3 setup.py sdist bdist_wheel
 	pip install -q -U --no-cache-dir --force-reinstall dist/trivialsec_common-$(TRIVIALSEC_PY_LIB_VER)-py2.py3-none-any.whl
-
-install-deps: prep ## setup for development of this project
-	pip install -q -U pip setuptools wheel semgrep pylint
-	pip install -q -U --user -r requirements.txt
 
 archive: wheel ## packages as a tar.gz for distribution
 	tar -ckzf $(APP_NAME).tar.gz build/wheel
