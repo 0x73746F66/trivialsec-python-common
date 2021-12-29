@@ -51,3 +51,7 @@ semgrep-xss-ci: ## run Flask XSS semgrep rules for CI
 	semgrep --disable-version-check -q --strict --error -o semgrep-flask-xss.json --json --config p/minusworld.flask-xss --lang=py src/**/*.py
 
 test-all: semgrep-xss-ci semgrep-sast-ci pylint-ci ## Run all CI tests
+
+publish: ## force tag and push version
+	git tag -f ${TRIVIALSEC_PY_LIB_VER}
+	git push -f origin ${TRIVIALSEC_PY_LIB_VER}
